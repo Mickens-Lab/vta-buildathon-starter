@@ -37,7 +37,7 @@ export function messagingRow(i: MessagingInput): MessagingRow {
     }
     if (i.mode === "tunnel") {
       return { pill: "bad", label, value: `MESSAGING DEGRADED: ${missing.join(" and ")} not available`, note: `The VTA reports ${i.protocols.join(", ") || "nothing"}. It has most likely fallen back to REST only because the mediator refused it or could not be reached; it logs only a warning.`,
-        fix: "Run `npm run tunnel:probe`, then check `docker compose logs vta mediator`. Restart with `MODE=tunnel npm run down` and `MODE=tunnel npm run up`. See docs/MODES.md." };
+        fix: "Run `npm run tunnel:probe`, then check `docker compose logs vta mediator`. Restart with `npm run down` and `npm run up -- --tunnel`. See docs/MODES.md." };
     }
     return { pill: "info", label, value: `REST only (${i.protocols.join(", ") || "none"})`, note: "Messaging is off in this mode. MODE=tunnel turns it on (docs/MODES.md)." };
   }
@@ -48,6 +48,6 @@ export function messagingRow(i: MessagingInput): MessagingRow {
     }
     return { pill: "warn", label, value: "advertised in the DID document; live state not checked", note: i.pingError ? `messaging/ping/0.1 failed: ${i.pingError}` : "Sign in (a credential) so the panel can ask the VTA which protocols it serves.", fix: "Run `npm run tunnel:probe` for the live check." };
   }
-  if (i.mode === "local") return { pill: "info", label, value: "off (REST only)", note: "The local stack has no mediator. `MODE=tunnel npm run up` adds one (docs/MODES.md)." };
+  if (i.mode === "local") return { pill: "info", label, value: "off (REST only)", note: "The local stack has no mediator. `npm run up -- --tunnel` adds one (docs/MODES.md)." };
   return { pill: "info", label, value: advertised.length ? `advertised: ${advertised.join(", ")}` : "not advertised", note: "Hosted VTAs advertise messaging only when configured; live state not checked." };
 }

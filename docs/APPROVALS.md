@@ -63,7 +63,7 @@ use both keys. A real second device (a phone) adds a separate machine and, if th
 [MOBILE-WALLET.md](MOBILE-WALLET.md). Approvals only exist while `policy.enforcement = true`; a rule stored without it gates nothing and the VTA's
 `approvals list` does not tell you which state you are in **[docs]**. `MODE=tunnel` works the same way **[verified]**: the demo and approver talk to the public VTA URL. There the VTA also tries to push the request to the approver
 over DIDComm (the outbox shows it), but a plain `did:key` approver has no inbox, so the relay through `.vta/refusal.json` is what carries it. The demo refuses `MODE=farm`.
-Setting up in tunnel mode: `MODE=tunnel npm run approvals:setup`, then `MODE=tunnel npm run up`, then `MODE=tunnel npm run approvals:demo` (the same for `approver`).
+Setting up in tunnel mode: `MODE=tunnel npm run approvals:setup`, then `npm run up -- --tunnel`, then `MODE=tunnel npm run approvals:demo` (the same for `approver`).
 
 Code: `packages/vta-client/src/consent.ts` (match code, request verification, decision, `withConsent`), `scripts/approver.ts`,
 `scripts/approvals-demo.ts`. Unit tests cover verification (tampering, wrong issuer, recipient, purpose, key, expiry), the code check and the wait loop.

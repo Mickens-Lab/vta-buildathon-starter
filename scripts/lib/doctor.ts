@@ -69,13 +69,13 @@ export function mediatorPortCheck(busy: boolean): Check {
     : { level: "ok", name: `Port ${MEDIATOR_PORT} (mediator)`, detail: "free" };
 }
 
-export interface ImageNeed { image: string; build: string; why: string }
+export interface ImageNeed { image: string; build: string; why: string; /** Missing = a warning, the run goes on without it (the default-on VTC). */ optional?: boolean }
 
 /** The images a mode needs, with the command that builds each. */
-export function imagesNeeded(mode: "local" | "tunnel" | "farm", withVtc: boolean, env: Record<string, string | undefined> = {}): ImageNeed[] {
+export function imagesNeeded(mode: "local" | "tunnel" | "farm", withVtc: boolean, env: Record<string, string | undefined> = {}, vtcOptional = false): ImageNeed[] {
   if (mode === "farm") return [];
   const out: ImageNeed[] = [{ image: env.VTA_IMAGE ?? "vta-buildathon:local", build: "npm run images:build vta", why: "the VTA (about 12 min cold)" }];
-  if (withVtc) out.push({ image: env.VTC_IMAGE ?? "vtc-buildathon:local", build: "npm run images:build vtc", why: "the community, VTC (about 8 to 23 min)" });
+  if (withVtc) out.push({ image: env.VTC_IMAGE ?? "vtc-buildathon:local", build: "npm run images:build vtc", why: "the community, VTC (about 8 to 23 min)", optional: vtcOptional });
   if (mode === "tunnel") out.push({ image: env.MEDIATOR_IMAGE ?? "mediator-buildathon:local", build: "npm run images:build mediator", why: "the mediator (about 12 min cold, 8 GB RAM advised)" });
   return out;
 }
@@ -84,7 +84,9 @@ export function imageChecks(needs: ImageNeed[], present: (image: string) => bool
   return needs.map((n) =>
     present(n.image)
       ? { level: "ok" as const, name: `Image ${n.image}`, detail: "present" }
-      : { level: "fail" as const, name: `Image ${n.image}`, detail: `not built on this machine (${n.why}); no images are published`, fix: `${n.build}   (docs/PINS.md#where-the-images-come-from)` },
+      : n.optional
+        ? { level: "warn" as const, name: `Image ${n.image}`, detail: `not built, so the community (VTC) is left out of \`up\` (${n.why})`, fix: `${n.build}   (or WITH_VTC=0 to stop seeing this; docs/PINS.md#where-the-images-come-from)` }
+        : { level: "fail" as const, name: `Image ${n.image}`, detail: `not built on this machine (${n.why}); no images are published`, fix: `${n.build}   (docs/PINS.md#where-the-images-come-from)` },
   );
 }
 
@@ -98,10 +100,6 @@ export function cloudflaredCheck(have: boolean): Check {
   return have
     ? { level: "ok", name: "cloudflared", detail: "found" }
     : { level: "fail", name: "cloudflared", detail: "not on PATH (MODE=tunnel needs it)", fix: "install it: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/" };
-}
-
-export function modeCheck(mode: string, source: string, withVtc: boolean): Check {
-  return { level: "ok", name: "Mode", detail: `MODE=${mode} (from ${source}); VTC ${withVtc ? "on" : "off"}`, fix: source === ".env" ? "change it for one run with `-- --local` / `-- --tunnel`, or edit .env" : undefined };
 }
 
 export const blocking = (cs: Check[]): Check[] => cs.filter((c) => c.level === "fail");

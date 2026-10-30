@@ -77,7 +77,7 @@ An applicant is not a member, so it cannot `authenticate`; it submits and polls 
 | Admin key | seeded into the VTA by compose | same | pasted into the portal as "Admin DID" (`npm run farm:setup`) |
 | Messaging (DIDComm, TSP) | off | on, through the kit's open mediator | the Farm's (unverified for this kit) |
 | Browser CORS | allowed: 3000, 5173, 8000 | same origins | blocked; templates proxy `/__vta`, `/__vtc` via Vite |
-| Start / stop | `npm run up` / `down` | `MODE=tunnel npm run up` / `down` (deletes volumes) | `MODE=farm npm run up` |
+| Start / stop | `npm run up` / `down` | `npm run up -- --tunnel` / `down` (deletes volumes) | `MODE=farm npm run up` |
 
 Tunnel URLs and DIDs die with the run; what each mode gives and every caveat: [MODES.md](MODES.md). Re-run the tunnel checks with `npm run tunnel:probe`.
 
@@ -85,14 +85,14 @@ Tunnel URLs and DIDs die with the run; what each mode gives and every caveat: [M
 
 | Var | Where | Meaning |
 |---|---|---|
-| `MODE` | `.env`, shell | `local` (default), `tunnel` (messaging on public quick tunnels, [MODES.md](MODES.md)) or `farm` |
+| `MODE` | shell, `.env` | `local` (default), `tunnel` (messaging on public quick tunnels, [MODES.md](MODES.md)) or `farm`. Prefer the flag `npm run up -- --tunnel` (this run only; `--local`, `--farm`). The kit writes `MODE` to `.env` only for farm |
 | `FARM` | `.env`, shell | farm mode only: `ic3` (default, preferred, https://vtafarm.ic3.dev) or `firstperson` (agent creation currently broken Farm-side) |
 | `FARM_AGENT` | `.env`, shell | farm mode only: agent name; derives `VTA_URL` (`https://vta-<name>.<farm domain>`) and `VTA_DID` (from its DID log) |
 | `VTC_URL` | `.env`, scripts | VTC base URL, default `http://localhost:8200` in local mode |
 | `VTC_DID` | `.env` | VTC DID, when not served at `/.well-known/did.jsonl` |
 | `VTC_REQUEST_ID` | `.env` | Written by `vtc:join`; delete to apply again |
 | `VTC_IMAGE`, `VTC_PORT`, `VTC_CONTEXT`, `VTC_CORS_ORIGINS_TOML` | compose | The optional local VTC |
-| `WITH_VTC=1` | shell | `npm run up` also starts and provisions the VTC |
+| `WITH_VTC=0` | shell | `npm run up` leaves the VTC out. The VTC is on by default in every mode; without its image `up` skips it with a note (`--no-vtc` / `--vtc` on the command line do the same) |
 
 | Var | Where | Meaning |
 |---|---|---|

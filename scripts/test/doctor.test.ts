@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  blocking, cloudflaredCheck, devPortCheck, dockerCheck, formatChecks, imageChecks, imagesNeeded, mediatorPortCheck, memoryCheck, modeCheck, nodeCheck,
+  blocking, cloudflaredCheck, devPortCheck, dockerCheck, formatChecks, imageChecks, imagesNeeded, mediatorPortCheck, memoryCheck, nodeCheck,
   stackPortCheck, summary, vtiCheckout,
 } from "../lib/doctor.js";
 
@@ -80,11 +80,18 @@ test("formatting and the summary", () => {
   assert.equal(blocking(cs).length, 1);
   assert.match(summary(cs), /1 problem\(s\) block/);
   assert.equal(summary([nodeCheck("v22.0.0")]), "All good.");
-  assert.match(modeCheck("local", ".env", false).fix!, /--tunnel/);
 });
 
 test("a server port (inbox-verifier) gets its own command and no CORS note", () => {
   const c = devPortCheck({ port: 4000, what: "inbox-verifier", busy: true, ownStack: false, server: true, use: (p) => `INBOX_PORT=${p} npm start -w @buildathon/inbox-verifier` }, 4001);
   assert.match(c.fix!, /INBOX_PORT=4001/);
   assert.doesNotMatch(c.fix!, /CORS/);
+});
+
+test("the default-on VTC image is optional: a warning, not a failure", () => {
+  const cs = imageChecks(imagesNeeded("local", true, {}, true), (i) => i.startsWith("vta"));
+  assert.equal(cs[1].level, "warn");
+  assert.match(cs[1].detail, /left out/);
+  assert.match(cs[1].fix!, /WITH_VTC=0/);
+  assert.equal(blocking(cs).length, 0);
 });

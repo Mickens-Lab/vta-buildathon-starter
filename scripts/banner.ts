@@ -9,5 +9,5 @@ export function devBanner(): void {
 export function tunnelBanner(): void {
   if (process.env.CI === "1" || process.env.QUIET === "1") return;
   console.log("DEV ONLY, PUBLIC: MODE=tunnel puts the VTA, VTC and an OPEN mediator (any DID may register and relay) on public,");
-  console.log("unauthenticated quick-tunnel URLs. Demo data only, never real credentials. Stop it when done: MODE=tunnel npm run down (docs/MODES.md).");
+  console.log("unauthenticated quick-tunnel URLs. Demo data only, never real credentials. Stop it when done: npm run down (docs/MODES.md).");
 }

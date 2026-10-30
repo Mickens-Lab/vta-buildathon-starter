@@ -1,6 +1,6 @@
 // `npm run doctor`: is this machine ready for the kit, and if not, exactly what to run?
 //   npm run doctor                 # mode from .env or the environment
-//   npm run doctor -- --tunnel     # check as if MODE=tunnel (also --local)
+//   npm run doctor -- --tunnel     # check as if MODE=tunnel (also --local); --no-vtc leaves the community out
 // `npm run up` runs the blocking subset first (runPreflight), so a missing image or a busy port is a short message, not a Docker error.
 import "./lib/cli.js";
 import { spawnSync } from "node:child_process";
@@ -8,10 +8,11 @@ import { existsSync, readFileSync } from "node:fs";
 import net from "node:net";
 import { resolve } from "node:path";
 import { devBanner } from "./banner.js";
-import { type Mode, mode, modeSource, withVtc } from "./env.js";
+import { type Mode, modeInfo, vtcChoice } from "./env.js";
+import { modeLine, parseModeFlags } from "./lib/modes.js";
 import {
   blocking, cloudflaredCheck, type Check, dockerCheck, DEV_PORTS, devPortCheck, formatChecks, imageChecks, imagesNeeded, CORS_PORTS, MEDIATOR_PORT, mediatorPortCheck,
-  memoryCheck, modeCheck, nodeCheck, STACK_PORTS, stackPortCheck, summary, vtiCheckout,
+  memoryCheck, nodeCheck, STACK_PORTS, stackPortCheck, summary, vtiCheckout,
 } from "./lib/doctor.js";
 import { have } from "./lib/compose.js";
 import { pins } from "./pins.js";
@@ -34,19 +35,18 @@ const ownStackRunning = (): boolean => {
   return r.status === 0 && r.stdout.trim() !== "";
 };
 
-const imagePresent = (image: string): boolean => spawnSync("docker", ["image", "inspect", image], { stdio: "ignore", timeout: 20_000 }).status === 0;
+export const imagePresent = (image: string): boolean => spawnSync("docker", ["image", "inspect", image], { stdio: "ignore", timeout: 20_000 }).status === 0;
 
 function availKb(): number | undefined {
   try { return Number(/MemAvailable:\s+(\d+)/.exec(readFileSync("/proc/meminfo", "utf8"))?.[1]) || undefined; } catch { return undefined; }
 }
 
-export interface DoctorOptions { mode: Mode; withVtc: boolean; scope: "full" | "up" }
+export interface DoctorOptions { mode: Mode; withVtc: boolean; scope: "full" | "up"; /** WITH_VTC was not set: a missing VTC image is a warning. */ vtcOptional?: boolean }
 
 /** Gather the real probes and judge them. `scope: "up"` skips the template ports and the mode line. */
 export async function runChecks(o: DoctorOptions): Promise<Check[]> {
   const out: Check[] = [nodeCheck(process.version)];
   if (o.mode === "farm") {
-    if (o.scope === "full") out.push(modeCheck(o.mode, modeSource(), o.withVtc));
     return out;
   }
   const cli = have("docker");
@@ -54,7 +54,7 @@ export async function runChecks(o: DoctorOptions): Promise<Check[]> {
   const compose = cli && spawnSync("docker", ["compose", "version"], { stdio: "ignore", timeout: 20_000 }).status === 0;
   const docker = dockerCheck({ cli, daemon, compose });
   out.push(docker);
-  const needs = imagesNeeded(o.mode, o.withVtc, process.env);
+  const needs = imagesNeeded(o.mode, o.withVtc, process.env, o.vtcOptional);
   out.push(memoryCheck(availKb(), o.mode === "tunnel" ? 8 : 4, o.mode === "tunnel" ? "building the mediator" : "building an image"));
   if (docker.level === "ok") {
     const images = imageChecks(needs, imagePresent);
@@ -89,7 +89,6 @@ export async function runChecks(o: DoctorOptions): Promise<Check[]> {
       if (p.port === 4000 && isBusy) { free = undefined; for (let c = 4001; c < 4020 && free === undefined; c++) if (!(await busy(c))) free = c; }
       out.push(devPortCheck({ port: p.port, what: p.what, busy: isBusy, ownStack: false, use: p.use, server: "server" in p }, free));
     }
-    out.push(modeCheck(o.mode, modeSource(), o.withVtc));
   }
   return out;
 }
@@ -107,7 +106,14 @@ export async function runPreflight(o: Omit<DoctorOptions, "scope">): Promise<voi
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   devBanner();
-  const cs = await runChecks({ mode: mode(), withVtc: withVtc(), scope: "full" });
+  const flags = parseModeFlags(process.argv.slice(2));
+  if (flags.error) { console.error(flags.error); process.exit(1); }
+  const info = flags.mode ? { mode: flags.mode, source: "flag" as const } : modeInfo();
+  if (flags.mode) process.env.MODE = flags.mode;
+  if (flags.vtc !== undefined) process.env.WITH_VTC = flags.vtc ? "1" : "0";
+  const choice = vtcChoice();
+  console.log(modeLine(info.mode, info.source, choice.on));
+  const cs = await runChecks({ mode: info.mode, withVtc: choice.on, vtcOptional: !choice.explicit, scope: "full" });
   console.log(`\nVTA buildathon starter: machine check\n\n${formatChecks(cs)}\n\n${summary(cs)}`);
   process.exit(blocking(cs).length ? 1 : 0);
 }

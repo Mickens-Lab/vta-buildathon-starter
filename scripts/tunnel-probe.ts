@@ -23,7 +23,7 @@ const get = async (url: string) => {
 
 const state = readTunnel();
 if (!state) {
-  console.error("no .vta/tunnel.json: there is no tunnel stack started by `MODE=tunnel npm run up`.");
+  console.error("no .vta/tunnel.json: there is no tunnel stack started by `npm run up -- --tunnel`.");
   process.exit(1);
 }
 const u = tunnelUrls(state);
@@ -38,7 +38,7 @@ add(health.status === 200 ? "ok" : "FAIL", "VTA /health (public)", `HTTP ${healt
 const log = await get(`${u.vta}/.well-known/did.jsonl`);
 const did = /"id":"(did:webvh:[^"#]+)"/.exec(log.text)?.[1];
 add(did?.endsWith(`:${state.vtaHost}`) ? "ok" : "FAIL", "VTA did:webvh resolves at the tunnel host",
-  log.status !== 200 ? `HTTP ${log.status}` : did ? (did.endsWith(`:${state.vtaHost}`) ? "DID is bound to the current tunnel host" : "DID names a different host: this volume is stale, reset with `MODE=tunnel npm run down`") : "no DID in the log");
+  log.status !== 200 ? `HTTP ${log.status}` : did ? (did.endsWith(`:${state.vtaHost}`) ? "DID is bound to the current tunnel host" : "DID names a different host: this volume is stale, reset with `npm run down`") : "no DID in the log");
 const advertises = ["DIDCommMessaging", "TSPTransport"].filter((t) => log.text.includes(t));
 add(advertises.length === 2 ? "ok" : "FAIL", "DID document advertises messaging", advertises.length ? advertises.join(", ") : "neither DIDCommMessaging nor TSPTransport");
 

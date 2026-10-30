@@ -18,7 +18,7 @@ async function vtcDid(): Promise<string | undefined> {
 }
 const peer = arg("peer") ?? env("VTC_DID") ?? (await vtcDid());
 if (!state?.mediatorDid || !cred || !peer) {
-  console.error("tsp:listen needs a MODE=tunnel stack with a VTC (MODE=tunnel npm run up) and a provisioned app (.env).");
+  console.error("tsp:listen needs a MODE=tunnel stack with a VTC (npm run up -- --tunnel) and a provisioned app (.env).");
   process.exit(1);
 }
 const seconds = Number(arg("seconds") ?? 90);

@@ -23,7 +23,7 @@ It is for developers who want to see a signed Trust Task round trip working in m
 
 ```sh
 npm ci
-WITH_VTC=1 npm run up        # keys, VTA (+ VTC), a "my-app" context and a credential in .env
+npm run up                   # keys, VTA + VTC, a "my-app" context and a credential in .env (WITH_VTC=0: no community)
 npm run hello                # first signed call
 npm run vtc:hello            # read the community's join manifest
 ```
@@ -38,7 +38,7 @@ Expected from `npm run hello` (DIDs differ on your machine):
 ```
 
 `npm run doctor` checks Docker, memory, ports (8100, 8200, 5173, 3000, 4000), the images (with the exact build command for a missing one) and the VTI checkout; `npm run up` runs the blocking part first, so a missing image or a busy port is a short message, not a Docker or Node stack trace.
-Use `npm run up` alone if you do not need a VTC. Clean up with `npm run reset`.
+Use `WITH_VTC=0 npm run up` if you do not need a VTC. Stop with `npm run down`, wipe everything with `npm run reset`.
 Trouble? See [Troubleshooting](#troubleshooting).
 
 ## Things to try
@@ -100,7 +100,7 @@ The ones you need in the first hour (all of them, grouped: [docs/COMMANDS.md](do
 | Command | Does |
 |---|---|
 | `npm run doctor` | Is this machine ready: Node, Docker, memory, ports, images (exact build command for a missing one), VTI checkout, mode. `up` runs the blocking checks first |
-| `npm run up` | Start the stack for the current mode. `WITH_VTC=1 npm run up` adds the community |
+| `npm run up` | Start the stack (local by default; `-- --tunnel` for messaging, this run only). The community (VTC) is on in every mode, `WITH_VTC=0` leaves it out |
 | `npm run down` / `npm run reset` | Stop and keep data / stop everything, delete volumes, `.vta/` and the keys the kit wrote to `.env` (your own `.env` lines stay). Both work in every mode |
 | `npm run hello` | The checkpoint |
 | `npm run vta:call -- <task> [json]` | Call any Trust Task as your app identity (no argument lists them) |

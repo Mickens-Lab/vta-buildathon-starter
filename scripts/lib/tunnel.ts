@@ -78,8 +78,8 @@ export function volumeGuard(i: { want: StackMode; marker: StackMode | null; volu
   return {
     ok: false,
     message: had === "local"
-      ? `Found volumes from a MODE=local run (${i.volumes.join(", ")}). MODE=tunnel needs a fresh VTA: a did:webvh DID is bound to its host, so the local one cannot move to a tunnel host. Your local data would be lost.\nReset: npm run reset (deletes the local VTA/VTC volumes, .vta and the kit's keys in .env), then MODE=tunnel npm run up.`
-      : `Found volumes from an earlier MODE=tunnel run (${i.volumes.join(", ")}). Every tunnel run gets new hostnames and therefore new DIDs; the old ones are dead.\nReset: npm run reset, then MODE=tunnel npm run up.`,
+      ? `Found volumes from a MODE=local run (${i.volumes.join(", ")}). MODE=tunnel needs a fresh VTA: a did:webvh DID is bound to its host, so the local one cannot move to a tunnel host. Your local data would be lost.\nReset: npm run reset (deletes the local VTA/VTC volumes, .vta and the kit's keys in .env), then npm run up -- --tunnel.`
+      : `Found volumes from an earlier MODE=tunnel run (${i.volumes.join(", ")}). Every tunnel run gets new hostnames and therefore new DIDs; the old ones are dead.\nReset: npm run reset, then npm run up -- --tunnel.`,
   };
 }
 

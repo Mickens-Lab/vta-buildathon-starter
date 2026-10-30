@@ -19,7 +19,7 @@ Treat every key, DID and community it creates as disposable.
 
 `MODE=tunnel` ([MODES.md](MODES.md)) puts the VTA, VTC and a messaging mediator on public, unauthenticated Cloudflare quick-tunnel URLs, and the
 mediator is **open** (any DID may register and relay). Treat it as a demo you switch on while you need it: demo data only, keys are plaintext
-on the volumes, and `MODE=tunnel npm run down` when you finish. MODES.md lists the log and setup-output hazards (the mediator setup prints an
+on the volumes, and `npm run down` when you finish. MODES.md lists the log and setup-output hazards (the mediator setup prints an
 admin private key; the VTC logs an install URL with a token).
 
 ## What not to do

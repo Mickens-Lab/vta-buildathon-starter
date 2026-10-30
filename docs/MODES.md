@@ -3,7 +3,7 @@
 One setting, `MODE` in `.env` (or the environment), chooses where the VTA and VTC run. There are exactly three modes and no separate
 "messaging" switch: messaging is what `tunnel` adds. Back to the [README](../README.md).
 
-Labels used here: **[verified]** observed while building this kit (tunnel spike and a live run of `MODE=tunnel npm run up` against the
+Labels used here: **[verified]** observed while building this kit (tunnel spike and a live run of `npm run up -- --tunnel` against the
 pinned images), **[unverified]** not observed, stated from documentation or inference.
 
 ## Which mode gives what
@@ -16,8 +16,8 @@ pinned images), **[unverified]** not observed, stated from documentation or infe
 | Reachable from other devices or a phone | no | yes, on public URLs | yes |
 | Persistence | Docker volumes, survive restarts | none worth keeping: new URLs and DIDs every run | the Farm's |
 | Needs | Docker, the VTA (and VTC) image | Docker, `cloudflared` on PATH, internet, the VTA, VTC **and mediator** images | a browser with a passkey, internet |
-| Start | `npm run up` | `MODE=tunnel npm run up` | `MODE=farm npm run up`, then [FARM.md](FARM.md) |
-| Stop | `npm run down` | `MODE=tunnel npm run down` (deletes its volumes) | delete the agent in the portal |
+| Start | `npm run up` | `npm run up -- --tunnel` | `MODE=farm npm run up`, then [FARM.md](FARM.md) |
+| Stop | `npm run down` | `npm run down` (deletes its volumes) | delete the agent in the portal |
 | Safe for real data | no | **no, never** | no (shared test service) |
 
 Features and the mode they need (everything in the README and [TRY-THIS](TRY-THIS.md) works in `local` unless a row says otherwise):
@@ -38,9 +38,9 @@ In the dashboard the membership card's "Credential delivery" row says which of t
 npm run images:build vta          # once; tsp is now in the feature list, see below
 npm run images:build vtc          # once
 npm run images:build mediator     # once, heavy: about 12 minutes cold and plenty of RAM
-MODE=tunnel npm run up            # tunnels -> mediator -> VTA -> VTC -> probe
+npm run up -- --tunnel            # tunnels -> mediator -> VTA -> VTC -> probe
 npm run tunnel:probe              # re-run the checks at any time
-MODE=tunnel npm run down          # stop tunnels, delete the volumes and the tunnel keys in .env
+npm run down          # stop tunnels, delete the volumes and the tunnel keys in .env
 ```
 
 `npm run up` in tunnel mode does this, in this order (it matters: the DIDs and configs name the tunnel hostnames):
@@ -124,18 +124,26 @@ _Verified live:_ with `MEDIATOR_CORS_ALLOW_ORIGIN=http://localhost:3000` the med
 - The VTA's `VTA_ALLOW_PRIVATE_ENDPOINTS` loopback allowance is switched off in tunnel mode; the VTA resolves its own DID over the public
   network and that works.
 
+## Which mode is in use
+
+Strongest first: a flag on the command (`npm run up -- --tunnel`, also `--local`, `--farm`), `MODE` in the environment, a `MODE=` line in `.env`, the stack that is already running
+(`.vta/mode.json`, written by `up`), then `local`. A flag is for that one command and writes nothing to `.env`; because later commands follow the running stack, `npm run down`, `hello` and
+`tsp:ping` need no prefix after a tunnel `up`, and a plain `npm run up` after `down` or `reset` is local again. `up`, `down`, `reset` and `doctor` print one line with the mode, where it
+came from and whether the VTC is on. The VTC is on by default in every mode (`WITH_VTC=0` or `--no-vtc` turn it off); if its image is not built and you did not ask for it, `up` says so and starts without it.
+If you ask for another mode while the other mode's volumes exist, a terminal gets the question "reset it now?" and a script gets the refusal with the command.
+
 ## Switching modes
 
 Volumes are never silently reused across modes. `npm run up` refuses, says why, and prints the reset command:
 
 | You have | You run | Result |
 |---|---|---|
-| a `local` stack (volumes) | `MODE=tunnel npm run up` | **refused.** Local data cannot move to a tunnel host. `npm run reset` (deletes the local volumes, `.vta` and the kit's `.env` keys), then try again |
-| tunnel volumes (a run you did not take down) | `MODE=tunnel npm run up` | **refused.** New hostnames mean new DIDs. `MODE=tunnel npm run down`, then up again |
-| tunnel volumes | `npm run up` (local) | **refused.** `MODE=tunnel npm run down` first |
+| a `local` stack (volumes) | `npm run up -- --tunnel` | **refused.** Local data cannot move to a tunnel host. `npm run reset` (deletes the local volumes, `.vta` and the kit's `.env` keys), then try again |
+| tunnel volumes (a run you did not take down) | `npm run up -- --tunnel` | **refused.** New hostnames mean new DIDs. `npm run down`, then up again |
+| tunnel volumes | `npm run up` (local) | **refused.** `npm run down` first |
 | a `local` stack | `npm run up` | fine, as before. A local stack made before modes existed counts as local |
 
-`MODE=tunnel npm run down` stops the tunnels it started, removes the containers **and deletes the volumes** (they cannot be used again),
+`npm run down` stops the tunnels it started, removes the containers **and deletes the volumes** (they cannot be used again),
 removes `.vta/tunnel.json`, and removes the dead URLs and the app credential from `.env`. It keeps `MODE` and the admin key in `.vta/`. The
 refusal is also enforced inside the VTA and mediator entrypoints (a volume made for one host will not start for another), so running
 `docker compose` by hand cannot reuse it either. `npm run reset` does all of that in any mode: it also stops any recorded tunnels, deletes every volume (local and messaging) and `.vta/`, and removes only the keys the kit wrote to `.env`.
@@ -148,7 +156,7 @@ VTA build features. Two changes to the images you already know:
 - **The VTA image must be built with `tsp`.** The VTI Dockerfile's default feature list has none, and then the VTA refuses
   `services.tsp = true` at setup **[verified]**. `npm run images:build vta` now passes the pinned feature list for every VTA build, so one
   image serves all modes. An image built before this change has no `tsp`: rebuild it. (`didcomm` without `tsp` also works **[verified]**,
-  but this kit sets both.) `npm run pins:check` flags an unlabelled VTA image and confirms the label matches the pinned list **[verified: an image built by `npm run images:build vta` carries the `org.buildathon.vta-features` label, `pins:check` reports "features match", and `MODE=tunnel npm run up` passed every probe check with it]**.
+  but this kit sets both.) `npm run pins:check` flags an unlabelled VTA image and confirms the label matches the pinned list **[verified: an image built by `npm run images:build vta` carries the `org.buildathon.vta-features` label, `pins:check` reports "features match", and `npm run up -- --tunnel` passed every probe check with it]**.
 - **The mediator image** is built from `docker/mediator.Dockerfile` by `npm run images:build mediator`. As with the others, there is no
   published image: you build it locally. It is for `MODE=tunnel` only; `images:build all` does not build it.
 
@@ -159,13 +167,13 @@ VTA build features. Two changes to the images you already know:
 | Symptom | Likely cause | What to do |
 |---|---|---|
 | `up` says `cloudflared` is missing | not on PATH | Install it (see the error text); no account needed |
-| "cloudflared did not print a tunnel host" | quick tunnels flaky or rate limited | wait a minute and run `MODE=tunnel npm run down` then `up` |
+| "cloudflared did not print a tunnel host" | quick tunnels flaky or rate limited | wait a minute and run `npm run down` then `up` |
 | "missing image(s)" | images not built | run the `images:build` commands in the message; the mediator build is the long one |
-| "refusing to start ... volume was set up for" | stale volume for another host | `MODE=tunnel npm run down`, then `up` |
+| "refusing to start ... volume was set up for" | stale volume for another host | `npm run down`, then `up` |
 | probe: "DID names a different host" | a tunnel restarted under a live VTA | the DID is bound to the old host: `down`, then `up` |
 | probe: MESSAGING DEGRADED / VTA reports REST only | mediator refused or unreachable (a closed ACL answers 403 to a `did:webvh` VTA), or `tsp` not built in | `docker compose --profile messaging logs vta mediator`; confirm the mediator ACL is open and the VTA image has `tsp` |
 | public hosts answer 502 | tunnel is up but nothing listens behind it | `docker compose ps`; start the service |
-| public hosts answer 530 / 1033 | the tunnel process is gone | `MODE=tunnel npm run down` and `up` (new URLs, new DIDs) |
+| public hosts answer 530 / 1033 | the tunnel process is gone | `npm run down` and `up` (new URLs, new DIDs) |
 | right after `up`, a public URL does not resolve | DNS for a fresh host lags a few seconds | wait and run `npm run tunnel:probe` again |
 | VTA and VTC answer 500 "No challenge found" | the mediator's redis was flushed | restart the VTA and VTC; avoid flushing |
 | hosted or organiser mediator rejects the VTA | its ACL is closed to your DID | ask the operator for its ACL mode; otherwise use this mode's own mediator |

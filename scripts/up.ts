@@ -1,4 +1,5 @@
-// One entry point for all modes:
+// One entry point for all modes. `--local`, `--tunnel`, `--farm` choose the mode for this one command without touching .env
+// (later commands follow the stack that is running); `--no-vtc` / `WITH_VTC=0` leaves the community out:
 //   npm run up      start the stack for MODE (local, tunnel or farm)
 //   npm run down    stop it and keep the data (a tunnel stack is not resumable, so there it also deletes its volumes)
 //   npm run reset   stop it, stop any tunnels, delete volumes, .vta/ and the kit's own keys in .env (your other .env lines stay); any mode
@@ -10,13 +11,15 @@ import "./lib/cli.js";
 import { spawnSync } from "node:child_process";
 import { existsSync, rmSync } from "node:fs";
 import { devBanner, tunnelBanner } from "./banner.js";
-import { clearGeneratedEnv, die, ENV_FILE, env, mode, removeEnv, updateEnv, withVtc } from "./env.js";
+import { clearGeneratedEnv, die, ENV_FILE, LOCAL_VTC_URL, env, modeInfo, removeEnv, updateEnv, vtcChoice, withVtc } from "./env.js";
+import { confirm } from "./lib/prompt.js";
+import { modeLine, parseModeFlags } from "./lib/modes.js";
 import {
   clearStackFiles, dc, existingStackVolumes, have, imageLabel, readStackMode, readTunnel, sleep, startTunnel, stopTunnels, waitFor200,
   writeStackMode, writeTunnel,
 } from "./lib/compose.js";
 import { composeEnv, tunnelUrls, TUNNEL_FILE, volumeGuard, type TunnelState } from "./lib/tunnel.js";
-import { runPreflight } from "./doctor.js";
+import { imagePresent, runPreflight } from "./doctor.js";
 import { pins } from "./pins.js";
 
 const run = (cmd: string, args: string[], extraEnv: Record<string, string> = {}) => {
@@ -24,9 +27,15 @@ const run = (cmd: string, args: string[], extraEnv: Record<string, string> = {})
   if (r.status !== 0) die(`\`${cmd} ${args.join(" ")}\` failed (exit ${r.status}).`);
 };
 const npm = (s: string, extraEnv: Record<string, string> = {}) => run("npm", ["run", "--silent", s], extraEnv);
-const guard = (want: "local" | "tunnel") => {
+/** Refuse to reuse volumes across modes. In a terminal, offer the reset instead of just refusing. */
+const guard = async (want: "local" | "tunnel") => {
   const g = volumeGuard({ want, marker: readStackMode(), volumes: existingStackVolumes() });
-  if (!g.ok) die(g.message);
+  if (g.ok) return;
+  if (await confirm(`\n${g.message}\n\nReset it now? This deletes that stack's volumes, .vta/ and the kit's keys in ${ENV_FILE}.`)) {
+    resetAll();
+    return;
+  }
+  die(g.message);
 };
 /** Tunnel-mode variables that keys in .env would otherwise carry over from a dead stack. */
 const TUNNEL_ENV_KEYS = ["VTA_URL", "VTA_DID", "VTA_CONTEXT", "APP_DID", "VTA_CREDENTIAL", "VTC_URL", "VTC_DID"];
@@ -41,8 +50,8 @@ async function tunnelUp(): Promise<void> {
   if (features !== undefined && features !== "" && !features.split(",").includes("tsp")) {
     die(`the VTA image was built without \`tsp\` (features: ${features}); MODE=tunnel needs it. Rebuild: npm run images:build vta.`);
   }
-  guard("tunnel");
-  if (readTunnel()) die(`${TUNNEL_FILE} exists: a tunnel stack was started and not taken down. Run MODE=tunnel npm run down first.`);
+  await guard("tunnel");
+  if (readTunnel()) die(`${TUNNEL_FILE} exists: a tunnel stack was started and not taken down. Run npm run down first.`);
 
   npm("vta:keygen");
   removeEnv(TUNNEL_ENV_KEYS);
@@ -81,14 +90,14 @@ async function tunnelUp(): Promise<void> {
       if (!(await waitFor200(`${urls.vtc}/health`, 120_000))) throw new Error(`the VTC does not answer at ${urls.vtc}; see \`docker compose --profile vtc logs vtc\`.`);
     }
   } catch (e) {
-    console.error(`\n${(e as Error).message}\nThe stack is left running for inspection. Tear it down with: MODE=tunnel npm run down`);
+    console.error(`\n${(e as Error).message}\nThe stack is left running for inspection. Tear it down with: npm run down`);
     process.exit(1);
   }
   await sleep(1000);
   console.log("\nrunning the tunnel probe:");
   const probe = spawnSync("npm", ["run", "--silent", "tunnel:probe"], { stdio: "inherit", env: { ...process.env, DEV_BANNER_SHOWN: "1", MODE: "tunnel" } });
-  if (probe.status !== 0) die("the tunnel probe found a problem (above). The stack is left running; fix it or tear it down with MODE=tunnel npm run down.");
-  console.log(`\nVTA ${tunnelUrls(state).vta}\n${wantVtc ? `VTC ${tunnelUrls(state).vtc}\n` : ""}These URLs are public and die with this run. Tear down: MODE=tunnel npm run down.`);
+  if (probe.status !== 0) die("the tunnel probe found a problem (above). The stack is left running; fix it or tear it down with npm run down.");
+  console.log(`\nVTA ${tunnelUrls(state).vta}\n${wantVtc ? `VTC ${tunnelUrls(state).vtc}\n` : ""}These URLs are public and die with this run. Tear down: npm run down.`);
 }
 
 function tunnelDown(): void {
@@ -121,10 +130,28 @@ function resetAll(): void {
   console.log(`reset: containers and volumes removed${n ? `, ${n} tunnel(s) stopped` : ""}, .vta/ deleted, the kit's keys removed from ${ENV_FILE}${kept.length ? ` (kept your own: ${kept.join(", ")})` : ""}.`);
 }
 
-const sub = process.argv[2] === "down" || process.argv[2] === "reset" ? process.argv[2] : "up";
+const flags = parseModeFlags(process.argv.slice(2));
+if (flags.error) die(flags.error);
+const sub = flags.rest[0] === "down" || flags.rest[0] === "reset" ? flags.rest[0] : "up";
 const down = sub === "down";
 if (sub === "up") devBanner();
-const m = mode();
+// A flag applies to this command only (child scripts inherit it through the environment); nothing is written to .env.
+const info = flags.mode ? { mode: flags.mode, source: "flag" as const } : modeInfo();
+if (flags.mode) process.env.MODE = flags.mode;
+if (flags.vtc !== undefined) process.env.WITH_VTC = flags.vtc ? "1" : "0";
+const m = info.mode;
+if (m !== "farm" && sub === "up") {
+  // The VTC is on by default in every mode. If its image is missing and nobody asked for it, start without it and say so.
+  const choice = vtcChoice();
+  const vtcImage = process.env.VTC_IMAGE ?? "vtc-buildathon:local";
+  let vtc = choice.on;
+  if (vtc && !choice.explicit && !imagePresent(vtcImage)) {
+    vtc = false;
+    console.log(`note: the community (VTC) image ${vtcImage} is not built, so this run starts without it. Build it (npm run images:build vtc) and run up again, or set WITH_VTC=0 to stop seeing this.`);
+  }
+  process.env.WITH_VTC = vtc ? "1" : "0";
+}
+console.log(modeLine(m, info.source, withVtc()));
 if (sub === "reset") {
   resetAll();
 } else if (down && (m === "tunnel" || existsSync(TUNNEL_FILE))) {
@@ -136,12 +163,19 @@ if (sub === "reset") {
   await tunnelUp();
 } else if (m === "local") {
   await runPreflight({ mode: "local", withVtc: withVtc() });
-  guard("local");
+  await guard("local");
   npm("vta:keygen");
   run("docker", ["compose", ...(withVtc() ? ["--profile", "vtc"] : []), "up", "-d", "--wait"]);
   writeStackMode("local");
   npm("vta:provision");
-  if (withVtc()) npm("vtc:up");
+  if (withVtc()) {
+    npm("vtc:up");
+    // The VTC finishes its own setup after the hand-off; wait for it so the next command does not hit a closed port.
+    process.stdout.write("waiting for the VTC to finish setup");
+    const t0 = Date.now();
+    const ready = await waitFor200(`${LOCAL_VTC_URL}/health`, 90_000);
+    console.log(ready ? ` ... ready (${Math.round((Date.now() - t0) / 1000)} s)` : "\nthe VTC is not answering yet; check `docker compose --profile vtc logs vtc`, then try npm run vtc:hello.");
+  }
 } else if (down) {
   console.log("MODE=farm: nothing runs locally. Delete the agent in the VTA Farm portal if you are done (npm run reset clears the local keys).");
 } else if (env("VTA_URL")?.startsWith("https://")) {

@@ -9,7 +9,7 @@ const state = readTunnel();
 const vtaDid = process.env.VTA_DID ?? env("VTA_DID");
 const mediatorDid = process.env.MEDIATOR_DID ?? state?.mediatorDid;
 if (!state || !vtaDid || !mediatorDid) {
-  console.error("tsp:ping needs a running MODE=tunnel stack (.vta/tunnel.json and .env). Start it with: MODE=tunnel npm run up");
+  console.error("tsp:ping needs a running MODE=tunnel stack (.vta/tunnel.json and .env). Start it with: npm run up -- --tunnel");
   process.exit(1);
 }
 // The app's own did:key (it is on the VTA's ACL); `--throwaway` uses a fresh DID that the VTA will refuse (403).

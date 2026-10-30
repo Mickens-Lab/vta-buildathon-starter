@@ -77,11 +77,11 @@ const credential = encodeCredential({
   vtaUrl: baseUrl,
 });
 updateEnv({
-  MODE: m,
+  ...(m === "farm" ? { MODE: m } : {}),
   VTA_URL: baseUrl,
   VTA_DID: admin.vtaDid,
   VTA_CONTEXT: context,
   APP_DID: app.did,
   VTA_CREDENTIAL: credential,
 });
-console.log(`wrote ${ENV_FILE} (MODE, VTA_URL, VTA_DID, VTA_CONTEXT, APP_DID, VTA_CREDENTIAL)`);
+console.log(`wrote ${ENV_FILE} (VTA_URL, VTA_DID, VTA_CONTEXT, APP_DID, VTA_CREDENTIAL)`);
