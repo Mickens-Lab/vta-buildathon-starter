@@ -25,6 +25,8 @@ services:
       PUBLIC_HOST: "${VTA_PUBLIC_HOST:-}"
       MEDIATOR_DID: "${MEDIATOR_DID:-}"
       CORS_ORIGINS_TOML: "${CORS_ORIGINS_TOML:-}"
+      # Approvals demo (npm run approvals:setup writes this to .env): seeds a consent rule on first boot. Empty = off.
+      APPROVER_DID: "${APPROVER_DID:-}"
     ports:
       - "127.0.0.1:${VTA_PORT:-8100}:${VTA_PORT:-8100}"
       # The VTC shares this container's network namespace (see `vtc` below), so its

@@ -49,7 +49,10 @@
     "security:check": "tsx scripts/security-check.ts",
     "recipe:backend-signer": "tsx scripts/recipes/backend-signer.ts",
     "recipe:webcrypto-key": "tsx scripts/recipes/webcrypto-key.ts",
-    "tunnel:probe": "tsx scripts/tunnel-probe.ts"
+    "tunnel:probe": "tsx scripts/tunnel-probe.ts",
+    "approvals:setup": "tsx scripts/approvals-setup.ts",
+    "approvals:demo": "tsx scripts/approvals-demo.ts",
+    "approver": "tsx scripts/approver.ts"
   },
   "devDependencies": {
     "@types/node": "22.20.5",

@@ -74,6 +74,30 @@ kind = "create_webvh"
 url  = "$PUBLIC_URL"
 TOML
   vta setup --from /tmp/setup.toml
+  # Optional approvals demo (npm run approvals:setup, docs/APPROVALS.md): the setup wizard cannot carry a [policy]
+  # section, so it is appended to the generated config. The VTA applies this seed ONCE, on the first boot with no
+  # stored rules, and nothing is enforced unless enforcement = true. Local to this volume; DEV ONLY.
+  if [ -n "${APPROVER_DID:-}" ]; then
+    # The generated config already has a [policy] table (enforcement = false, approvals = [], an empty approver_sets
+    # table), so edit those lines rather than adding a second [policy].
+    sed -i \
+      -e '/^\[policy\]$/,/^\[policy\.approver_sets\]$/ s/^enforcement = false$/enforcement = true/' \
+      -e '/^\[policy\]$/,/^\[policy\.approver_sets\]$/ { /^approvals = \[\]$/d }' \
+      -e "s|^\[policy\.approver_sets\]\$|[policy.approver_sets]\ndemo-approvers = [\"$APPROVER_DID\"]|" \
+      "$CONFIG"
+    # Field names are camelCase here; the VTA's docs show snake_case, which this VTA rejects ("unknown field").
+    cat >> "$CONFIG" <<TOML
+
+[[policy.approvals]]
+taskType         = "https://trusttasks.org/spec/vta/contexts/update/1.0"
+requires         = "consent"
+approverSet      = "demo-approvers"
+minApprovals     = 1
+excludeRequester = true
+TOML
+    grep -q '^enforcement = true$' "$CONFIG" || { echo "approvals demo: could not switch policy.enforcement on; refusing to start with a rule that gates nothing" >&2; exit 1; }
+    echo "approvals demo: consent required for vta/contexts/update/1.0, approver set = 1 software approver, enforcement on" >&2
+  fi
   echo "$PUBLIC_URL" > "$MARKER"
 fi
 

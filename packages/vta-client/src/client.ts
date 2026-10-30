@@ -17,6 +17,7 @@ export const TASK = {
   contextsCreate: `${TT}/vta/contexts/create/1.0`,
   contextsList: `${TT}/vta/contexts/list/1.0`,
   aclGrant: `${TT}/acl/grant/0.1`,
+  contextsUpdate: `${TT}/vta/contexts/update/1.0`,
 } as const;
 
 export const DEFAULT_URL = "http://localhost:8100";
@@ -192,6 +193,14 @@ export class VtaClient {
         reason: "VTC setup hand-off",
       }),
     );
+  }
+
+  /**
+   * Admin only. Gives `subject` a `monitor` entry with no contexts: enough to open a REST session and answer a consent
+   * request, not enough to do anything else. Over messaging an approver needs no entry at all; over REST it needs this.
+   */
+  async grantApprover(subject: string, label = "approver"): Promise<boolean> {
+    return this.idempotent(() => this.call(TASK.aclGrant, { entry: { subject, role: "monitor", scopes: [], label }, reason: "approvals demo" }));
   }
 
   private async idempotent(fn: () => Promise<unknown>): Promise<boolean> {
