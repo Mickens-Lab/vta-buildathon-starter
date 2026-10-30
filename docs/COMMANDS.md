@@ -8,7 +8,8 @@ muscle memory keep working; a test fails if a script is missing from this page.
 
 | Command | Does |
 |---|---|
-| `npm run doctor` | Is this machine ready: Node, Docker, memory, ports, images (a missing one: `images:pull` first, the local build second), VTI checkout, mode. `up` runs the blocking checks first |
+| `npm run setup` | Build the images your mode needs and that are not built yet (local: VTA + VTC; `-- --tunnel` adds the mediator; `-- --no-vtc` leaves the VTC out). Prints a time estimate, warns about low memory, reports the time each took. Prebuilt images are not available yet, so this is the first command on a new machine |
+| `npm run doctor` | Is this machine ready: Node, Docker, memory, ports, images (a missing one: the exact local build command first, with its time), VTI checkout, mode. `up` runs the blocking checks first |
 | `npm run up` | Start the stack for the current mode (keys, VTA, optional VTC, an app context and credential in `.env`) |
 | `npm run down` | Stop it and keep the data (tunnel mode: also deletes its volumes, which cannot be reused) |
 | `npm run reset` | Stop everything (tunnels too), delete volumes and `.vta/`, remove the keys the kit wrote to `.env`. Works in every mode; lines you added to `.env` stay |

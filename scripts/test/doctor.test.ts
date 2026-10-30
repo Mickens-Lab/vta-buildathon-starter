@@ -79,7 +79,7 @@ test("a missing prebuilt image warns: images:pull first, the local build second;
 test("a local build counts as present in auto mode", () => {
   const cs = imageChecks(rowsFor("auto", [specs.vta.local, specs.vtc.local]), specs);
   assert.deepEqual(cs.map((c) => c.level), ["ok", "ok"]);
-  assert.match(cs[0].detail, /local build/);
+  assert.match(cs[0].detail, /built here/);
 });
 
 test("IMAGES=local with no local build blocks, and says to build or unset IMAGES", () => {
@@ -130,4 +130,49 @@ test("a Vite server outside the VTA's CORS list warns and says what still works;
   assert.match(c.fix!, /npm run reset && npm run up/);
   assert.equal(viteOriginCheck(3050, true), undefined);
   assert.equal(viteOriginCheck(3050, undefined), undefined, "VTA not running: nothing to compare with");
+});
+
+// --- prebuilt images not available (pins.json images.available = false) -------------------------------------
+
+import { imagesToBuild, localBuildFix } from "../lib/doctor.js";
+
+test("unavailable: a missing image fails with the exact local build command first, times, VTI checkout and the tunnel hint", () => {
+  const rows = imageStatus(specs, dockerWith([specs.vta.pinned]), "auto", ["vta", "vtc"], {}, false);
+  const cs = imageChecks(rows, specs, false, { available: false, mode: "local" });
+  assert.deepEqual(cs.map((c) => c.level), ["fail", "fail"], "a registry image sitting here is not counted");
+  const fix = cs[0].fix!;
+  assert.ok(fix.startsWith("npm run images:build vta"), fix);
+  assert.match(fix, /25 to 40 min/);
+  assert.match(fix, /VTI checkout/);
+  assert.match(fix, /MODE=tunnel also needs the mediator/);
+  assert.match(fix, /npm run setup/);
+  assert.doesNotMatch(formatChecks(cs), /images:pull|will pull/);
+});
+
+test("unavailable: the mediator fix names its time and that tunnel mode needs it; the optional VTC only warns", () => {
+  const m = localBuildFix(specs.mediator, "tunnel");
+  assert.ok(m.startsWith("npm run images:build mediator"));
+  assert.match(m, /about 12 min/);
+  assert.match(m, /MODE=tunnel needs the mediator/);
+  assert.doesNotMatch(m, /VTI checkout \(/);
+  const rows = imageStatus(specs, dockerWith([specs.vta.local]), "auto", ["vta", "vtc"], {}, false);
+  const cs = imageChecks(rows, specs, true, { available: false });
+  assert.deepEqual(cs.map((c) => c.level), ["ok", "warn"]);
+  assert.match(cs[1].fix!, /WITH_VTC=0/);
+  assert.equal(blocking(cs).length, 0);
+});
+
+test("available (the default) keeps the pull-first advice", () => {
+  const cs = imageChecks(rowsFor("auto", [specs.vta.pinned]), specs, false, { available: true });
+  assert.match(cs[1].fix!, /^npm run images:pull vtc/);
+});
+
+test("setup plan: only what the mode needs and is not built yet", () => {
+  const has = (present: string[]) => (ref: string) => present.includes(ref);
+  assert.deepEqual(imagesToBuild("local", true, specs, has([])), ["vta", "vtc"]);
+  assert.deepEqual(imagesToBuild("local", false, specs, has([])), ["vta"]);
+  assert.deepEqual(imagesToBuild("tunnel", true, specs, has([])), ["vta", "vtc", "mediator"]);
+  assert.deepEqual(imagesToBuild("tunnel", true, specs, has([specs.vta.local, specs.mediator.local])), ["vtc"]);
+  assert.deepEqual(imagesToBuild("farm", true, specs, has([])), []);
+  assert.deepEqual(imagesToBuild("local", true, specs, has([specs.vta.local, specs.vtc.local])), []);
 });

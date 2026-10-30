@@ -1,6 +1,10 @@
 // Build the VTA, VTC and/or mediator image, each from its own ref pinned in pins.json
 // (the releases come from different commits and repositories).
-//   npm run images:build [vta|vtc|mediator|all]     (`all` is vta + vtc; the mediator is only for MODE=tunnel)
+//   npm run images:build [vta|vtc|mediator|all|needed]   (`all` is vta + vtc; the mediator is only for MODE=tunnel)
+//   npm run setup [-- --tunnel] [--no-vtc]   = images:build needed: builds only what the mode needs and is not built yet
+//                                (local: vta + vtc; --tunnel / MODE=tunnel: + mediator; --no-vtc / WITH_VTC=0 leaves the VTC out),
+//                                one after the other, with the time each took and a memory warning up front. Prebuilt images are
+//                                not available yet (pins.json images.available), so this is how every machine gets its images.
 // VTI_PATH   a verifiable-trust-infrastructure checkout (default ../verifiable-trust-infrastructure);
 //            each pinned ref is exported with `git archive`, so its working tree is never used.
 // VTI_LOCAL=1 build the checkout's working tree instead (development; the image is tagged :local only).
@@ -16,15 +20,22 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { die } from "./env.js";
-import { buildLabels, labelArgs } from "./lib/images.js";
+import { die, modeInfo, vtcChoice } from "./env.js";
+import { parseModeFlags } from "./lib/modes.js";
+import { imagesToBuild } from "./lib/doctor.js";
+import { BUILD_ESTIMATE, formatElapsed, setupIntro } from "./lib/build-help.js";
+import { buildLabels, imageSpecs, labelArgs, realDocker, type ImageKind } from "./lib/images.js";
 import { missingCheckoutMessage, missingRefMessage, parseBuildArgs } from "./lib/build-help.js";
 import { confirm } from "./lib/prompt.js";
 import { MEDIATOR_BUILD_NOTICE, memoryWarning } from "./lib/tunnel.js";
 import { pins } from "./pins.js";
 
-const { which, clone } = parseBuildArgs(process.argv.slice(2));
-if (!["vta", "vtc", "mediator", "all"].includes(which)) die("usage: npm run images:build [vta|vtc|mediator|all] [--clone]");
+const flags = parseModeFlags(process.argv.slice(2));
+if (flags.error) die(flags.error);
+const { which, clone } = parseBuildArgs(flags.rest);
+if (!["vta", "vtc", "mediator", "all", "needed"].includes(which)) die("usage: npm run images:build [vta|vtc|mediator|all|needed] [--clone]   (npm run setup = needed; mode flags --local/--tunnel/--no-vtc apply to `needed`)");
+if (flags.mode) process.env.MODE = flags.mode;
+if (flags.vtc !== undefined) process.env.WITH_VTC = flags.vtc ? "1" : "0";
 const vti = pins().vti;
 const repo = resolve(process.env.VTI_PATH ?? "../verifiable-trust-infrastructure");
 const local = process.env.VTI_LOCAL === "1";
@@ -34,20 +45,24 @@ const sh = (cmd: string, args: string[], opts: object = {}) => {
   if (r.status !== 0) die(`\`${cmd} ${args.join(" ")}\` failed (exit ${r.status}).`);
 };
 
-if (which === "mediator") {
+function availKb(): number | undefined {
+  try {
+    const n = Number(/MemAvailable:\s+(\d+)/.exec(readFileSync("/proc/meminfo", "utf8"))?.[1]);
+    return n && !Number.isNaN(n) ? n : undefined;
+  } catch { return undefined; /* not Linux */ }
+}
+
+function buildMediator(): void {
   const m = pins().messaging.mediator;
   const short = m.ref.slice(0, 8);
   console.log(MEDIATOR_BUILD_NOTICE);
-  let avail: number | undefined;
-  try { avail = Number(/MemAvailable:\s+(\d+)/.exec(readFileSync("/proc/meminfo", "utf8"))?.[1]); } catch { /* not Linux */ }
-  const warn = memoryWarning(avail && !Number.isNaN(avail) ? avail : undefined);
+  const warn = memoryWarning(availKb(), 8);
   if (warn) console.warn(`WARNING: ${warn}`);
   const tags = [`${m.image}:${short}`, `${m.image}:local`];
   const dockerfile = resolve("docker/mediator.Dockerfile");
   const labels = labelArgs(buildLabels("mediator", pins(), { dockerfileSha256: sha256(dockerfile) }));
   console.log(`building ${tags.join(", ")} from ${m.repo} @ ${m.ref} (mediator ${m.version}, features ${m.features})`);
   sh("nice", ["-n", "10", "docker", "build", "-f", dockerfile, "--build-arg", `MEDIATOR_REF=${m.ref}`, "--build-arg", `FEATURES=${m.features}`, ...labels, ...tags.flatMap((t) => ["-t", t]), resolve("docker")]);
-  process.exit(0);
 }
 
 /** The VTA and VTC are built from a checkout of the upstream repository. Offer the clone, never do it unasked. */
@@ -69,7 +84,7 @@ async function ensureCheckout(ref: string, tag: string): Promise<void> {
   }
 }
 
-for (const name of which === "all" ? (["vta", "vtc"] as const) : [which as "vta" | "vtc"]) {
+async function buildOne(name: "vta" | "vtc"): Promise<void> {
   const { image, ref, tag } = vti[name];
   const short = ref.slice(0, 8);
   let ctx = repo;
@@ -92,3 +107,23 @@ for (const name of which === "all" ? (["vta", "vtc"] as const) : [which as "vta"
     if (tmp) rmSync(tmp, { recursive: true, force: true });
   }
 }
+
+const mode = flags.mode ?? modeInfo().mode;
+let plan: ImageKind[];
+if (which === "needed") {
+  if (mode === "farm") { console.log("MODE=farm runs no local images: nothing to build."); process.exit(0); }
+  plan = imagesToBuild(mode, vtcChoice().on, imageSpecs(pins()), (ref) => realDocker.has(ref));
+  console.log(setupIntro(plan, mode));
+} else plan = which === "all" ? ["vta", "vtc"] : [which as ImageKind];
+if (plan.some((k) => k !== "mediator")) {
+  const warn = memoryWarning(availKb(), 4);
+  if (warn) console.warn(`WARNING: ${warn}`);
+}
+const started = Date.now();
+for (const kind of plan) {
+  const t0 = Date.now();
+  if (kind === "mediator") buildMediator(); else await buildOne(kind);
+  console.log(`${kind}: built in ${formatElapsed(Date.now() - t0)} (estimate ${BUILD_ESTIMATE[kind]})`);
+}
+if (plan.length > 1) console.log(`all ${plan.length} images built in ${formatElapsed(Date.now() - started)}.`);
+if (which === "needed" && plan.length) console.log("\nNext: npm run doctor, then npm run up.");

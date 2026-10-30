@@ -15,7 +15,7 @@ import {
   memoryCheck, nodeCheck, STACK_PORTS, stackPortCheck, summary, vtiCheckout,
 } from "./lib/doctor.js";
 import { have } from "./lib/compose.js";
-import { currentMode, imageSpecs, imageStatus, realDocker } from "./lib/images.js";
+import { currentMode, imagesAvailable, imageSpecs, imageStatus, realDocker } from "./lib/images.js";
 import { pins } from "./pins.js";
 
 /** Busy = something accepts a connection on loopback (IPv4 or IPv6). */
@@ -79,12 +79,12 @@ export async function runChecks(o: DoctorOptions): Promise<Check[]> {
     try {
       const specs = imageSpecs(pins(), env("IMAGE_REGISTRY"));
       const over = { vta: env("VTA_IMAGE"), vtc: env("VTC_IMAGE"), mediator: env("MEDIATOR_IMAGE") };
-      images = imageChecks(imageStatus(specs, realDocker, currentMode(env), needs, over), specs, o.vtcOptional);
+      images = imageChecks(imageStatus(specs, realDocker, currentMode(env), needs, over, imagesAvailable(pins())), specs, o.vtcOptional, { available: imagesAvailable(pins()), mode: o.mode });
     } catch (e) {
       images = [{ level: "fail", name: "Images", detail: (e as Error).message, fix: "see docs/IMAGES.md" }];
     }
     out.push(...images);
-    const buildsVti = images.some((c) => c.level === "fail" && /vta|vtc/.test(c.name));
+    const buildsVti = images.some((c) => c.level !== "ok" && /vta|vtc/.test(c.name));
     if (buildsVti) {
       const dir = resolve(process.env.VTI_PATH ?? "../verifiable-trust-infrastructure");
       out.push(vtiCheckout({ exists: existsSync(dir), dir: process.env.VTI_PATH ? dir : "../verifiable-trust-infrastructure", repoUrl: pins().vti.repo }));

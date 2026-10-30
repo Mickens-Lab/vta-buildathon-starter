@@ -54,7 +54,7 @@ const ENV_VAR = { vta: "VTA_IMAGE", vtc: "VTC_IMAGE", mediator: "MEDIATOR_IMAGE"
 const BUILD_CMD = {
   vta: "npm run images:build vta",
   vtc: "npm run images:build vtc",
-  mediator: "npm run images:build mediator   (about 15 min, see docs/MODES.md)",
+  mediator: "npm run images:build mediator",
 } as const;
 
 /** `IMAGES` value; throws on anything but auto|local|registry. */
