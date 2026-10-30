@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>TSP ping</title>
+    <style>
+      body { margin: 0; font: 16px/1.5 system-ui, sans-serif; background: #f6f7f9; color: #1b1f24; }
+      main { max-width: 52rem; margin: 0 auto; padding: 1rem; }
+      h1 { font-size: 1.4rem; margin: .25rem 0 .5rem; }
+      label { display: block; margin: .6rem 0 .15rem; font-size: .9rem; }
+      input { width: 100%; box-sizing: border-box; font: 13px ui-monospace, monospace; padding: .35rem .5rem; border: 1px solid #c3c9d2; border-radius: 6px; background: transparent; color: inherit; }
+      button { font: inherit; color: inherit; background: transparent; border: 1px solid #c3c9d2; border-radius: 8px; padding: .35rem .9rem; margin-top: .8rem; cursor: pointer; }
+      .verdict { margin-top: 1rem; padding: .7rem .9rem; border-radius: 10px; border: 1px solid #c3c9d2; background: #fff; }
+      .verdict.ok { border-color: #1a7f37; } .verdict.bad { border-color: #b3201f; }
+      pre { background: #eef0f4; padding: .6rem; overflow: auto; border-radius: 6px; font-size: 12.5px; white-space: pre-wrap; }
+      small, .hint { opacity: .75; }
+      @media (prefers-color-scheme: dark) {
+        body { background: #14171c; color: #e6e9ee; } input, button { border-color: #3a424d; }
+        .verdict { background: #1d2128; border-color: #2d333c; } .verdict.ok { border-color: #3fb950; } .verdict.bad { border-color: #ff8d8a; } pre { background: #12151a; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>TSP ping from the browser</h1>
+      <p class="hint">Logs in to the mediator as a <code>did:key</code>, forms a TSP relationship with the VTA and sends <code>messaging/ping/0.1</code>. Needs the <code>MODE=tunnel</code> stack with the mediator's CORS opened for this origin. DEV ONLY: the credential below is a private key.</p>
+      <label for="vta">VTA DID</label><input id="vta" autocomplete="off" />
+      <label for="med">Mediator DID</label><input id="med" autocomplete="off" />
+      <label for="cred">App credential (VTA_CREDENTIAL) <small>blank = throwaway did:key, which the VTA refuses</small></label><input id="cred" type="password" autocomplete="off" />
+      <button id="go">Send ping</button>
+      <div id="verdict" class="verdict" hidden></div>
+      <pre id="log" hidden></pre>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
