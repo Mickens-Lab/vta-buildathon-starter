@@ -8,21 +8,22 @@ verifiable-trust-infrastructure (VTI) refs that the VTA and VTC images are built
 participant's or organiser's rebuild silently changes the wire behaviour.
 
 ```sh
+npm run setup                        # build the images your mode needs and that are missing (= images:build needed); the usual first command
 npm run images:build [vta|vtc|mediator|all]   # build each image from its own pinned ref; tags <image>:<short-sha> and :local (`all` = vta + vtc; the mediator is for MODE=tunnel only)
-npm run images:pull [vta|vtc|mediator|all]   # pull the prebuilt images pinned in pins.json (`images` section); see IMAGES.md; `-- --by-digest` = digest or nothing
+npm run images:pull [vta|vtc|mediator|all]   # prebuilt images are NOT available yet (pins.json images.available is false): explains and pulls nothing; IMAGES=registry for members with access
 npm run images:verify [-- vta|vtc|mediator|all]   # is it the pinned, signed image? see VERIFY.md
 npm run pins:check [-- --strict]     # report drift; changes nothing
 ```
 
-**Prebuilt images are the default, local builds the fallback.** `pins.json` `images` holds the registry, the platforms and, once
-published, each image's digest; the image tag is the first 8 characters of the pinned ref. `npm run up` uses a pulled image, else a
-local build, else pulls ([IMAGES.md](IMAGES.md), including `IMAGES=local` to flip back). The commands below are the local-build path.
+**Build locally; prebuilt images are not yet available.** `pins.json` `images.available` is `false` (the organisation does not allow public packages), so `npm run up`
+uses the `<name>:local` images you built and never pulls ([IMAGES.md](IMAGES.md)). `pins.json` `images` still holds the registry, the platforms and, for later, each image's digest;
+the registry tag would be the first 8 characters of the pinned ref. The commands below are the path everyone takes today.
 
 `images:build` exports each pinned ref from a VTI checkout (`VTI_PATH`, default
 `../verifiable-trust-infrastructure`) with `git archive`, so whatever is checked out
 there is irrelevant. `VTI_LOCAL=1` builds that checkout's working tree instead (for
 development; tagged `:local` only). Images carry the label `org.buildathon.vti-ref`.
-**Digests.** While `images.<kind>.digest` is `null` an image is pulled by a movable tag; `pins:check` prints a `WARN` for that. After a workflow run, record the digests, and `images:verify` can check them against the signature ([VERIFY.md](VERIFY.md)).
+**Digests.** They matter only for prebuilt images, which are not available yet, so `pins:check` says "not in use" instead of warning. If `images.available` is flipped to `true` and a digest is `null`, an image is pulled by a movable tag and `pins:check` prints a `WARN`. After a workflow run, record the digests, and `images:verify` can check them against the signature ([VERIFY.md](VERIFY.md)).
 
 `pins:check` compares, per image, the label, the binary's own `--version`, that the release tag still resolves to the pinned ref, a running VTC's
 `/health` version, the lockfile against `pins.json`, and the newest upstream
@@ -30,19 +31,19 @@ development; tagged `:local` only). Images carry the label `org.buildathon.vti-r
 
 ## Where the images come from
 
-**Current decision: prebuilt images from `ghcr.io/mickens-lab` by default, a local build as the fallback.** `npm run up` uses a pulled image, else a local build, else
-pulls ([IMAGES.md](IMAGES.md); `IMAGES=local` flips back). Status, **unverified here**: the organiser reports that amd64 images were already pushed as a stopgap and that the packages
-are private until made public; CI will publish multi-arch (the workflow has never been run). Until the packages are public a pull may be refused, so a local build is what is
-known to work. This is the one place that says so; the other docs link here, so if the status changes, change this section and the `Prerequisites` bullet in the README.
+**Current decision: build locally; prebuilt images are not yet available.** The organisation does not allow public GHCR packages, so participants cannot pull images and everyone builds their own
+(`npm run setup`). `pins.json` `images.available` (`false`, with a one-line `why`) is the single switch: while it is `false`, `IMAGES=auto` means local and nothing is pulled. The publish workflow
+(`.github/workflows/images.yml`, never run), the signing and verification tooling and the digest fields stay for later, for organisation members (`IMAGES=registry`, after `docker login`) or if
+packages can ever be public ([IMAGES.md](IMAGES.md)). This is the one place that says so; the other docs link here, so if the status changes, change this section, the `images.available` switch and the `Prerequisites` bullet in the README.
 
-The local-build (fallback) cold path, exactly (Linux, 12 cores, Docker; times are from this kit's own builds, so treat them as a floor on a laptop):
+The local-build cold path, exactly (Linux, 12 cores, Docker; the times below were measured on a 12-core desktop, so plan 25 to 40 minutes per Rust image on a laptop):
 
 ```sh
 # 1. The upstream repository, next to this one (the URL is `vti.repo` in pins.json). `images:build` asks before cloning in a terminal,
 #    prints these two commands otherwise, and does it for you only with `npm run images:build -- --clone`.
 git clone https://github.com/OpenVTC/verifiable-trust-infrastructure ../verifiable-trust-infrastructure
 git -C ../verifiable-trust-infrastructure fetch --tags origin     # the pinned refs must be present
-# 2. Build what you need (each image is exported from its own pinned ref; niced; the first build is the slow one)
+# 2. Build what you need, in one command: `npm run setup` (local: VTA + VTC; `-- --tunnel` adds the mediator). Or one at a time (each image is exported from its own pinned ref; niced; the first build is the slow one)
 npm run images:build vta        # about 12 min cold (Rust); local mode needs this
 npm run images:build vtc        # about 8 min with warm caches, about 23 min cold; only for WITH_VTC=1 and the community
 npm run images:build mediator   # about 12 min cold, tunnel mode only; also needs `cloudflared`
@@ -50,8 +51,8 @@ npm run images:build mediator   # about 12 min cold, tunnel mode only; also need
 
 Budget several GB of free RAM (the mediator build warns below 8 GB) and about 10 GB of disk for the Rust build layers. If the checkout is somewhere else, set `VTI_PATH`.
 The mediator comes from its own repository (`messaging.mediator.repo` in pins.json), which the Dockerfile fetches itself, so no checkout is needed for it.
-`npm run doctor` lists which images and which VTI checkout are missing: `npm run images:pull` first, these build commands second. An organiser may also hand out images as files (`docker save` / `docker load`,
-or `VTA_IMAGE=...`, see [EVENT.md](EVENT.md)).
+`npm run doctor` lists which images and which VTI checkout are missing, with the exact build command and its time first. Images you built can be copied to another machine of the same CPU architecture
+with `npm run images:export` / `images:import` (`docker save` / `docker load`; [IMAGES.md](IMAGES.md#sharing-images-you-built), [EVENT.md](EVENT.md)).
 
 ## What is pinned now
 

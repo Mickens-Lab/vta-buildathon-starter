@@ -101,7 +101,7 @@ Tunnel URLs and DIDs die with the run; what each mode gives and every caveat: [M
 | `VTA_CONTEXT` | `.env` | Context your app is scoped to |
 | `APP_DID` | `.env` | Your app's did:key |
 | `VTA_CREDENTIAL` | `.env` | base64url JSON `{did, privateKeyMultibase, vtaDid, vtaUrl}`; contains a private key |
-| `IMAGES`, `IMAGE_REGISTRY` | `up`, `images:pull` | `IMAGES=local` forces locally built images, `registry` insists on prebuilt ones (default: pulled, else local, else pull); `IMAGE_REGISTRY=host/org` pulls from elsewhere ([IMAGES.md](IMAGES.md)) |
+| `IMAGES`, `IMAGE_REGISTRY` | `up`, `images:pull` | default: your locally built images (prebuilt images are not yet available, so `auto` means `local`); `IMAGES=registry` is for organisation members with access; `IMAGE_REGISTRY=host/org` pulls from elsewhere ([IMAGES.md](IMAGES.md)). Build with `npm run setup` |
 | `VTA_IMAGE` | compose | Image to run, default `vta-buildathon:local` (built with `tsp`: [PINS.md](PINS.md)) |
 | `MEDIATOR_IMAGE`, `REDIS_IMAGE` | compose | `MODE=tunnel` only: default `mediator-buildathon:local` and `redis:7.4.6-alpine` |
 | `APPROVER_DID` | `.env` | Set by `npm run approvals:setup`; makes a fresh VTA require a second key's approval for a gated task ([APPROVALS.md](APPROVALS.md)) |

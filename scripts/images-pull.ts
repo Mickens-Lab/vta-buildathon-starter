@@ -1,4 +1,5 @@
-// Pull the prebuilt images pinned in pins.json (docs/IMAGES.md).
+// Pull the prebuilt images pinned in pins.json (docs/IMAGES.md). While pins.json images.available is false (the organisation does
+// not allow public packages) this explains how to build locally and does nothing, unless IMAGES=registry is set (people with access).
 //   npm run images:pull [vta|vtc|mediator|all] [--check] [--force] [--by-digest]
 //   all = vta + vtc + mediator (unlike images:build, pulling the mediator is cheap)
 //   --check  report what is present and what would be pulled; no network, nothing changed
@@ -10,7 +11,7 @@
 import "./lib/cli.js";
 import { spawnSync } from "node:child_process";
 import { die } from "./env.js";
-import { currentMode, friendlyPullError, IMAGE_KINDS, imageSpecs, imageStatus, NO_DIGEST_WARNING, pullTarget, realDocker, type ImageKind } from "./lib/images.js";
+import { currentMode, friendlyPullError, IMAGE_KINDS, imagesAvailable, imageSpecs, imageStatus, pullUnavailableMessage, NO_DIGEST_WARNING, pullTarget, realDocker, type ImageKind } from "./lib/images.js";
 import { pins } from "./pins.js";
 
 const args = process.argv.slice(2);
@@ -29,8 +30,10 @@ try {
   die((e as Error).message);
 }
 
+const available = imagesAvailable(pins());
 if (flags.has("--check")) {
-  for (const r of imageStatus(specs, realDocker, mode, kinds)) {
+  if (!available && mode !== "registry") console.log("Prebuilt images are not available yet; showing what a local build would use.");
+  for (const r of imageStatus(specs, realDocker, mode, kinds, {}, available)) {
     console.log(`${r.kind.padEnd(9)} ${r.state.padEnd(9)} ${r.ref}${r.source ? `  (${r.source})` : ""}${r.fix && r.state !== "ready" ? `\n          ${r.fix}` : ""}`);
   }
   process.exit(0);
@@ -39,6 +42,11 @@ if (mode === "local") {
   console.log("IMAGES=local: building locally is selected, nothing to pull (unset IMAGES to use prebuilt images).");
   process.exit(0);
 }
+if (!available && mode !== "registry") {
+  console.log(pullUnavailableMessage(specs, kinds, pins().images.why));
+  process.exit(0);
+}
+if (!available) console.log("IMAGES=registry: trying the registry although prebuilt images are not generally available (you need access; docker login ghcr.io).\n");
 if (spawnSync("docker", ["version", "--format", "{{.Server.Version}}"], { stdio: "ignore", timeout: 30_000 }).status !== 0) {
   die("Docker is not running or not reachable. Start Docker and try again.");
 }

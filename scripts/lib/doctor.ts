@@ -1,6 +1,6 @@
 // `npm run doctor`: the checks, as pure functions over probe results, so the messages are tested without Docker.
 // scripts/doctor.ts gathers the real probes; `up` runs the blocking subset first.
-import { cloneCommand, DEFAULT_VTI_DIR } from "./build-help.js";
+import { BUILD_ESTIMATE, cloneCommand, DEFAULT_VTI_DIR } from "./build-help.js";
 import type { ImageKind, ImageSpec, StatusRow } from "./images.js";
 
 export type Level = "ok" | "warn" | "fail";
@@ -92,23 +92,45 @@ export function imagesNeeded(mode: "local" | "tunnel" | "farm", withVtc: boolean
 }
 
 const WHY: Record<ImageKind, string> = {
-  vta: "the VTA (build: about 12 min cold)",
-  vtc: "the community, VTC (build: about 8 to 23 min)",
-  mediator: "the mediator (build: about 12 min cold, 8 GB RAM advised)",
+  vta: `the VTA (build: ${BUILD_ESTIMATE.vta})`,
+  vtc: `the community, VTC (build: ${BUILD_ESTIMATE.vtc})`,
+  mediator: `the mediator (build: ${BUILD_ESTIMATE.mediator}, 8 GB RAM advised)`,
 };
 
+/** Which of the needed images are not built yet (nothing is present under `<name>:local`), in build order. */
+export function imagesToBuild(mode: "local" | "tunnel" | "farm", withVtc: boolean, specs: Record<ImageKind, ImageSpec>, has: (ref: string) => boolean): ImageKind[] {
+  return imagesNeeded(mode, withVtc).filter((k) => !has(specs[k].local));
+}
+
+/** The fix for an image that has to be built here: the exact command first, then the time, the checkout and the tunnel hint. */
+export function localBuildFix(spec: ImageSpec, mode?: "local" | "tunnel" | "farm"): string {
+  const needsVti = spec.kind !== "mediator";
+  return [
+    `${spec.buildCmd}   (${BUILD_ESTIMATE[spec.kind]}, once)`,
+    needsVti ? "needs the VTI checkout (see the VTI checkout line; --clone makes it)" : "needs no VTI checkout, but about 8 GB of memory",
+    spec.kind === "mediator" ? "MODE=tunnel needs the mediator" : mode === "tunnel" ? undefined : "MODE=tunnel also needs the mediator: npm run images:build mediator",
+    "or build everything your mode needs in one go: npm run setup   (-- --tunnel for MODE=tunnel)",
+  ].filter(Boolean).join("; ");
+}
+
 /**
- * Judge the rows of imageStatus() (lib/images.ts). A prebuilt image that is only missing locally is a warning, since `up`
- * pulls it; the pull command comes first and the local build second. Nothing obtainable (IMAGES=local, or an override that
+ * Judge the rows of imageStatus() (lib/images.ts). While prebuilt images are not available (`opts.available` false) a missing image is built here: the exact build command comes first.
+ * When they are, a prebuilt image that is only missing locally is a warning, since `up` pulls it; the pull command comes first and the local build second. Nothing obtainable (IMAGES=local, or an override that
  * is absent) blocks, except an unrequested VTC, which `up` leaves out.
  */
-export function imageChecks(rows: StatusRow[], specs: Record<ImageKind, ImageSpec>, vtcOptional = false): Check[] {
+export function imageChecks(rows: StatusRow[], specs: Record<ImageKind, ImageSpec>, vtcOptional = false, opts: { available?: boolean; mode?: "local" | "tunnel" | "farm" } = {}): Check[] {
   return rows.map((r): Check => {
     const name = `Image ${r.ref}`;
     const spec = specs[r.kind];
-    if (r.state === "ready") return { level: "ok", name, detail: r.source === "local-build" ? "present (local build; npm run images:verify -- --local shows its labels)" : r.source === "env" ? "present (your override)" : "present (prebuilt; check what you run: npm run images:verify, docs/VERIFY.md)" };
+    if (r.state === "ready") return { level: "ok", name, detail: r.source === "local-build" ? "present (built here; npm run images:verify -- --local shows its labels)" : r.source === "env" ? "present (your override)" : "present (prebuilt; check what you run: npm run images:verify, docs/VERIFY.md)" };
     if (r.state === "pullable") {
       return { level: "warn", name, detail: `not on this machine yet; \`up\` will pull it (${WHY[r.kind]})`, fix: `${r.fix}   (or build locally: ${spec.buildCmd}; docs/PINS.md#where-the-images-come-from)` };
+    }
+    if (opts.available === false && r.ref === spec.local) {
+      const fix = localBuildFix(spec, opts.mode);
+      return r.kind === "vtc" && vtcOptional
+        ? { level: "warn", name, detail: `not built yet, so the community (VTC) is left out of \`up\` (${WHY[r.kind]})`, fix: `${fix}; or WITH_VTC=0 to stop seeing this` }
+        : { level: "fail", name, detail: `not built yet (${WHY[r.kind]}); prebuilt images are not available, so build it here`, fix };
     }
     const optional = r.kind === "vtc" && vtcOptional;
     return optional

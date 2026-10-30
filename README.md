@@ -15,16 +15,18 @@ It is for developers who want to see a signed Trust Task round trip working in m
 ## Prerequisites
 
 - Node 20+ and npm 10+, Docker with Compose v2
-- The VTA image (plus the VTC image for the community, and the mediator image for tunnel mode). **By default `npm run up` uses prebuilt images from
-  `ghcr.io/mickens-lab`** and pulls them for you ([docs/IMAGES.md](docs/IMAGES.md)): internet and no build. Per the organiser, amd64 images are already pushed as a
-  stopgap and the packages are private until made public (unverified here; until then a pull may be refused), and CI will publish multi-arch. **Fallback: build locally**
-  (`npm run images:build all`, then `IMAGES=local npm run up`): it needs a checkout of the upstream VTI repository next to this one and 10 to 25 minutes of Rust per image
-  (exact steps: [docs/PINS.md](docs/PINS.md#where-the-images-come-from)). To check what you run, prebuilt or built yourself: [docs/VERIFY.md](docs/VERIFY.md). Without Docker, see the Farm mode in [docs/MODES.md](docs/MODES.md).
+- The VTA image (plus the VTC image for the community, and the mediator image for tunnel mode). **Build locally; prebuilt images are not yet available**
+  (the organisation does not allow public packages, so there is nothing to pull). `npm run setup` builds what your mode needs: it needs a checkout of the upstream VTI repository
+  next to this one (`npm run setup -- --clone` makes it) and a cold Rust build of **25 to 40 minutes for the VTA and again for the VTC** on a laptop (the mediator, `MODE=tunnel` only,
+  is about 12 minutes). Do this once, ahead of time, with a few GB of free memory; later runs reuse the images. A colleague with the same CPU architecture can hand you theirs
+  (`npm run images:import`; [docs/IMAGES.md](docs/IMAGES.md#sharing-images-you-built)). Exact steps: [docs/PINS.md](docs/PINS.md#where-the-images-come-from). To check what you run:
+  [docs/VERIFY.md](docs/VERIFY.md). Without Docker, see the Farm mode in [docs/MODES.md](docs/MODES.md).
 
 ## Quick start
 
 ```sh
 npm ci
+npm run setup                # once: builds the missing images (the slow part, 25 to 40 min per Rust image cold; see Prerequisites)
 npm run up                   # keys, VTA + VTC, a "my-app" context and a credential in .env (WITH_VTC=0: no community)
 npm run hello                # first signed call
 npm run vtc:hello            # read the community's join manifest
@@ -112,10 +114,11 @@ The ones you need in the first hour (all of them, grouped: [docs/COMMANDS.md](do
 
 | Command | Does |
 |---|---|
-| `npm run doctor` | Is this machine ready: Node, Docker, memory, ports, images (a missing one: `images:pull` first, the local build second), VTI checkout, mode. `up` runs the blocking checks first |
+| `npm run doctor` | Is this machine ready: Node, Docker, memory, ports, images (a missing one: the exact local build command first, with its time), VTI checkout, mode. `up` runs the blocking checks first |
 | `npm run up` | Start the stack (local by default; `-- --tunnel` for messaging, this run only). The community (VTC) is on in every mode, `WITH_VTC=0` leaves it out |
 | `npm run down` / `npm run reset` | Stop and keep data / stop everything, delete volumes, `.vta/` and the keys the kit wrote to `.env` (your own `.env` lines stay). Both work in every mode |
-| `npm run images:pull [vta\|vtc\|mediator\|all]` | Pull the prebuilt images pinned in `pins.json` (`--check` shows what is present; `IMAGES=local` forces local builds; [docs/IMAGES.md](docs/IMAGES.md)) |
+| `npm run setup` | Build the images your mode needs and are missing (`-- --tunnel` adds the mediator, `-- --no-vtc` leaves the VTC out); prints estimates, warns on low memory, reports the time ([docs/IMAGES.md](docs/IMAGES.md)) |
+| `npm run images:export` / `images:import -- file.tar` | Share the images you built with another machine (same CPU architecture), no registry ([docs/IMAGES.md](docs/IMAGES.md#sharing-images-you-built)) |
 | `npm run hello` | The checkpoint |
 | `npm run new -- my-app --from hello-web\|hello-node` | Copy a minimal template to `apps/my-app` and install it |
 | `npm run vta:call -- <task> [json]` | Call any Trust Task as your app identity (no argument lists them; `--search <word>` filters, `--schema <task>` shows its fields offline) |
@@ -134,8 +137,8 @@ Old names `vta:up`, `vta:down` and `vta:reset` still work. Farm, tunnel, VTC, li
 
 | Symptom | Fix |
 |---|---|
-| Port busy, or `pull access denied` | `npm run doctor` names the busy port with a free alternative, or the missing image with `npm run images:pull` and then the local build. |
-| `pull access denied` for a registry image | The prebuilt package is private or not published yet, or you are offline. Build locally: `npm run images:build vta` and `IMAGES=local npm run up` ([docs/IMAGES.md](docs/IMAGES.md)). |
+| Port busy, or an image is missing | `npm run doctor` names the busy port with a free alternative, or the missing image with the exact build command (`npm run setup` builds them all). |
+| `pull access denied` for a registry image | Prebuilt images are not available (the organisation does not allow public packages); you only see this with `IMAGES=registry` or a custom registry. Build locally: `npm run setup` ([docs/IMAGES.md](docs/IMAGES.md)). |
 | `.vta/admin.env` not found | `npm run vta:keygen` before `docker compose up`. |
 | `provision` fails with 401 or `permissionDenied` | `.vta/admin.json` is not the key this volume was seeded with. `npm run reset`, then `npm run up`. |
 | `VTA DID changed` | The VTA was recreated. `npm run vta:provision`. |

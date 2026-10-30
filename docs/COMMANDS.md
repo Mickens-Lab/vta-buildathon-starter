@@ -8,7 +8,8 @@ muscle memory keep working; a test fails if a script is missing from this page.
 
 | Command | Does |
 |---|---|
-| `npm run doctor` | Is this machine ready: Node, Docker, memory, ports, images (a missing one: `images:pull` first, the local build second), VTI checkout, mode. `up` runs the blocking checks first |
+| `npm run setup` | Build the images your mode needs and that are not built yet (local: VTA + VTC; `-- --tunnel` adds the mediator; `-- --no-vtc` leaves the VTC out). Prints a time estimate, warns about low memory, reports the time each took. Prebuilt images are not available yet, so this is the first command on a new machine |
+| `npm run doctor` | Is this machine ready: Node, Docker, memory, ports, images (a missing one: the exact local build command first, with its time), VTI checkout, mode. `up` runs the blocking checks first |
 | `npm run up` | Start the stack for the current mode (keys, VTA, optional VTC, an app context and credential in `.env`) |
 | `npm run down` | Stop it and keep the data (tunnel mode: also deletes its volumes, which cannot be reused) |
 | `npm run reset` | Stop everything (tunnels too), delete volumes and `.vta/`, remove the keys the kit wrote to `.env`. Works in every mode; lines you added to `.env` stay |
@@ -37,7 +38,7 @@ muscle memory keep working; a test fails if a script is missing from this page.
 
 ## Organiser
 
-`images:pull [vta|vtc|mediator|all]` (prebuilt, [IMAGES.md](IMAGES.md)), `images:build [vta|vtc|mediator|all]`, `images:verify [vta|vtc|mediator|all]` (`-- --local` for your own build) and `images:compare` ([VERIFY.md](VERIFY.md)), `pins:check` ([PINS.md](PINS.md)); `farm:setup`, `farm:check`, `farm:probe`, `farm:canary` ([FARM.md](FARM.md), [EVENT.md](EVENT.md)).
+`images:pull [vta|vtc|mediator|all]` (explains that prebuilt images are not yet available; [IMAGES.md](IMAGES.md)), `images:build [vta|vtc|mediator|all|needed]`, `images:export` / `images:import -- file.tar` (share the images you built with another machine, no registry; [IMAGES.md](IMAGES.md)), `images:verify [vta|vtc|mediator|all]` (`-- --local` for your own build) and `images:compare` ([VERIFY.md](VERIFY.md)), `pins:check` ([PINS.md](PINS.md)); `farm:setup`, `farm:check`, `farm:probe`, `farm:canary` ([FARM.md](FARM.md), [EVENT.md](EVENT.md)).
 
 ## Maintainer
 

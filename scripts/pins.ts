@@ -5,6 +5,10 @@ export interface ImagePin { image: string; tag: string; ref: string; version: st
 export interface MediatorPin { image: string; repo: string; ref: string; version: string; features: string; service: string }
 /** Prebuilt images (docs/IMAGES.md). `digest` is the multi-arch index digest the publish workflow reports; null = not recorded. */
 export interface ImagesPin {
+  /** The one switch: can participants pull the prebuilt images? false = everyone builds locally and IMAGES=auto never touches the network. */
+  available: boolean;
+  /** One line: why `available` is what it is. */
+  why: string;
   registry: string;
   platforms: string[];
   note: string;

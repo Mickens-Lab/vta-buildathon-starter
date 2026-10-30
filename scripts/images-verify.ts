@@ -7,7 +7,7 @@
 // Exit: 0 verified (or labels-only for --local), 1 something failed, 2 not verified (checks skipped). docs/VERIFY.md
 import "./lib/cli.js";
 import { die } from "./env.js";
-import { IMAGE_KINDS, imageSpecs, type ImageKind } from "./lib/images.js";
+import { IMAGE_KINDS, imagesAvailable, imageSpecs, type ImageKind } from "./lib/images.js";
 import { dockerArch, exitCode, formatReport, identityFor, realRunner, sha256File, verifyImage } from "./lib/verify.js";
 import { pins } from "./pins.js";
 
@@ -25,6 +25,9 @@ try {
   identity = identityFor(pins(), process.env.VERIFY_REPO);
 } catch (e) { die((e as Error).message); }
 
+if (!local && !imagesAvailable(pins())) {
+  console.log("note: prebuilt images are not generally available (pins.json images.available is false), so this checks a published copy only if you have one (IMAGES=registry, docker login). To check the images you built yourself: npm run images:verify -- --local\n");
+}
 const DOCKERFILE = { vta: undefined, vtc: "docker/vtc.Dockerfile", mediator: "docker/mediator.Dockerfile" } as const;
 const reports = kinds.map((k) => {
   const f = DOCKERFILE[k];

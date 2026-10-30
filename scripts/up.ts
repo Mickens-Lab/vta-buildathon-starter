@@ -18,7 +18,7 @@ import {
   clearStackFiles, dc, existingStackVolumes, have, imageLabel, readStackMode, readTunnel, sleep, startTunnel, stopTunnels, waitFor200,
   writeStackMode, writeTunnel,
 } from "./lib/compose.js";
-import { currentMode, imageSpecs, imageStatus, realDocker, useImages, type ImageKind } from "./lib/images.js";
+import { currentMode, imagesAvailable, imageSpecs, imageStatus, realDocker, useImages, type ImageKind } from "./lib/images.js";
 import { composeEnv, tunnelUrls, TUNNEL_FILE, volumeGuard, type TunnelState } from "./lib/tunnel.js";
 import { runPreflight } from "./doctor.js";
 import { pins } from "./pins.js";
@@ -40,7 +40,7 @@ function prepareImages(kinds: ImageKind[]): void {
     console.log(`note: no community (VTC) image could be had, so this run starts without it:\n  ${vtc.message}\nSet WITH_VTC=0 to stop seeing this.`);
   }
   const bad = failed.filter((r) => r !== vtc || vtcRequested).map((r) => r.message);
-  if (bad.length) die(`no usable image:\n  ${bad.join("\n  ")}\n(IMAGES=local forces a local build; see docs/IMAGES.md.)`);
+  if (bad.length) die(`no usable image:\n  ${bad.join("\n  ")}\n(images are built locally: npm run setup builds what this mode needs; docs/IMAGES.md.)`);
 }
 const npm = (s: string, extraEnv: Record<string, string> = {}) => run("npm", ["run", "--silent", s], extraEnv);
 /** Refuse to reuse volumes across modes. In a terminal, offer the reset instead of just refusing. */
@@ -164,7 +164,7 @@ if (m !== "farm" && sub === "up") {
   let vtc = choice.on;
   if (vtc && !choice.explicit) {
     const specs = imageSpecs(pins(), env("IMAGE_REGISTRY"));
-    const [row] = imageStatus(specs, realDocker, currentMode(env), ["vtc"], { vtc: env("VTC_IMAGE") });
+    const [row] = imageStatus(specs, realDocker, currentMode(env), ["vtc"], { vtc: env("VTC_IMAGE") }, imagesAvailable(pins()));
     if (row.state === "missing") {
       vtc = false;
       console.log(`note: the community (VTC) image is not available (${row.fix}), so this run starts without it. Set WITH_VTC=0 to stop seeing this.`);

@@ -1,48 +1,77 @@
-# Images: prebuilt by default, local build as the fallback
+# Images: build locally; prebuilt images are not available yet
 
 Part of the [docs index](README.md). Pins and drift checks: [PINS.md](PINS.md).
 
-The VTA, VTC and mediator images are Rust release builds (about 12 minutes each on a 12-core desktop, more on a laptop). To
-skip that, the kit can run **prebuilt images** published to the GitHub Container Registry (GHCR) by CI. If one is not
-available, everything still works by building locally, exactly as before.
+> **Current state, plainly.** The organisation does not allow public GHCR packages, so participants **cannot pull prebuilt images**.
+> Everyone builds their own images on their own machine. That is the default and the only generally supported path today.
+> The switch is one line in `pins.json`: `images.available` (currently `false`, with a one-line `why`). While it is `false`,
+> `IMAGES=auto` behaves like `IMAGES=local`: the kit uses `<name>:local`, never attempts a network pull and never defaults to a `ghcr.io` tag.
+> The publish workflow, the signing and verification tooling and the digests in `pins.json` stay in the repository for later (organisation
+> members who have access, or the day packages can be public). They are not the default path and nothing here should be read as saying
+> prebuilt images exist for you.
 
-> **Status, stated plainly.** The workflow that publishes the images, `.github/workflows/images.yml`, has been written and
-> statically checked (it parses, its permissions and action pins are tested, its plan step runs locally) but **has never been
-> run**. The organiser reports that amd64 images were pushed by hand as a stopgap and that the packages are private until made
-> public; CI is to publish multi-arch. **None of that was observed here** (no registry access from this tree), so until the
-> packages are public a pull may be refused, and `npm run up` then says so and names the local build. Everything below about the
-> registry is the design, not an observation. The first workflow run is the real test.
+The VTA, VTC and mediator images are Rust release builds. Plan for **25 to 40 minutes cold for the VTA and for the VTC** on a laptop (12 to 25 minutes
+were measured on a 12-core desktop) and **about 12 minutes for the mediator**, which only `MODE=tunnel` needs. Later builds reuse Docker's layer cache.
+Each image is built once; after that `npm run up` starts in seconds.
 
 ## What a participant does
 
 ```sh
 npm ci
-npm run images:pull      # optional: fetch the pinned images now (about 170 to 200 MB each)
-npm run up               # uses a pulled image, else a local build, else pulls
+npm run doctor           # says exactly which images are missing and the command that builds each (with its time)
+npm run setup            # builds what your mode needs and is not built yet: VTA + VTC (add -- --tunnel for the mediator)
+npm run up
 ```
+
+`npm run setup` is `images:build needed`: it builds only the missing images for the chosen mode (`-- --tunnel`, `-- --no-vtc`), one after the
+other, prints the estimate first, warns if memory is low, and reports how long each took. It is safe to stop and run again. The VTA and VTC are
+built from a checkout of the upstream VTI repository next to this one (`git clone ... ../verifiable-trust-infrastructure`, or add `-- --clone`
+and the script does it); the mediator needs no checkout but about 8 GB of memory. Details and times: [PINS.md](PINS.md#where-the-images-come-from).
+
+To get images without building them yourself, a colleague with the same CPU architecture can send you theirs: see
+[Sharing images you built](#sharing-images-you-built).
 
 `npm run up` decides per image, in this order (`scripts/lib/images.ts`):
 
 1. `VTA_IMAGE` / `VTC_IMAGE` / `MEDIATOR_IMAGE` set: that exact image, nothing else is tried.
-2. `IMAGES=local`: only the locally built `<name>:local`. Never touches the network.
-3. Otherwise (`IMAGES` unset or `auto`): the pinned registry image if it is already here, else a local build (`<name>:local`) if you
-   have one, else it **pulls** the pinned registry image.
-4. `IMAGES=registry`: the pinned registry image only (pulled if absent), no fallback to a local build.
+2. `IMAGES=local`, **or `IMAGES` unset/`auto` while `images.available` is `false` (today)**: only the locally built `<name>:local`. Never touches the network.
+3. `IMAGES=auto` once `images.available` is `true`: the pinned registry image if it is already here, else a local build if you have one, else it **pulls** the pinned registry image.
+4. `IMAGES=registry`: the pinned registry image only (pulled if absent), no fallback to a local build. Works even while `images.available` is `false`, for people whose account
+   can pull the organisation's packages (`docker login ghcr.io` first); it says that the images are not generally available.
 
 | Variable | Effect |
 |---|---|
-| `IMAGES=local` | Force the old behaviour: build with `npm run images:build`, use `:local`. The easy flip back. |
-| `IMAGES=registry` | Insist on prebuilt images. |
+| `IMAGES=local` | Only locally built images. Today this is what `auto` means anyway. |
+| `IMAGES=registry` | Insist on the registry images. For organisation members with access; not generally available. |
 | `IMAGE_REGISTRY=host/org` | Pull from another registry or org (a mirror, a fork's packages, a local `registry:2`). Default: `pins.json` `images.registry`. |
 | `VTA_IMAGE`, `VTC_IMAGE`, `MEDIATOR_IMAGE` | An exact image (for example one loaded with `docker load`). |
 
 These can go in `.env` or the shell. `npm run reset` removes only the keys the kit wrote to `.env`, so your own lines stay.
 Bare `docker compose up` (without `npm run up`) knows nothing of the registry and uses `<name>:local`; use `npm run up`.
 
-If the pull fails (no network, not published yet, package still private, wrong CPU architecture), the message says why and names
-the local build command. `npm run images:pull -- --check` shows, without any network, what is present and what would be pulled.
+`npm run images:pull` while images are unavailable prints an explanation and pulls nothing (add `IMAGES=registry` if you have access).
+`npm run images:pull -- --check` shows, without any network, what is present.
 
-### Where the names come from
+### Sharing images you built
+
+Building is the slow part; copying is not. Build once on a fast machine, then share the result with `docker save` / `docker load`, with no registry:
+
+```sh
+npm run images:export -- buildathon-images.tar     # on the machine that built (add --tunnel for the mediator, --no-vtc to leave the VTC out)
+npm run images:import -- buildathon-images.tar     # on the other machine, same CPU architecture
+```
+
+These run `docker save -o` and `docker load -i` on the `<name>:local` images the mode needs. **Verified here:** a `docker save | gzip` then `zcat | docker load` round trip and
+the script's `save -o` then `import` on a tiny scratch image (the image ID and labels survived), and `images:export` on the real VTA image (the tar is written, 179 MB).
+**Not verified:** a full export and import of all three images onto a second machine, and `up` from images loaded that way (it should be the same, as compose only needs the `:local` tags). Details
+that matter: the CPU architecture must match (import warns when it does not; an amd64 tar will not run natively on Apple silicon), and the tar is **unsigned**, so it is exactly as
+trustworthy as whoever made it ([VERIFY.md](VERIFY.md)). By hand the same thing is `docker save vta-buildathon:local vtc-buildathon:local | gzip > images.tar.gz` and `zcat images.tar.gz | docker load`.
+
+## The registry design (for later)
+
+Everything below is how prebuilt images are meant to work once `images.available` is `true`. Until then it is not a path you can use unless you are an organisation member with access.
+
+### Where the names come from (registry images)
 
 `pins.json` stays the single source of truth. The image is `<registry>/<name>:<first 8 characters of the pinned upstream commit>`:
 
@@ -72,7 +101,9 @@ per image `ready | pullable | missing` with a fix command, and pulls nothing.
 
 Pulling is not trusting. `npm run images:verify` checks a pulled image against `pins.json` and the workflow's signature and attestations, and `npm run images:pull -- --by-digest` pulls only by the pinned digest. How, and what that does and does not prove: [VERIFY.md](VERIFY.md). The workflow attaches an SBOM, a build provenance attestation and a keyless cosign signature (jobs `attest` and `sign`); these have **never run** and are unverified until the first real run.
 
-## What an organiser does: publishing
+## What an organiser does: publishing (only when packages can be public, or for members)
+
+**The current blocker is organisational, not technical:** the organisation does not allow public GHCR packages. Publishing the images (and the signatures and digests that go with them) is therefore not something participants can use today. Running the workflow is still useful for organisation members and for the day the policy changes; when it does, set `images.available` to `true` in `pins.json`, record the digests, and run the checks in step 7 below.
 
 Publishing happens in GitHub Actions with the built-in `GITHUB_TOKEN` (`packages: write`). No personal token is involved, and no
 credential is stored in this repository. (A personal token needs the `write:packages` scope; the `gh` token on the organiser's
@@ -117,13 +148,16 @@ open-ACL by design and the VTA stores a plaintext seed ([MODES.md](MODES.md), [S
 | arm64 jobs wait for ever | The `ubuntu-24.04-arm` runner is not available to the organisation. See the QEMU fallback in the workflow comments (hours, not minutes), or publish amd64 only. |
 | A build leg is cancelled at its timeout | The runner was slower than the estimate. Raise `timeout` in the plan step, and record the real time in this file. |
 | `fetch ... origin <sha>` fails in the VTA or VTC leg | The pinned commit is not reachable from the upstream repository (force-pushed or deleted). Re-pin ([PINS.md](PINS.md)). |
-| `pull access denied` for a participant | The package is still private (step 5), or `IMAGE_REGISTRY` points elsewhere. |
+| `pull access denied` for a participant | Expected today: the packages are private and the organisation does not allow public ones. Build locally (`npm run setup`). If `images.available` is true: the package is still private (step 5), or `IMAGE_REGISTRY` points elsewhere. |
 | `no matching manifest for linux/...` | A CPU architecture that was not built (only amd64 and arm64 are). |
 | `pins:check` reports a digest drift | The registry tag moved or the local copy is old: `npm run images:pull -- vta --force`. |
 
 ## What is verified and what is not
 
 Verified here (no network, no registry):
+
+- `images.available` false/true: `IMAGES=auto` resolves to the local build and never pulls while false; flipping it to true gives the earlier behaviour (unit tests, both ways); `images:pull` prints the explanation;
+  `doctor` puts the local build command first; `npm run setup` plans only the missing images for the mode (unit tests; the build itself is the pre-existing `images:build`);
 
 - the resolution logic and its fallbacks, the friendly pull errors, the label and digest checks (unit tests, `scripts/test/images.test.ts`);
 - `images:verify` and `images:compare` against a mocked `docker`/`gh`/`cosign` (`scripts/test/verify.test.ts`), and live against the local images (labels only; the hand-pushed stopgap images correctly fail `label origin`);

@@ -27,3 +27,20 @@ test("--clone is a flag, the first other argument is the image", () => {
   assert.deepEqual(parseBuildArgs(["vta", "--clone"]), { which: "vta", clone: true });
   assert.deepEqual(parseBuildArgs(["--clone", "vtc"]), { which: "vtc", clone: true });
 });
+
+import { BUILD_ESTIMATE, formatElapsed as fe, setupIntro } from "../lib/build-help.js";
+
+test("formatElapsed", () => {
+  assert.equal(fe(0), "0s");
+  assert.equal(fe(42_000), "42s");
+  assert.equal(fe(754_000), "12m 34s");
+  assert.equal(fe(3_600_000), "60m 00s");
+});
+
+test("setupIntro lists each image with its estimate, or says there is nothing to do", () => {
+  const t = setupIntro(["vta", "vtc"], "local");
+  assert.ok(t.includes(`vta (${BUILD_ESTIMATE.vta})`) && t.includes(`vtc (${BUILD_ESTIMATE.vtc})`));
+  assert.match(t, /--tunnel/);
+  assert.doesNotMatch(setupIntro(["vta", "vtc", "mediator"], "tunnel"), /--tunnel/);
+  assert.match(setupIntro([], "local"), /Nothing to build/);
+});
