@@ -37,7 +37,7 @@ muscle memory keep working; a test fails if a script is missing from this page.
 
 ## Organiser
 
-`images:pull [vta|vtc|mediator|all]` (prebuilt, [IMAGES.md](IMAGES.md)), `images:build [vta|vtc|mediator|all]`, `pins:check` ([PINS.md](PINS.md)); `farm:setup`, `farm:check`, `farm:probe`, `farm:canary` ([FARM.md](FARM.md), [EVENT.md](EVENT.md)).
+`images:pull [vta|vtc|mediator|all]` (prebuilt, [IMAGES.md](IMAGES.md)), `images:build [vta|vtc|mediator|all]`, `images:verify [vta|vtc|mediator|all] [--local]` and `images:compare` (check what you run), `pins:check` ([PINS.md](PINS.md)); `farm:setup`, `farm:check`, `farm:probe`, `farm:canary` ([FARM.md](FARM.md), [EVENT.md](EVENT.md)).
 
 ## Maintainer
 
