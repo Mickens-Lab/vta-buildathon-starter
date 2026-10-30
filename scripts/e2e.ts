@@ -1,4 +1,4 @@
-// Browser end-to-end check of the community dashboard against the LOCAL stack. Optional: not part of `npm test`.
+// Browser end-to-end check of the community dashboard against your own stack (MODE=local, or MODE=tunnel through the public URLs). Optional: not part of `npm test`.
 //
 //   WITH_VTC=1 npm run up        # once: VTA + VTC in Docker (ports 8100 and 8200)
 //   npm run e2e                  # needs a Chromium/Chrome; CHROME=/path/to/browser to choose one

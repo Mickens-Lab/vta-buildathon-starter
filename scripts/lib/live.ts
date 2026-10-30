@@ -1,9 +1,10 @@
-// Shared by the live (local stack) checks: `npm run test:roles` and `npm run e2e`. Neither runs in `npm test`.
+// Shared by the live checks: `npm run test:roles` and `npm run e2e`. Neither runs in `npm test`. They drive your own stack
+// (MODE=local, or MODE=tunnel, where every call goes out through the public quick-tunnel URLs); never a Farm.
 import { env, LOCAL_VTA_URL, LOCAL_VTC_URL, mode, vtcUrl } from "../env.js";
 
-/** Why the local stack cannot be used, or undefined when both services answer. Never throws. */
+/** Why your own stack cannot be used, or undefined when both services answer. Never throws. */
 export async function stackProblem(): Promise<string | undefined> {
-  if (mode() !== "local") return "MODE is not local: these checks drive the local Docker stack, not a Farm.";
+  if (mode() === "farm") return "MODE=farm: these checks drive your own Docker stack (MODE=local or MODE=tunnel), not a Farm.";
   const vta = env("VTA_URL") ?? LOCAL_VTA_URL;
   const vtc = vtcUrl();
   if (!env("VTA_CREDENTIAL")) return "no VTA_CREDENTIAL in .env. Start the stack with `WITH_VTC=1 npm run up`.";

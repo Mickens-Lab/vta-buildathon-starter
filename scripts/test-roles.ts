@@ -1,4 +1,4 @@
-// Role matrix contract test (LIVE: needs the local stack, `WITH_VTC=1 npm run up`; not part of `npm test`).
+// Role matrix contract test (LIVE: needs your own stack, `WITH_VTC=1 npm run up` (MODE=local or MODE=tunnel); not part of `npm test`).
 //   npm run test:roles
 // Probes safe READ tasks as four callers and asserts who-can-call-what as written in docs/VTC-SURFACE.md:
 //   stranger (fresh did:key), applicant (pending request), member (approved), admin (.vta/admin.json).
