@@ -31,6 +31,6 @@ This starter was checked on Linux with Docker 29 and Node 22 only; Windows and m
 
 **Verified live**: the local VTA and VTC flows, the dashboard (browser end to end), the role matrix, `MODE=tunnel` bring-up with the public URLs, the status
 panel Messaging row in a browser, the software-approver demo in local and tunnel mode, and the TSP round trip in tunnel mode: a ping from Node and from headless
-Chromium reaches the VTA and its pong comes back through the mediator (0.45.0), and `npm run tsp:listen` receives the credential frames the VTC pushes after an approval.
+Chromium reaches the VTA and its pong comes back through the mediator (0.45.0), and `npm run tsp:listen` receives the credential frames the VTC pushes after an approval. An opt-in `did:peer:2` applicant (`VTC_APPLICANT=did:peer`) whose `TSPTransport` service names the mediator, so the VTC can push with no ping first, is built and unit-tested but not verified live; `credentialsDelivered` stays false because it reports the member's own credential sent back, not frame arrival ([MESSAGING.md](MESSAGING.md#what-credentialsdelivered-means)).
 **Not verified**: DIDComm, a wallet storing the credential, a phone as approver, a hosted mediator admitting an outside VTA, the Farm community path, and Windows or macOS
 ([MESSAGING.md](MESSAGING.md)).

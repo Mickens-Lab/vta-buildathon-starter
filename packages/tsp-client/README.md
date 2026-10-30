@@ -23,8 +23,10 @@ console.log(describePong(r));     // "pong from the VTA in 120 ms: status ok, pr
 | `describePong`, `isPong` | One readable line from a pong; check a reply is a pong for your nonce. |
 | `wrapEnvelope`, `openEnvelope`, `TSP_BINDING_TYPE` | The Trust Task TSP binding envelope. |
 | `emitTspTrace` | Reports each ping to the shared trace (`TRACE=1`). |
+| `didPeerFromSeed(seed, mediatorDid)` | A deterministic `did:peer:2` (X25519 `#key-1`, Ed25519 `#key-2`, `TSPTransport` -> mediator DID) with a Trust Task signer, its TSP keys and the mediator-login secret. `parseDidPeer2`, `tspMediatorOf` read one back. |
+| `connectTsp({ identity })` / `clientKeys` | Log in to the mediator and open TSP frames as that did:peer instead of a did:key. |
 
 ## Limits
 
 - Ping-shaped: there is no general `call(type, payload)` or `listen(handler)` yet; other tasks mean using `session.request()` with a document you build and sign (`@openvtc/pnm-core` `buildTrustTask`, `signOutboundTask`).
-- DIDComm is not implemented; a wallet (did:peer:2) receiving credentials is not built ([docs/MESSAGING.md](../../docs/MESSAGING.md)).
+- DIDComm is not implemented. `didPeerFromSeed` gives a `did:peer:2` whose `TSPTransport` service names the mediator, and `connectTsp({ identity })` listens as it; nothing verifies or stores the credential, and the did:peer path is not verified live ([docs/MESSAGING.md](../../docs/MESSAGING.md#a-didpeer2-applicant-the-vtc-pushes-with-no-ping-first)).

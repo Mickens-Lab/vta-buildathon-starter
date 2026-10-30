@@ -32,7 +32,7 @@ If it fails: a "NetworkError" or fetch failure means the stack is down (`npm run
 
 ## 3. Join a community and see the member screens (React)
 
-*Mode: any mode. The membership card's "Credential delivery" row explains, per mode, why no credential arrives ([MESSAGING.md](MESSAGING.md)): there is no inbox for it in `local`, and none for this page's identity in `tunnel` either.*
+*Mode: any mode. The membership card's "Credential delivery" row explains, per mode, why no credential arrives ([MESSAGING.md](MESSAGING.md)): there is no inbox for it in `local`, and in `tunnel` this page's default `did:key` names none (`VTC_APPLICANT=did:peer` signs as a DID that does; not verified live). `credentialsDelivered` stays false in every case: it reports the member's own credential sent back, not frame arrival.*
 
 ```sh
 npm run dev -w @buildathon/community-dashboard      # open http://localhost:5173
@@ -183,7 +183,10 @@ In the VTA log you see `TSP trust-task dispatched ... status=200 OK`. Try `npm r
 If you use an older mediator image (`MEDIATOR_IMAGE`) the ping times out and the VTA log says `failed to send TSP reply ... unsupported TSP major version`: that mediator does not read TSP 1.0 ([MESSAGING.md](MESSAGING.md)).
 
 Credential push: run `npm run tsp:listen` in one shell, then `npm run vtc:join` and `npm run vtc:approve` in another; the listener prints `frame from the peer: .../credential-exchange/issue/0.1` (twice, **verified**).
-It proves the frames arrive, not that a wallet could use them.
+It proves the frames arrive, not that a wallet could use them. The `did:key` listener sends a relationship invite first; that is how the VTC learns to use TSP for it.
+
+With no ping first: `VTC_APPLICANT=did:peer npm run tsp:peer-push` applies as a `did:peer:2` whose `TSPTransport` service names the mediator, approves, and waits for the frames ([MESSAGING.md](MESSAGING.md#a-didpeer2-applicant-the-vtc-pushes-with-no-ping-first)). Built and unit-tested, **not verified live** yet: if you run it, note the result.
+The join status still says `credentialsDelivered: false` afterwards; that flag reports the member's own credential sent back, not frame arrival.
 
 ## 9. Extend it: your own task and an extension
 
