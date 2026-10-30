@@ -1,4 +1,4 @@
-// Check what you run: npm run images:verify [vta|vtc|mediator|all] [--local] [--allow-incomplete]
+// Check what you run: npm run images:verify -- [vta|vtc|mediator|all] [--local] [--allow-incomplete]   (flags need the --)
 //   default   the pinned published image (by digest when pins.json records one): digest vs pins.json, GitHub attestation
 //             and/or cosign signature, labels vs pins, SBOM summary. Needs gh and/or cosign for the signature part.
 //   --local   the image `npm run images:build` made (<name>:local): labels only; says what that cannot prove.

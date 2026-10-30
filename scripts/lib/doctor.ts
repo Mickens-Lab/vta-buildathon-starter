@@ -91,7 +91,7 @@ export function imageChecks(rows: StatusRow[], specs: Record<ImageKind, ImageSpe
   return rows.map((r): Check => {
     const name = `Image ${r.ref}`;
     const spec = specs[r.kind];
-    if (r.state === "ready") return { level: "ok", name, detail: r.source === "local-build" ? "present (local build)" : r.source === "env" ? "present (your override)" : "present (prebuilt)" };
+    if (r.state === "ready") return { level: "ok", name, detail: r.source === "local-build" ? "present (local build; npm run images:verify -- --local shows its labels)" : r.source === "env" ? "present (your override)" : "present (prebuilt; check what you run: npm run images:verify, docs/VERIFY.md)" };
     if (r.state === "pullable") {
       return { level: "warn", name, detail: `not on this machine yet; \`up\` will pull it (${WHY[r.kind]})`, fix: `${r.fix}   (or build locally: ${spec.buildCmd}; docs/PINS.md#where-the-images-come-from)` };
     }

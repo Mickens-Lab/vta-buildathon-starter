@@ -92,7 +92,7 @@ export function verifyImage(spec: ImageSpec, p: Pins, r: Runner, o: VerifyOption
       target = spec.digest;
       if (!ins.present) add("INFO", "digest", `${image} is not pulled here; checking the published image remotely (npm run images:pull ${spec.kind} to fetch it)`);
       else if (mine.includes(spec.digest)) add("PASS", "digest", `this copy is ${short(spec.digest)}, as pins.json records`);
-      else add("FAIL", "digest", `pins.json records ${short(spec.digest)} but this copy is ${mine.map(short).join(", ") || "unknown"}. Do not use it: npm run images:pull ${spec.kind} --force`);
+      else add("FAIL", "digest", `pins.json records ${short(spec.digest)} but this copy is ${mine.map(short).join(", ") || "unknown"}. Do not use it: npm run images:pull -- ${spec.kind} --force`);
     } else {
       add("SKIPPED", "digest", "pins.json records no digest for this image, so there is nothing to compare: the tag can be moved by whoever can push. Run the workflow and record the digest (docs/IMAGES.md)");
       if (ins.present && mine.length === 0) add("INFO", "digest", "this image has no registry digest: it was tagged locally (a retag of a local build?), not pulled, so it is not evidence of what was published");
@@ -246,7 +246,7 @@ export function compareSides(kind: string, local: Side, published: Side): Line[]
   const add = (status: Status, check: string, detail: string) => lines.push({ status, check, detail });
   if (!local.present) { add("SKIPPED", "local", `no local build of ${kind}: npm run images:build ${kind}`); return lines; }
   if (!published.present) { add("SKIPPED", "published", `the published ${kind} image is not pulled: npm run images:pull ${kind}`); return lines; }
-  if (published.repoDigests && published.repoDigests.length === 0) add("INFO", "published copy", "this copy has no registry digest: it was tagged locally (a retag of a local build?), not pulled. Comparing against it proves nothing; `npm run images:pull <kind> --force` first");
+  if (published.repoDigests && published.repoDigests.length === 0) add("INFO", "published copy", "this copy has no registry digest: it was tagged locally (a retag of a local build?), not pulled. Comparing against it proves nothing; `npm run images:pull -- <kind> --force` first");
   for (const k of COMPARE_LABELS) {
     const a = local.labels[k], b = published.labels[k];
     if (a === undefined && b === undefined) continue;
