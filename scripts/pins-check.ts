@@ -16,7 +16,7 @@ const run = (cmd: string, args: string[]) => spawnSync(cmd, args, { encoding: "u
 // 1. npm: exact pins vs the lockfile's resolved versions, then upstream.
 const lock = JSON.parse(readFileSync(new URL("../package-lock.json", import.meta.url), "utf8")).packages as Record<string, { version: string }>;
 for (const [name, want] of Object.entries(p.npm)) {
-  const got = lock[`node_modules/${name}`]?.version;
+  const got = lock[name.startsWith("packages/") ? name : `node_modules/${name}`]?.version;
   out(got === want, `npm ${name}`, got === want ? want : `pinned ${want}, lockfile ${got ?? "missing"}`);
 }
 const od = run("npm", ["outdated", "--json"]);

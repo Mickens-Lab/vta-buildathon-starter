@@ -1,0 +1,20 @@
+{
+  "name": "@buildathon/tsp-client",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "private": true,
+  "description": "TSP (Trust Spanning Protocol) ping client for the MODE=tunnel stack: did:key login to the mediator, messaging/ping/0.1 to the VTA. Node and browser.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "tsx --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@noble/curves": "2.4.0",
+    "@openvtc/pnm-core": "0.9.1",
+    "@openvtc/vti-tsp-js": "0.4.0",
+    "vti-tsp-js-rev3": "npm:@openvtc/vti-tsp-js@0.3.0"
+  }
+}

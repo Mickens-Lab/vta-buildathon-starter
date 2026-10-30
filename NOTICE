@@ -11,3 +11,6 @@ dtgwg-trust-tasks-tf (Apache-2.0): GETTING-STARTED.md and trust-tasks-ts/README.
 
 The `vta-buildathon:local` container image is built from the
 verifiable-trust-infrastructure repository and is not distributed here.
+
+The TSP client in packages/tsp-client uses @openvtc/pnm-core and @openvtc/vti-tsp-js (Apache-2.0, from
+https://github.com/OpenVTC/vta-browser-plugin) as npm dependencies; their sources are not copied here.
