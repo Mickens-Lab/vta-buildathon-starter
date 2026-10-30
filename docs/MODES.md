@@ -26,8 +26,8 @@ Features and the mode they need (everything in the README and [TRY-THIS](TRY-THI
 |---|---|---|---|
 | Trust Tasks, the dashboard, roles lab, `npm run e2e`, `npm run test:roles` | yes **[verified]** | yes **[verified: e2e 13/13, roles 36/36 through the public URLs]** | yes (see [FARM.md](FARM.md)) |
 | [Approve on a second device](APPROVALS.md) (software approver) | yes **[verified]** | yes **[verified]** | no: a hosted VTA's policy is set in its portal |
-| Membership credential reaches the member | no (messaging off) | **no**: the kit's applicant has no inbox, `credentialsDelivered:false` **[verified]** | **[unverified]** |
-| TSP ping reaches the VTA (`npm run tsp:ping`) | no | yes **[verified]**; the pong does not come back (mediator pin refuses TSP 1.0 replies) ([MESSAGING.md](MESSAGING.md)) | **[unverified]** |
+| Membership credential reaches the member | no (messaging off) | frames reach a TSP listener (`npm run tsp:listen`) **[verified]**; the kit's applicant has no inbox, so `credentialsDelivered:false` and no wallet-side storage ([MESSAGING.md](MESSAGING.md)) | **[unverified]** |
+| TSP ping and pong (`npm run tsp:ping`) | no | yes, and the pong comes back **[verified]** with mediator 0.45.0; `tunnel:probe` runs it ([MESSAGING.md](MESSAGING.md)) | **[unverified]** |
 | DIDComm round trip, a phone as approver | no | **no DIDComm client in the kit** ([MOBILE-WALLET.md](MOBILE-WALLET.md)) | **[unverified]** |
 
 In the dashboard the membership card's "Credential delivery" row says which of these applies to the mode the page was built for.
@@ -91,13 +91,12 @@ _Verified live:_ with `MEDIATOR_CORS_ALLOW_ORIGIN=http://localhost:3000` the med
   fresh clone of the pinned commit; the image is about 170 MB; the build's own footprint stayed within about 1.5 GB above idle **[verified,
   one machine]**. Upstream estimates 20+ minutes and 8 GB of RAM, and `npm run images:build mediator` warns when less than that is
   available. Running it (mediator 10 MB, redis 5 MB, VTA 16 MB, VTC 27 MB, each `cloudflared` about 33 MB resident) is light.
-- **Messaging is "transport connected, round trip unverified".** (What this kit can and cannot build on it: [MESSAGING.md](MESSAGING.md).) What is verified: the mediator answers through its public URL, the VTA and
-  VTC connect to it, the VTA's DID document lists `TSPTransport`, `DIDCommMessaging` and `VTARest`, `messaging/ping/0.1` reports
-  `tsp`, `didcomm`, `rest`, the VTC advertises both transports as serviceable, and a VTC approval queues two Trust Task pushes via
-  DIDComm that the mediator accepts (outbox `Queued` then `Sent`). What is **not** verified: an application-level message from one peer
-  arriving at another, TSP frame handling end to end, and credential pickup (the applicant of this kit is a plain `did:key` with no
-  mediator or listener, so the VTC logs `credentials_delivered=false`). `messaging/ping/0.1` as the status panel uses it is a capability check, not a peer ping. A TSP client now exists (`npm run tsp:ping`): its request reaches the VTA **[verified]**, but no
-  reply comes back, because the pinned mediator reads TSP Rev 3 and the VTA and VTC send TSP 1.0 ([MESSAGING.md](MESSAGING.md)). The kit has no DIDComm client.
+- **Messaging: a TSP round trip is verified, DIDComm is not.** (What this kit can and cannot build on it: [MESSAGING.md](MESSAGING.md).) Verified: the mediator answers through its public URL, the VTA and
+  VTC connect to it, the VTA's DID document lists `TSPTransport`, `DIDCommMessaging` and `VTARest`, `messaging/ping/0.1` reports `tsp`, `didcomm`, `rest`, the VTC advertises both transports as serviceable,
+  a signed TSP ping sent with `npm run tsp:ping` (and from the browser page) gets a pong from the VTA through the mediator, and after a join and an approval the VTC's two `credential-exchange/issue/0.1`
+  frames arrive at a TSP listener on the applicant's `did:key` (`npm run tsp:listen`). This needs the pinned mediator, v0.45.0: the first pin (0.33.1) read only TSP Rev 3 and refused the TSP 1.0 the VTA and
+  VTC send. The status panel's `messaging/ping/0.1` is still only a capability check, not a peer ping. **Not** verified: any DIDComm message arriving at a peer (the kit has no DIDComm client), a wallet
+  storing the credential (the applicant is a plain `did:key` with no mediator in its DID, so the flag `credentials_delivered` stays false), a Farm-hosted mediator.
 - **A silent REST fallback is made loud.** The VTA keeps serving REST when its mediator connection fails and only logs a warning, so the
   probe and the status panel's Messaging row read the VTA's own protocol list and show `MESSAGING DEGRADED` (a failure) when `didcomm` or
   `tsp` is missing.

@@ -20,7 +20,7 @@ If it fails: `could not reach the VTA` means the stack is down (`npm run up`, `n
 
 ## 2. The status page
 
-*Mode: any mode. The Messaging row reads "off (REST only)" in `local` and "transport connected, round trip unverified" in `tunnel` (needs a credential to ask the VTA).*
+*Mode: any mode. The Messaging row reads "off (REST only)" in `local` and "transport connected (...), not a peer ping" in `tunnel` (needs a credential to ask the VTA).*
 
 ```sh
 npm run dev -w @buildathon/web-vta-app      # then open http://localhost:5173
@@ -168,7 +168,7 @@ npm run approver -- --match-code 032df1      # in a second terminal: decision se
 You should see the demo print `approved and executed` with the context renamed. Try a wrong code (refused before anything is signed) and `npm run approver -- --deny "not expected"`
 (the demo stops and does not ask again). This is a second key on the same laptop, not a second device: [APPROVALS.md](APPROVALS.md) says what it does and does not protect.
 
-## 8c. Ping the VTA over TSP (tunnel mode, see where it stops)
+## 8c. Ping the VTA over TSP and catch the credential push (tunnel mode)
 
 *Mode: `tunnel` only. Start it with the mediator open to the page: `MODE=tunnel MEDIATOR_CORS_ALLOW_ORIGIN=http://localhost:3000 npm run up`. Needs the images in [MODES.md](MODES.md).*
 
@@ -178,10 +178,12 @@ npm run dev -w @buildathon/tsp-ping   # the same in a browser: http://localhost:
 docker compose logs vta | grep -E "tsp|trust-task"     # what the VTA did with it
 ```
 
-With the pinned images you should see the client log in and send, then `TSP ping FAILED: timed out awaiting reply frame`, while the VTA log shows
-`TSP trust-task dispatched ... status=200 OK` followed by `failed to send TSP reply ... unsupported TSP major version 1`. That is the honest result today: the request arrives and the
-mediator pin refuses the answer ([MESSAGING.md](MESSAGING.md)). Try `npm run tsp:ping -- --throwaway` (a DID the VTA does not know: 403) and the page with the credential field cleared.
-If you have a mediator that speaks TSP 1.0 (`MEDIATOR_IMAGE`), the same command should end with `pong from the VTA`; tell the organiser, that is unverified here.
+With the pinned images (mediator 0.45.0) you should see the client log in, send, and end with `pong from the VTA ... nonce echoed` (the page shows the same verdict). That is **verified** in tunnel mode.
+In the VTA log you see `TSP trust-task dispatched ... status=200 OK`. Try `npm run tsp:ping -- --throwaway` (a DID the VTA does not know: 403) and the page with the credential field cleared.
+If you use an older mediator image (`MEDIATOR_IMAGE`) the ping times out and the VTA log says `failed to send TSP reply ... unsupported TSP major version`: that mediator does not read TSP 1.0 ([MESSAGING.md](MESSAGING.md)).
+
+Credential push: run `npm run tsp:listen` in one shell, then `npm run vtc:join` and `npm run vtc:approve` in another; the listener prints `frame from the peer: .../credential-exchange/issue/0.1` (twice, **verified**).
+It proves the frames arrive, not that a wallet could use them.
 
 ## 9. Extend it: your own task and an extension
 

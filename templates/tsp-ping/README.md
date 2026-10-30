@@ -9,7 +9,7 @@ npm run dev -w @buildathon/tsp-ping                                        # htt
 npm run tsp:ping:browser                                                   # the same, driven by headless Chromium
 ```
 
-- **Status.** With the pinned images the page logs in, opens the socket and sends the ping, and the VTA dispatches it; no pong comes back because the pinned mediator refuses the VTA's
-  TSP 1.0 replies. It then shows "No pong: timed out awaiting reply frame". Details: [docs/MESSAGING.md](../../docs/MESSAGING.md) **[verified]**.
+- **Status.** With the pinned images (mediator 0.45.0, which reads TSP 1.0) the page logs in, opens the socket, sends the ping and shows the VTA's pong (`pong from the VTA ... nonce echoed`). Details: [docs/MESSAGING.md](../../docs/MESSAGING.md) **[verified]**.
+  An older mediator that reads only Rev 3 makes it show "No pong: timed out awaiting reply frame".
 - **Credential in the page.** Like `web-vta-app`, `vite.config.ts` puts `VTA_CREDENTIAL` (a private key) in the page. Dev only. A blank field uses a throwaway `did:key`, which the VTA refuses (403).
 - **CORS.** The mediator refuses a browser origin unless `MEDIATOR_CORS_ALLOW_ORIGIN` names it ([docs/MODES.md](../../docs/MODES.md)); port 3000 is also in the VTA and VTC defaults.
