@@ -52,7 +52,8 @@
     "tunnel:probe": "tsx scripts/tunnel-probe.ts",
     "approvals:setup": "tsx scripts/approvals-setup.ts",
     "approvals:demo": "tsx scripts/approvals-demo.ts",
-    "approver": "tsx scripts/approver.ts"
+    "approver": "tsx scripts/approver.ts",
+    "tsp:ping": "tsx scripts/tsp-ping.ts"
   },
   "devDependencies": {
     "@types/node": "22.20.5",
