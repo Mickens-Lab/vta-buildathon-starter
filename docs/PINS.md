@@ -28,7 +28,8 @@ here, so if images are published later (a registry, or tarballs from the organis
 The cold path, exactly (Linux, 12 cores, Docker; times are from this kit's own builds, so treat them as a floor on a laptop):
 
 ```sh
-# 1. The upstream repository, next to this one (the URL is `vti.repo` in pins.json). images:build never clones silently.
+# 1. The upstream repository, next to this one (the URL is `vti.repo` in pins.json). `images:build` asks before cloning in a terminal,
+#    prints these two commands otherwise, and does it for you only with `npm run images:build -- --clone`.
 git clone https://github.com/OpenVTC/verifiable-trust-infrastructure ../verifiable-trust-infrastructure
 git -C ../verifiable-trust-infrastructure fetch --tags origin     # the pinned refs must be present
 # 2. Build what you need (each image is exported from its own pinned ref; niced; the first build is the slow one)

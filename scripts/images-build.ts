@@ -4,19 +4,22 @@
 // VTI_PATH   a verifiable-trust-infrastructure checkout (default ../verifiable-trust-infrastructure);
 //            each pinned ref is exported with `git archive`, so its working tree is never used.
 // VTI_LOCAL=1 build the checkout's working tree instead (development; the image is tagged :local only).
+// --clone   clone the VTI checkout (and fetch its tags) if it is missing, without asking. Without it a terminal is asked; a pipe or CI gets the commands printed.
 // TMPDIR     where the exported source goes (default the OS temp dir; use /var/tmp/<name> for heavy runs).
 // Tags: <image>:<short-sha> and <image>:local (what compose defaults to).
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { readFileSync } from "node:fs";
 import { die } from "./env.js";
+import { missingCheckoutMessage, missingRefMessage, parseBuildArgs } from "./lib/images.js";
+import { confirm } from "./lib/prompt.js";
 import { MEDIATOR_BUILD_NOTICE, memoryWarning } from "./lib/tunnel.js";
 import { pins } from "./pins.js";
 
-const which = process.argv[2] ?? "all";
-if (!["vta", "vtc", "mediator", "all"].includes(which)) die("usage: npm run images:build [vta|vtc|mediator|all]");
+const { which, clone } = parseBuildArgs(process.argv.slice(2));
+if (!["vta", "vtc", "mediator", "all"].includes(which)) die("usage: npm run images:build [vta|vtc|mediator|all] [--clone]");
 const vti = pins().vti;
 const repo = resolve(process.env.VTI_PATH ?? "../verifiable-trust-infrastructure");
 const local = process.env.VTI_LOCAL === "1";
@@ -39,15 +42,32 @@ if (which === "mediator") {
   process.exit(0);
 }
 
+/** The VTA and VTC are built from a checkout of the upstream repository. Offer the clone, never do it unasked. */
+async function ensureCheckout(ref: string, tag: string): Promise<void> {
+  if (local) return;
+  const isRepo = existsSync(repo) && spawnSync("git", ["-C", repo, "rev-parse", "--git-dir"], { stdio: "ignore" }).status === 0;
+  if (!isRepo) {
+    const message = missingCheckoutMessage({ dir: repo, repoUrl: vti.repo, explicitPath: Boolean(process.env.VTI_PATH) });
+    if (existsSync(repo)) die(`${repo} exists but is not a git checkout. Move it away or set VTI_PATH.`);
+    if (!clone && !(await confirm(`\n${message}\n\nClone it now (a few hundred MB)?`))) die(message);
+    sh("git", ["clone", vti.repo, repo]);
+    sh("git", ["-C", repo, "fetch", "--tags", "origin"]);
+  }
+  if (spawnSync("git", ["-C", repo, "cat-file", "-e", `${ref}^{commit}`]).status !== 0) {
+    const message = missingRefMessage({ dir: repo, ref, tag });
+    if (!clone && !(await confirm(`\n${message}\n\nRun that fetch now?`))) die(message);
+    sh("git", ["-C", repo, "fetch", "--tags", "origin"]);
+    if (spawnSync("git", ["-C", repo, "cat-file", "-e", `${ref}^{commit}`]).status !== 0) die(missingRefMessage({ dir: repo, ref, tag }));
+  }
+}
+
 for (const name of which === "all" ? (["vta", "vtc"] as const) : [which as "vta" | "vtc"]) {
   const { image, ref, tag } = vti[name];
   const short = ref.slice(0, 8);
   let ctx = repo;
   let tmp = "";
   if (!local) {
-    if (spawnSync("git", ["-C", repo, "cat-file", "-e", `${ref}^{commit}`]).status !== 0) {
-      die(`${ref} (${tag}) is not in ${repo}. Fetch it (git -C ${repo} fetch --tags origin) or set VTI_PATH.`);
-    }
+    await ensureCheckout(ref, tag);
     tmp = mkdtempSync(join(process.env.TMPDIR ?? tmpdir(), "vti-"));
     sh("sh", ["-c", `git -C '${repo}' archive ${ref} | tar -x -C '${tmp}'`]);
     ctx = tmp;
