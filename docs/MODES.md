@@ -20,9 +20,16 @@ pinned images), **[unverified]** not observed, stated from documentation or infe
 | Stop | `npm run down` | `MODE=tunnel npm run down` (deletes its volumes) | delete the agent in the portal |
 | Safe for real data | no | **no, never** | no (shared test service) |
 
-Features and the mode they need: everything in the README and TRY-THIS today works in `local`. Anything that needs a peer to reach the VTA or
-VTC over messaging (credential delivery to a wallet, a phone approving on a second device) needs `tunnel` (or `farm`). Those features are
-planned, not in this release; this mode is the foundation.
+Features and the mode they need (everything in the README and [TRY-THIS](TRY-THIS.md) works in `local` unless a row says otherwise):
+
+| Feature | `local` | `tunnel` | `farm` |
+|---|---|---|---|
+| Trust Tasks, the dashboard, roles lab, `npm run e2e`, `npm run test:roles` | yes **[verified]** | yes **[verified: e2e 13/13, roles 36/36 through the public URLs]** | yes (see [FARM.md](FARM.md)) |
+| [Approve on a second device](APPROVALS.md) (software approver) | yes **[verified]** | yes **[verified]** | no: a hosted VTA's policy is set in its portal |
+| Membership credential reaches the member | no (messaging off) | **no**: the kit's applicant has no inbox, `credentialsDelivered:false` **[verified]** | **[unverified]** |
+| DIDComm/TSP application round trip, a phone as approver | no | **no client in the kit** ([MESSAGING.md](MESSAGING.md), [MOBILE-WALLET.md](MOBILE-WALLET.md)) | **[unverified]** |
+
+In the dashboard the membership card's "Credential delivery" row says which of these applies to the mode the page was built for.
 
 ## Tunnel mode in short
 
@@ -69,7 +76,7 @@ Compose files, entrypoints and recipes contain placeholders only.
   fresh clone of the pinned commit; the image is about 170 MB; the build's own footprint stayed within about 1.5 GB above idle **[verified,
   one machine]**. Upstream estimates 20+ minutes and 8 GB of RAM, and `npm run images:build mediator` warns when less than that is
   available. Running it (mediator 10 MB, redis 5 MB, VTA 16 MB, VTC 27 MB, each `cloudflared` about 33 MB resident) is light.
-- **Messaging is "transport connected, round trip unverified".** What is verified: the mediator answers through its public URL, the VTA and
+- **Messaging is "transport connected, round trip unverified".** (What this kit can and cannot build on it: [MESSAGING.md](MESSAGING.md).) What is verified: the mediator answers through its public URL, the VTA and
   VTC connect to it, the VTA's DID document lists `TSPTransport`, `DIDCommMessaging` and `VTARest`, `messaging/ping/0.1` reports
   `tsp`, `didcomm`, `rest`, the VTC advertises both transports as serviceable, and a VTC approval queues two Trust Task pushes via
   DIDComm that the mediator accepts (outbox `Queued` then `Sent`). What is **not** verified: an application-level message from one peer

@@ -24,6 +24,9 @@ Back to the [repo README](../README.md). Everything here is for a local playgrou
 
 - [CHEATSHEET.md](CHEATSHEET.md): endpoints, task names, env vars, common errors.
 - [VTC-SURFACE.md](VTC-SURFACE.md): who can call which VTC task (stranger, applicant, member, admin).
+- [APPROVALS.md](APPROVALS.md): approve a gated task on a second device (a software approver first): `npm run approvals:demo`.
+- [MOBILE-WALLET.md](MOBILE-WALLET.md): what a phone wallet could add, what was and was not checked.
+- [MESSAGING.md](MESSAGING.md): what messaging gives in tunnel mode and the gap (no DIDComm/TSP client).
 - [ROLES.md](ROLES.md): roles lab: personas, separation of duties, lifecycle, strict mode (`npm run roles:matrix`).
 - [trust-tasks/06-troubleshooting-and-glossary.md](trust-tasks/06-troubleshooting-and-glossary.md): error causes and a glossary.
 

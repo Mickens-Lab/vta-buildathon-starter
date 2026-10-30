@@ -54,9 +54,9 @@ hold the signing key itself, call its signing tasks instead of holding the key i
 
 **L4. A human in the loop.** Passkeys authenticate a human to a service; they are **not** usable to sign Trust Task documents (those need an Ed25519 DID key). Use a
 wallet or browser extension that asks the person to consent before each signature. The VTA serves approval and step-up tasks (`auth/step-up/*` appear in its discovery list)
-and has policy features; how an approval policy is configured and enforced is **unverified** here.
+and has policy features. [APPROVALS.md](APPROVALS.md) runs a consent rule end to end with a software approver, and [MOBILE-WALLET.md](MOBILE-WALLET.md) says what a phone would add and what was not checked.
 
-*Evidence (design review):* a passkey proves presence at login or step-up and does not sign Trust Task documents (those need an `eddsa-jcs-2022` or `ecdsa-jcs-2019` proof) **[V]**. Approvals are rules keyed by task type, either re-authentication or consent by named approvers bound to the exact payload, and are **off by default**: they need `policy.enforcement = true`, which this kit's `vta-entrypoint.sh` does not set **[V]**. The `auth/oob` step-up purpose is reserved, not defined **[V]**.
+*Evidence (design review):* a passkey proves presence at login or step-up and does not sign Trust Task documents (those need an `eddsa-jcs-2022` or `ecdsa-jcs-2019` proof) **[V]**. Approvals are rules keyed by task type, either re-authentication or consent by named approvers bound to the exact payload, and are **off by default**: they need `policy.enforcement = true`, which this kit's `vta-entrypoint.sh` sets only for the approvals demo (`npm run approvals:setup`); the default stack leaves it off **[V]**. The `auth/oob` step-up purpose is reserved, not defined **[V]**.
 
 **L5. Production custody.** Keep secrets in a protected backend (cloud KMS or an HSM), use the OS keychain on user devices, prefer attested or hardware-backed keys, and let
 a mobile wallet hold the user's identity.

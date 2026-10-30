@@ -7,6 +7,8 @@ Start the stack once: `npm ci && WITH_VTC=1 npm run up`. Stop and wipe it with `
 
 ## 1. Your first signed call
 
+*Mode: any mode.*
+
 ```sh
 npm run hello
 ```
@@ -17,6 +19,8 @@ If it fails: `could not reach the VTA` means the stack is down (`npm run up`, `n
 
 ## 2. The status page
 
+*Mode: any mode. The Messaging row reads "off (REST only)" in `local` and "transport connected, round trip unverified" in `tunnel` (needs a credential to ask the VTA).*
+
 ```sh
 npm run dev -w @buildathon/web-vta-app      # then open http://localhost:5173
 ```
@@ -26,6 +30,8 @@ Version, Auth and session, ...) with mostly OK pills. "DIDComm / TSP / Mediator:
 If it fails: a CORS error means you are not on port 5173, 3000 or 8000; a blank "no credential" means `.env` is missing (`npm run up`).
 
 ## 3. Join a community and see the member screens (React)
+
+*Mode: any mode. The membership card's "Credential delivery" row explains, per mode, why no credential arrives ([MESSAGING.md](MESSAGING.md)): there is no inbox for it in `local`, and none for this page's identity in `tunnel` either.*
 
 ```sh
 npm run dev -w @buildathon/community-dashboard      # open http://localhost:5173
@@ -63,6 +69,8 @@ Why: the VTC re-reads your records on every call; the page does the same, and ne
 
 ## 4. Tamper, replay and wrong recipient
 
+*Mode: any mode (it needs no stack).*
+
 ```sh
 npm run demo -w @buildathon/inbox-verifier
 ```
@@ -81,6 +89,8 @@ Now by hand: `npm start -w @buildathon/inbox-verifier` in one terminal, then in 
 `curl localhost:4000/notes` lists each accepted note once. No VTA is needed: a `did:key` carries its own public key.
 
 ## 5. Reading refusals: who can call what
+
+*Mode: `local` or `tunnel` with the VTC (`WITH_VTC=1`, which is the default in tunnel mode).*
 
 ```sh
 npm run vtc:refusals
@@ -105,6 +115,8 @@ you are not a member yet (exercise 3).
 
 ## 6. Call a task you have not used before
 
+*Mode: any mode.*
+
 ```sh
 npm run vta:call                                 # lists the Trust Tasks this VTA serves
 npm run vta:call -- vta/contexts/list/1.0        # {"contexts":[{"id":"my-app",...}]}
@@ -121,6 +133,8 @@ A refusal names what is wrong: your app is not an admin (`acl/list`), or the pay
 
 ## 7. A look at the Farm (read-only)
 
+*Mode: any mode; needs the internet, touches the Farm read-only.*
+
 ```sh
 npm run farm:probe
 ```
@@ -131,10 +145,31 @@ If it fails: a timeout means the Farm or your network is down; that is informati
 
 ## 8. Extend it: personas
 
+*Mode: any mode.*
+
 Idea, not run: give each of two app identities its own context (`npm run vta:provision -- alice`, `ENV_FILE=.env.alice`), then use `vta:call` and
 `vtc:status` with `ENV_FILE=.env.alice` to see two members with different cards. The VTA also serves persona and attribute tasks (see the list in exercise 6).
 
+## 8b. Approve on a second device (software approver)
+
+*Mode: `local` or `tunnel` (not `farm`). A real phone needs more than this kit has: [MOBILE-WALLET.md](MOBILE-WALLET.md).*
+
+A VTA can refuse a task until a different key agrees to that exact task. Set it up on a fresh stack, then ask for a gated task and approve it from a second terminal:
+
+```sh
+npm run vta:reset                  # only if a stack exists
+npm run approvals:setup            # mints the throwaway approver key
+WITH_VTC=1 npm run up
+npm run approvals:demo             # WAITING FOR APPROVAL   match code: 032df1
+npm run approver -- --match-code 032df1      # in a second terminal: decision sent: approve -> granted
+```
+
+You should see the demo print `approved and executed` with the context renamed. Try a wrong code (refused before anything is signed) and `npm run approver -- --deny "not expected"`
+(the demo stops and does not ask again). This is a second key on the same laptop, not a second device: [APPROVALS.md](APPROVALS.md) says what it does and does not protect.
+
 ## 9. Extend it: your own task and an extension
+
+*Mode: any mode.*
 
 Idea, not run: change `NOTE_TYPE`, the schema and the handler in `templates/inbox-verifier/src/inbox.ts`, run its demo, then send from your VTA app by swapping
 `newIdentity()` for `identityFromCredential(...)` in `send.ts`. A browser wallet or extension can sign instead of the embedded key: see the wallet panel in `templates/web-vta-app`.

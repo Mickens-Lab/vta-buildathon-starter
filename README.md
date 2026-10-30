@@ -43,7 +43,8 @@ Trouble? See [Troubleshooting](#troubleshooting).
 
 [docs/TRY-THIS.md](docs/TRY-THIS.md) has ten guided exercises, easy to advanced, each with commands and expected output:
 a first signed call, the status page, join a community and see the member screens, tamper/replay/wrong-recipient
-against the inbox verifier, reading refusals, calling a task you have not used, a read-only look at the Farm, and ideas to extend.
+against the inbox verifier, reading refusals, calling a task you have not used, a read-only look at the Farm, and ideas to extend,
+plus approving a gated task from a second key ([docs/APPROVALS.md](docs/APPROVALS.md)). Each exercise names the mode it needs.
 
 ## Repo map
 
@@ -122,6 +123,7 @@ concepts, finding, using, developing and evaluating them, with a hands-on custom
 | `npm run vtc:hello` / `vtc:join` / `vtc:approve` | VTC checkpoint / apply as your app identity / admin approves |
 | `npm run vtc:status` / `vtc:profile` / `vtc:withdraw` / `vtc:leave -- --yes` | member: status + membership proof / community profile, my card, directory, groups / withdraw the open request / leave the community now |
 | `npm run roles:matrix` / `roles:personas -- create <name> <role>` | Who-can-call-what table / throwaway persona identities, warnings only ([docs/ROLES.md](docs/ROLES.md)) |
+| `npm run approvals:setup` / `approvals:demo` / `approver` | Approve a gated task from a second key: mint the throwaway approver / ask for the task and wait / verify and approve or deny ([docs/APPROVALS.md](docs/APPROVALS.md)); `local` or `tunnel` |
 | `npm run security:check` / `recipe:backend-signer` / `recipe:webcrypto-key` | Key-hygiene scan of the tree / first hardening rungs ([docs/SECURITY.md](docs/SECURITY.md)) |
 | `npm run images:build` / `pins:check` | Build the VTA/VTC images from the pinned VTI ref / report version drift ([docs/PINS.md](docs/PINS.md)) |
 | `WITH_VTC=1 npm run up` | Local VTC too (needs a VTC image, see docs/VTC.md) |
