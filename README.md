@@ -37,6 +37,7 @@ Expected from `npm run hello` (DIDs differ on your machine):
 4. signed call    auth/whoami -> {"capabilities":[...],"roles":["application"],"scopes":["ctx:my-app"],...}
 ```
 
+`npm run doctor` checks Docker, memory, ports (8100, 8200, 5173, 3000, 4000), the images (with the exact build command for a missing one) and the VTI checkout; `npm run up` runs the blocking part first, so a missing image or a busy port is a short message, not a Docker or Node stack trace.
 Use `npm run up` alone if you do not need a VTC. Clean up with `npm run vta:reset`.
 Trouble? See [Troubleshooting](#troubleshooting).
 
@@ -96,6 +97,7 @@ concepts, finding, using, developing and evaluating them, with a hands-on custom
 
 | Command | Does |
 |---|---|
+| `npm run doctor` | Is this machine ready: Node, Docker, memory, ports, images (exact build command for a missing one), VTI checkout, mode. `up` runs the blocking checks first |
 | `npm run up` / `down` | Mode-aware: local = keygen, compose up, provision; tunnel (`MODE=tunnel`) = tunnels, mediator, VTA, VTC, provision, probe, and `down` deletes its volumes; farm = mint admin key, print portal steps, then provision |
 | `npm run tunnel:probe` | `MODE=tunnel`: re-run the checks (public URLs, DID bound to the tunnel host, messaging advertised and live, mediator ACL note) |
 | `npm run tsp:ping` / `tsp:listen` / `tsp:ping:browser` | `MODE=tunnel`: send a signed TSP ping and print the pong / receive the credential frames the VTC pushes / the same ping from headless Chromium ([docs/MESSAGING.md](docs/MESSAGING.md)) |
@@ -125,6 +127,7 @@ concepts, finding, using, developing and evaluating them, with a hands-on custom
 
 | Symptom | Fix |
 |---|---|
+| Port busy, or `pull access denied` | `npm run doctor` names the busy port with a free alternative, or the missing image with its build command. |
 | `pull access denied for vta-buildathon` | The image is not built here. Build it ([docs/PINS.md](docs/PINS.md#where-the-images-come-from)) or set `VTA_IMAGE` to one you were given. |
 | `.vta/admin.env` not found | `npm run vta:keygen` before `docker compose up`. |
 | `provision` fails with 401 or `permissionDenied` | `.vta/admin.json` is not the key this volume was seeded with. `npm run vta:reset`, then `npm run vta:up`. |

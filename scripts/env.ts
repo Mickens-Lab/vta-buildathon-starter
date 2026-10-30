@@ -43,6 +43,23 @@ export function mode(): Mode {
   return parseMode(env("MODE"));
 }
 
+/** Where the mode came from, for messages: the environment, .env, or the default. */
+export function modeSource(): "environment" | ".env" | "default" {
+  if (process.env.MODE) return "environment";
+  return readEnvFile("MODE") ? ".env" : "default";
+}
+function readEnvFile(name: string): string | undefined {
+  try { return readFileSync(ENV_FILE, "utf8").match(new RegExp(`^${name}=(.+)$`, "m"))?.[1]; } catch { return undefined; }
+}
+
+/** Is the VTC part of this run? `WITH_VTC=1` / `0` decides; unset means off in local mode and on in tunnel mode. */
+export function withVtc(): boolean {
+  const v = process.env.WITH_VTC;
+  if (v === "1") return true;
+  if (v === "0") return false;
+  return mode() === "tunnel";
+}
+
 /** Drop KEY=value lines from the env file (used when a tunnel stack is torn down and its URLs and credential are dead). */
 export function removeEnv(keys: string[]): void {
   if (!existsSync(ENV_FILE)) return;

@@ -40,7 +40,7 @@ npm run images:build mediator   # about 12 min cold, tunnel mode only; also need
 
 Budget several GB of free RAM (the mediator build warns below 8 GB) and about 10 GB of disk for the Rust build layers. If the checkout is somewhere else, set `VTI_PATH`.
 The mediator comes from its own repository (`messaging.mediator.repo` in pins.json), which the Dockerfile fetches itself, so no checkout is needed for it.
-`images:build` names the missing piece. An organiser may still hand out pre-built images (`docker save` / `docker load`,
+`npm run doctor` lists which images and which VTI checkout are missing, with these commands. An organiser may still hand out pre-built images (`docker save` / `docker load`,
 or `VTA_IMAGE=...`, see [EVENT.md](EVENT.md)); that is optional, not the plan.
 
 ## What is pinned now
