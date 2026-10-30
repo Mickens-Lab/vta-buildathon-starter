@@ -33,7 +33,7 @@ export function messagingRow(i: MessagingInput): MessagingRow {
   if (i.protocols) {
     const missing = ["didcomm", "tsp"].filter((p) => !i.protocols!.includes(p));
     if (!missing.length) {
-      return { pill: "ok", label, value: `transport connected (${i.protocols.join(", ")}), round trip unverified`, note: "From the VTA's messaging/ping/0.1: DIDComm and TSP are available. Nothing here sent a message to a peer." };
+      return { pill: "ok", label, value: `transport connected (${i.protocols.join(", ")}), not a peer ping`, note: "From the VTA's messaging/ping/0.1: DIDComm and TSP are available. This panel sent no message to a peer; `npm run tsp:ping` does (docs/MESSAGING.md)." };
     }
     if (i.mode === "tunnel") {
       return { pill: "bad", label, value: `MESSAGING DEGRADED: ${missing.join(" and ")} not available`, note: `The VTA reports ${i.protocols.join(", ") || "nothing"}. It has most likely fallen back to REST only because the mediator refused it or could not be reached; it logs only a warning.`,

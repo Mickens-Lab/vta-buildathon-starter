@@ -7,11 +7,11 @@ import type { DidService } from "../src/parse.ts";
 const svc = (kind: DidService["kind"]): DidService => ({ id: `#${kind}`, type: kind, endpoints: ["https://example.test"], kind });
 const both = [svc("didcomm"), svc("tsp"), svc("rest")];
 
-test("tunnel: ping reporting didcomm and tsp is ok, and says the round trip is unverified", () => {
+test("tunnel: ping reporting didcomm and tsp is ok, and says it is not a peer ping", () => {
   const r = messagingRow({ mode: "tunnel", services: both, protocols: ["tsp", "didcomm", "rest"], haveDidDoc: true });
   assert.equal(r.pill, "ok");
   assert.match(r.value, /transport connected/);
-  assert.match(r.value, /round trip unverified/);
+  assert.match(r.value, /not a peer ping/);
 });
 test("tunnel: a REST-only ping is a loud problem with a fix, even if the DID document advertises messaging", () => {
   const r = messagingRow({ mode: "tunnel", services: both, protocols: ["rest"], haveDidDoc: true });

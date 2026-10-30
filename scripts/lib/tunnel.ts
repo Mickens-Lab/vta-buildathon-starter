@@ -109,7 +109,7 @@ export function messagingVerdict(protocols: string[] | undefined, who = "VTA"): 
   if (!protocols) return { state: "unknown", text: `the ${who} did not report its protocols` };
   const has = (p: string) => protocols.includes(p);
   if (has("didcomm") && has("tsp")) {
-    return { state: "ok", text: `transport connected (${protocols.join(", ")}), round trip unverified` };
+    return { state: "ok", text: `transport connected (${protocols.join(", ")}), not a peer ping` };
   }
   const missing = ["didcomm", "tsp"].filter((p) => !has(p));
   return { state: "degraded", text: `MESSAGING DEGRADED: ${missing.join(" and ")} not available (reports ${protocols.join(", ") || "nothing"}). The ${who} has fallen back to REST only, usually because the mediator refused it or was unreachable.` };
@@ -133,5 +133,5 @@ export function vtcMessagingVerdict(profile: unknown): MessagingVerdict {
     .map((x) => (x as { protocol: string }).protocol);
   const v = messagingVerdict(live, "VTC");
   // The public profile only says what the VTC advertises and can serve; it does not prove the mediator link.
-  return v.state === "ok" ? { state: "ok", text: `advertised and serviceable (${live.join(", ")}), round trip unverified` } : v;
+  return v.state === "ok" ? { state: "ok", text: `advertised and serviceable (${live.join(", ")}), not a peer ping` } : v;
 }

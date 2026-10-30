@@ -19,7 +19,7 @@ try {
   console.log(describePong(r));
 } catch (e) {
   console.error(`TSP ping FAILED: ${(e as Error).message}`);
-  console.error("If the VTA log (docker compose logs vta) shows the ping dispatched with status 200 but \"failed to send TSP reply ... unsupported TSP major version 1\",");
-  console.error("the request arrived and the mediator refused the VTA's answer: a TSP version mismatch between VTA and mediator. See docs/MESSAGING.md.");
+  console.error("If the VTA log (docker compose logs vta) shows the ping dispatched with status 200 but \"failed to send TSP reply ... unsupported TSP major version\",");
+  console.error("the request arrived and the mediator refused the VTA's answer: a TSP version mismatch between VTA and mediator (use the pinned mediator, docs/MESSAGING.md).");
   process.exit(1);
 }

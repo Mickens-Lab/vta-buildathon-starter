@@ -94,7 +94,7 @@ test("memory warning only when below the estimate; silent when unknown", () => {
 test("messaging verdict is loud when didcomm or tsp is missing (the silent REST fallback)", () => {
   const ok = messagingVerdict(["tsp", "didcomm", "rest"]);
   assert.equal(ok.state, "ok");
-  assert.match(ok.text, /transport connected.*round trip unverified/);
+  assert.match(ok.text, /transport connected.*not a peer ping/);
   for (const p of [["rest"], ["didcomm", "rest"], []]) {
     const v = messagingVerdict(p);
     assert.equal(v.state, "degraded");

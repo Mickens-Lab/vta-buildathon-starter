@@ -2,7 +2,8 @@
 // Read-only. Checks the public hosts, the VTA's DID at its tunnel host, and the messaging state, loudly:
 // a VTA whose mediator connection failed keeps serving REST and only logs a warning.
 // "messaging ok" means the transport is connected. It does NOT prove an app-level DIDComm/TSP round trip.
-import { VtaClient, TT } from "@buildathon/vta-client";
+import { VtaClient, TT, decodeCredential, seedFromMultibase } from "@buildathon/vta-client";
+import { describePong, tspPing } from "@buildathon/tsp-client";
 import { env, loadAdmin } from "./env.js";
 import { readTunnel } from "./lib/compose.js";
 import { messagingVerdict, protocolsOf, tunnelUrls, vtcMessagingVerdict } from "./lib/tunnel.js";
@@ -51,6 +52,20 @@ try {
   add("FAIL", "VTA messaging (messaging/ping/0.1)", `call failed: ${String((e as Error).message).slice(0, 200)}`);
 }
 
+// 3b. a real TSP round trip: a signed messaging/ping/0.1 to the VTA through the mediator, answered by a pong (needs the app credential in .env)
+const appCred = env("VTA_CREDENTIAL");
+const vtaDid = env("VTA_DID");
+if (appCred && vtaDid && state.mediatorDid) {
+  try {
+    const r = await tspPing({ vtaDid, mediatorDid: state.mediatorDid, seed: seedFromMultibase(decodeCredential(appCred).privateKeyMultibase), timeoutMs: 15_000 });
+    add("ok", "TSP round trip (ping, pong)", describePong(r));
+  } catch (e) {
+    add("FAIL", "TSP round trip (ping, pong)", `no pong: ${String((e as Error).message).slice(0, 200)} (docs/MESSAGING.md)`);
+  }
+} else {
+  add("info", "TSP round trip (ping, pong)", "skipped: needs the app credential in .env (npm run up writes it)");
+}
+
 // 4. VTC, if one runs
 if (u.vtc) {
   const vh = await get(`${u.vtc}/health`);
@@ -64,7 +79,7 @@ if (u.vtc) {
 
 // 5. what this probe does not establish
 add("info", "mediator ACL", "OPEN by design (any DID may register and relay): demo data only");
-add("info", "DIDComm/TSP round trip", "transport connected, round trip unverified (`npm run tsp:ping` sends a TSP ping; no pong comes back with the pinned mediator, docs/MESSAGING.md)");
+add("info", "DIDComm", "no DIDComm client in this kit; only TSP is exercised end to end (docs/MESSAGING.md)");
 
 for (const [l, w, d] of rows) console.log(`${l === "ok" ? "ok  " : l === "FAIL" ? "FAIL" : "info"} ${w.padEnd(44)} ${d}`);
 const failed = rows.filter((r) => r[0] === "FAIL").length;
