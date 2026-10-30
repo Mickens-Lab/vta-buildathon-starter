@@ -6,6 +6,7 @@
 import "./lib/cli.js";
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { hasGit, repoFiles } from "./lib/files.js";
 
 const B58 = "[1-9A-HJ-NP-Za-km-z]";
 // [label, pattern, optional path allow-list]
@@ -36,21 +37,24 @@ const scan = (where: string, text: string, path?: string) => {
   });
 };
 
-for (const f of git("ls-files", "-co", "--exclude-standard").split("\n").filter(Boolean)) {
+const GIT = hasGit();
+for (const f of repoFiles()) {
   if (f === SELF || SKIP.test(f)) continue;
   let text: string;
   try { text = readFileSync(f, "utf8"); } catch { continue; }
   if (text.includes("\0")) continue;
   scan(f, text, f);
 }
-if (process.argv.includes("--history")) {
+if (process.argv.includes("--history") && !GIT) {
+  console.log("check:generic: no git history here (a ZIP download?), so --history was skipped; the files were scanned.");
+} else if (process.argv.includes("--history")) {
   for (const c of git("rev-list", "HEAD").split("\n").filter(Boolean)) {
     const show = git("show", "--format=%B", "--no-color", "-U0", c, "--", ".", `:!${SELF}`, ":!package-lock.json");
     // The author and Signed-off-by trailer identify the committer by design; everything else must be generic.
     scan(`commit ${c.slice(0, 8)}`, show.split("\n").filter((l) => !/^Signed-off-by:/i.test(l)).join("\n"));
   }
 }
-for (const f of git("ls-files", "package.json", "*/package.json").split("\n").filter(Boolean)) {
+for (const f of repoFiles(/(^|\/)package\.json$/).filter((p) => !p.includes("node_modules"))) {
   let license: unknown;
   try { license = JSON.parse(readFileSync(f, "utf8")).license; } catch { continue; }
   if (license !== "Apache-2.0") hits.push(`${f}  licence  expected "license": "Apache-2.0", found ${JSON.stringify(license)}`);

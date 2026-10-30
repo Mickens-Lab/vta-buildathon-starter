@@ -41,7 +41,7 @@ muscle memory keep working; a test fails if a script is missing from this page.
 
 ## Maintainer
 
-`typecheck`, `test`, `check:generic` (`-- --history` also scans commits), `check:docs`, and the live tests `test:roles`, `e2e`, `tsp:ping:browser`
+`typecheck`, `test`, `check:generic` (`-- --history` also scans commits; without a `.git` folder, such as a ZIP download, it scans the files and skips the history), `check:docs`, and the live tests `test:roles`, `e2e`, `tsp:ping:browser`
 (need a running stack and, for the last two, Chromium; not part of `npm test`).
 
 ## Old names (aliases)

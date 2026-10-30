@@ -3,19 +3,19 @@
 // (scripts/lib/stale-phrases.ts).
 //   npm run check:docs
 import "./lib/cli.js";
-import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, normalize } from "node:path";
+import { repoFiles } from "./lib/files.js";
 import { staleHits } from "./lib/stale-phrases.js";
 
-const files = execFileSync("git", ["ls-files", "-co", "--exclude-standard", "*.md"], { encoding: "utf8" }).split("\n").filter(Boolean);
+const files = repoFiles(/\.md$/);
 const scriptsOf = (dir: string): Set<string> | undefined => {
   const p = join(dir, "package.json");
   return existsSync(p) ? new Set(Object.keys(JSON.parse(readFileSync(p, "utf8")).scripts ?? {})) : undefined;
 };
 const workspaces = new Map<string, string>(); // package name -> dir
 for (const g of ["packages", "templates"]) {
-  for (const d of existsSync(g) ? execFileSync("ls", [g], { encoding: "utf8" }).split("\n").filter(Boolean) : []) {
+  for (const d of existsSync(g) ? readdirSync(g) : []) {
     const p = join(g, d, "package.json");
     if (existsSync(p)) workspaces.set(JSON.parse(readFileSync(p, "utf8")).name, join(g, d));
   }
