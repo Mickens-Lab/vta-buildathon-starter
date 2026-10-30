@@ -11,6 +11,8 @@ const withDigest = (digests: Partial<Record<ImageKind, string | null>>): Pins =>
   for (const k of Object.keys(digests) as ImageKind[]) p.images[k].digest = digests[k] ?? null;
   return p;
 };
+// The real pins.json records digests once the workflow has run; these tests must not depend on that.
+const bare = (): Pins => withDigest({ vta: null, vtc: null, mediator: null });
 const D = "sha256:" + "a".repeat(64);
 
 /** A fake Docker: `present` is the set of refs, `pullOk` decides pulls, `pulled` records them. */
@@ -40,7 +42,7 @@ test("pins.json images section: registry, platforms, digests null or sha256", ()
 });
 
 test("specs: names and tags come from the existing pins, tag is the short ref", () => {
-  const s = imageSpecs(pins());
+  const s = imageSpecs(bare());
   const p = pins();
   assert.equal(s.vta.name, "vta-buildathon");
   assert.equal(s.vta.tagged, `${p.images.registry}/vta-buildathon:${p.vti.vta.ref.slice(0, 8)}`);
@@ -245,13 +247,13 @@ test("buildLabels: what a local build records, per image, and VTI_LOCAL says so"
 
 test("pullTarget: a recorded digest is always pulled by digest; --by-digest refuses a tag; otherwise the tag with a warning flag", () => {
   const D = `sha256:${"a".repeat(64)}`;
-  const withD = structuredClone(pins()); withD.images.vtc.digest = D;
+  const withD = structuredClone(bare()); withD.images.vtc.digest = D;
   const s = imageSpecs(withD);
   for (const by of [true, false]) {
     const t = pullTarget(s.vtc, by);
     assert.deepEqual(t, { ok: true, ref: `${s.vtc.repo}@${D}`, byTag: false });
   }
-  const none = imageSpecs(pins());
+  const none = imageSpecs(bare());
   const refused = pullTarget(none.vta, true);
   assert.equal(refused.ok, false);
   assert.match((refused as { message: string }).message, /Nothing was pulled/);
