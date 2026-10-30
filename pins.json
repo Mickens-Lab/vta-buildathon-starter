@@ -44,6 +44,14 @@
     "why": "MODE=tunnel (docs/MODES.md): the mediator and the VTA/VTC messaging setup were validated against this mediator tag (v0.45.0, built with tsp; the mediator lives in its own repository since 0.42, the same version the VTA 0.65.0 lockfile names). Build it with `npm run images:build mediator`.",
     "note": "Advance only deliberately via docs/PINS.md. The mediator is open-ACL in this kit by design (docs/MODES.md)."
   },
+  "images": {
+    "registry": "ghcr.io/mickens-lab",
+    "platforms": ["linux/amd64", "linux/arm64"],
+    "note": "Prebuilt images published by .github/workflows/images.yml to <registry>/<image>:<short ref> (the image names and refs are the vti/messaging pins above). `digest` is the multi-arch index digest (sha256:...) that the workflow reports after a run; null means not published yet (or not recorded), and then the tag is used and `pins:check` says so. Paste the digests in, commit, and `images:pull` / `up` pull by digest. Procedure: docs/IMAGES.md.",
+    "vta": { "digest": null },
+    "vtc": { "digest": null },
+    "mediator": { "digest": null }
+  },
   "farm": {
     "observedOn": "2026-10-29T18:38Z",
     "assumed": {
