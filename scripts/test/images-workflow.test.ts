@@ -232,3 +232,9 @@ test("plan step: one image, dry run, registry override; bad values are refused",
     assert.notEqual(plan(bad).status, 0, JSON.stringify(bad));
   }
 });
+
+test("the build job adds swap before it builds (Rust builds were OOM-killed on the first real run)", () => {
+  const names = wf.jobs.build!.steps.map((s) => s.name ?? "");
+  const swap = names.indexOf("Add swap");
+  assert.ok(swap >= 0 && swap < names.indexOf("Build"), "Add swap must come before Build");
+});
