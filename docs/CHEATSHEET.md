@@ -77,11 +77,13 @@ An applicant is not a member, so it cannot `authenticate`; it submits and polls 
 | Admin key | seeded into the VTA by compose | pasted into the portal as "Admin DID" (`npm run farm:setup`) |
 | Browser CORS | allowed: 3000, 5173, 8000 | blocked; templates proxy `/__vta`, `/__vtc` via Vite |
 
+`MODE=tunnel` behaves like local, except `VTA_URL` and `VTC_URL` are public `https://<random>.trycloudflare.com` hosts that `up` writes to `.env` and that die with the run (see [MODES.md](MODES.md)).
+
 ## Env vars
 
 | Var | Where | Meaning |
 |---|---|---|
-| `MODE` | `.env`, shell | `local` (default) or `farm` |
+| `MODE` | `.env`, shell | `local` (default), `tunnel` (messaging on public quick tunnels, [MODES.md](MODES.md)) or `farm` |
 | `FARM` | `.env`, shell | farm mode only: `ic3` (default, preferred, https://vtafarm.ic3.dev) or `firstperson` (agent creation currently broken Farm-side) |
 | `FARM_AGENT` | `.env`, shell | farm mode only: agent name; derives `VTA_URL` (`https://vta-<name>.<farm domain>`) and `VTA_DID` (from its DID log) |
 | `VTC_URL` | `.env`, scripts | VTC base URL, default `http://localhost:8200` in local mode |

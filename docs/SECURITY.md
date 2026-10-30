@@ -15,6 +15,13 @@ Treat every key, DID and community it creates as disposable.
 | Access control | One admin, one app role, a context | No real access policy, no key rotation, no backup, no audit review. |
 | CORS | Exact origins `localhost:3000`, `:5173`, `:8000` | Dev only; do not widen it for a deployed page. |
 
+## Tunnel mode widens the exposure
+
+`MODE=tunnel` ([MODES.md](MODES.md)) puts the VTA, VTC and a messaging mediator on public, unauthenticated Cloudflare quick-tunnel URLs, and the
+mediator is **open** (any DID may register and relay). Treat it as a demo you switch on while you need it: demo data only, keys are plaintext
+on the volumes, and `MODE=tunnel npm run down` when you finish. MODES.md lists the log and setup-output hazards (the mediator setup prints an
+admin private key; the VTC logs an install URL with a token).
+
 ## What not to do
 
 - Do not reuse any key from `.vta/` or `.env`, anywhere, ever.

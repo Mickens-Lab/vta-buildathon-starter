@@ -61,26 +61,29 @@ against the inbox verifier, reading refusals, calling a task you have not used, 
 
 Code tour with a diagram: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-## Two modes
+## Three modes
 
 `MODE=local` (default): docker compose on your machine, the primary and supported path (`npm run up`).
+`MODE=tunnel`: the same stack plus a messaging mediator, exposed on **public, ephemeral** Cloudflare quick-tunnel URLs, with an **open**
+mediator (`MODE=tunnel npm run up`; heavy first build; demo data only; [docs/MODES.md](docs/MODES.md) lists every caveat).
 `MODE=farm`: a VTA hosted by [VTA Farm](https://vta.farm/), no Docker needed, needs a browser passkey and a pre-check
-(`MODE=farm npm run up`, then [docs/FARM.md](docs/FARM.md)). Every command works in both; browser apps use a Vite proxy in farm mode.
+(`MODE=farm npm run up`, then [docs/FARM.md](docs/FARM.md)). Every command works in every mode; browser apps use a Vite proxy in farm mode.
 
 ## Docs
 
 [Docs index](docs/README.md): [TRY-THIS](docs/TRY-THIS.md), [ARCHITECTURE](docs/ARCHITECTURE.md), [CHEATSHEET](docs/CHEATSHEET.md),
-[VTC](docs/VTC.md), [VTC-SURFACE](docs/VTC-SURFACE.md), [ROLES](docs/ROLES.md), [FARM](docs/FARM.md), [PINS](docs/PINS.md), [EVENT](docs/EVENT.md),
+[VTC](docs/VTC.md), [VTC-SURFACE](docs/VTC-SURFACE.md), [ROLES](docs/ROLES.md), [MODES](docs/MODES.md), [FARM](docs/FARM.md), [PINS](docs/PINS.md), [EVENT](docs/EVENT.md),
 [TRACKS](docs/TRACKS.md), [SECURITY](docs/SECURITY.md), [Trust Tasks guide](docs/trust-tasks/README.md).
 
 ## Mode details
 
 One setting, `MODE` in `.env` (or the environment), chooses where the VTA/VTC run.
-Every command below works in both.
+Every command below works in every mode. What each mode gives, and what each feature needs: [docs/MODES.md](docs/MODES.md).
 
 | `MODE` | Runs | Needs | Start |
 |---|---|---|---|
 | `local` (default) | docker compose on your laptop | Docker, the VTA image | `npm run up` |
+| `tunnel` | the local stack plus a mediator (messaging), on public quick-tunnel URLs | Docker, `cloudflared`, internet, a locally built mediator image | `MODE=tunnel npm run up`, see [docs/MODES.md](docs/MODES.md) |
 | `farm` | agents hosted by [VTA Farm](https://vta.farm/) | A browser with a passkey; no Docker, no Rust build | `MODE=farm npm run up`, then [docs/FARM.md](docs/FARM.md) |
 
 **Local mode is the primary, supported path.** Farm mode is an optional shortcut for

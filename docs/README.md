@@ -16,6 +16,7 @@ Back to the [repo README](../README.md). Everything here is for a local playgrou
 
 ## Operate
 
+- [MODES.md](MODES.md): local, tunnel (messaging on public quick tunnels) and farm: what each gives, caveats, switching, troubleshooting.
 - [FARM.md](FARM.md): the hosted VTA Farm mode, canary and troubleshooting.
 - [PINS.md](PINS.md): pinned versions, building the images, drift checks (and [PINS_LOG.md](../PINS_LOG.md)).
 
