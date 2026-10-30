@@ -19,7 +19,7 @@ It is for developers who want to see a signed Trust Task round trip working in m
   `ghcr.io/mickens-lab`** and pulls them for you ([docs/IMAGES.md](docs/IMAGES.md)): internet and no build. Per the organiser, amd64 images are already pushed as a
   stopgap and the packages are private until made public (unverified here; until then a pull may be refused), and CI will publish multi-arch. **Fallback: build locally**
   (`npm run images:build all`, then `IMAGES=local npm run up`): it needs a checkout of the upstream VTI repository next to this one and 10 to 25 minutes of Rust per image
-  (exact steps: [docs/PINS.md](docs/PINS.md#where-the-images-come-from)). Without Docker, see the Farm mode in [docs/MODES.md](docs/MODES.md).
+  (exact steps: [docs/PINS.md](docs/PINS.md#where-the-images-come-from)). To check what you run, prebuilt or built yourself: [docs/VERIFY.md](docs/VERIFY.md). Without Docker, see the Farm mode in [docs/MODES.md](docs/MODES.md).
 
 ## Quick start
 
@@ -124,6 +124,7 @@ The ones you need in the first hour (all of them, grouped: [docs/COMMANDS.md](do
 | `npm run vtc:hello` / `vtc:join` / `vtc:approve` / `vtc:status` | Community: read the join manifest / apply / admin approves / where do I stand |
 | `npm run tsp:ping` / `tsp:listen` | `MODE=tunnel`: send a signed TSP ping and print the pong / receive the credential frames the VTC pushes ([docs/MESSAGING.md](docs/MESSAGING.md)) |
 | `npm run roles:matrix` / `approvals:demo` / `security:check` | Who can call what / approve a gated task from a second key / key-hygiene scan ([ROLES](docs/ROLES.md), [APPROVALS](docs/APPROVALS.md), [SECURITY](docs/SECURITY.md)) |
+| `npm run images:verify` / `images:compare` | Check what you run: is the image the pinned one, built and signed by this repository's workflow, with the pinned labels (`-- --local` for your own build; [docs/VERIFY.md](docs/VERIFY.md)) |
 | `npm run images:build [vta\|vtc\|mediator\|all]` / `pins:check` | Fallback or organiser: build an image from its pinned ref / report version drift ([docs/PINS.md](docs/PINS.md)) |
 | `npm test` / `npm run typecheck` / `npm run check:docs` / `npm run check:generic` | Unit tests (no VTA needed) / typecheck / links and script names in the docs / no personal specifics in the tree |
 

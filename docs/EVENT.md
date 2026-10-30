@@ -50,6 +50,7 @@ single demo or a phone experiment, and take it down afterwards.
       `pins.json`) are in [IMAGES.md](IMAGES.md). **The workflow has never been run** (unverified), and the organiser reports amd64 images were pushed by hand as a stopgap, packages private until made public; CI will publish multi-arch. So do the dry run and the first publish well before the event,
       and verify from a machine with no local images (amd64 and, if participants have them, arm64 such as Apple silicon): `npm ci`,
       `npm run images:pull`, `npm run pins:check`, `npm run up`, `npm run hello` should take minutes.
+- [ ] **Check what you publish and tell participants how to check it.** After the first real run: `npm run images:pull`, `npm run images:verify` (needs `gh` or `cosign`), record the digests, commit, verify again until it says `VERIFIED`; put [VERIFY.md](VERIFY.md) in the welcome message. Unverified until the workflow has run: the signing jobs, and anonymous verification once the packages are public.
 - [ ] **Fallback if the registry is down or unpublished: local images.** Build from the pinned refs, not from whatever is checked out:
       `npm run images:build all` (VTA `vta-service-v0.65.0`, VTC `vtc-service-v0.15.0`; a Rust release build each, see
       [VTC.md](VTC.md) for times; tags `<image>:<short-sha>` and `:local`) and participants run with `IMAGES=local npm run up`. Hand the images

@@ -54,7 +54,7 @@ the local build command. `npm run images:pull -- --check` shows, without any net
 
 `pins.json` `images.<kind>.digest` (initially `null`) is the multi-arch index digest. Once recorded, `images:pull` and `up` pull by
 digest (`<registry>/<name>@sha256:...`), so a moved tag cannot change what runs. Until it is recorded they pull by tag and
-`pins:check` says "no digest recorded".
+`pins:check` warns "no digest in pins.json" (`images:pull -- --by-digest` refuses the tag fallback).
 
 ### Checks
 
@@ -67,6 +67,10 @@ built it), `.licenses` (Apache-2.0, the licence of the software built in), `.ver
 
 For a future `doctor`: `scripts/lib/images.ts` exports `imageStatus(imageSpecs(pins()), realDocker, currentMode())`, which returns
 per image `ready | pullable | missing` with a fix command, and pulls nothing.
+
+### Checking the images
+
+Pulling is not trusting. `npm run images:verify` checks a pulled image against `pins.json` and the workflow's signature and attestations, and `npm run images:pull -- --by-digest` pulls only by the pinned digest. How, and what that does and does not prove: [VERIFY.md](VERIFY.md). The workflow attaches an SBOM, a build provenance attestation and a keyless cosign signature (jobs `attest` and `sign`); these have **never run** and are unverified until the first real run.
 
 ## What an organiser does: publishing
 
@@ -91,8 +95,8 @@ route is preferred because the images are then built from a clean checkout, labe
    Package settings > Change visibility > Public. Because the images carry the `org.opencontainers.image.source` label for this repository,
    the package is linked to the repository automatically on first push; if it is not, use "Connect repository" on the package page.
    (Linking is also what lets the repository's Actions keep pushing new versions.)
-6. **Record the digests.** The run's summary lists each image's digest and a `jq` command that sets it in `pins.json`; the same data is
-   the `images-digests` artifact. Commit the change (`git commit -s`) so participants pull by digest.
+6. **Check the signatures, then record the digests.** First `npm run images:pull`, then `npm run images:verify` (needs `gh` or `cosign`; [VERIFY.md](VERIFY.md)): expect `INCOMPLETE` only for the missing digest, and no `FAIL`. The run's summary lists each image's digest and a `jq` command that sets it in `pins.json`; the same data is
+   the `images-digests` artifact. Commit the change (`git commit -s`) so participants pull by digest, and run `images:verify` again: now it can say `VERIFIED`.
 7. **Verify from a clean machine**, with no local images: `docker logout ghcr.io` (the package is public, no login should be needed), then
    `npm ci && npm run images:pull && npm run pins:check && npm run up && npm run hello`. On an arm64 machine (Apple silicon, an arm64 server)
    as well as amd64: the arm64 image is built on a native arm64 runner and is **untested** until someone does this.
@@ -120,12 +124,13 @@ open-ACL by design and the VTA stores a plaintext seed ([MODES.md](MODES.md), [S
 Verified here (no network, no registry):
 
 - the resolution logic and its fallbacks, the friendly pull errors, the label and digest checks (unit tests, `scripts/test/images.test.ts`);
-- the workflow file parses, its permissions are read-only except `packages: write` on the two publishing jobs, every action is pinned to a
+- `images:verify` and `images:compare` against a mocked `docker`/`gh`/`cosign` (`scripts/test/verify.test.ts`), and live against the local images (labels only; the hand-pushed stopgap images correctly fail `label origin`);
+- the workflow file parses, its permissions are read-only except `packages: write` on the publishing jobs and `id-token`/`attestations: write` only on `attest` and `sign`, every action is pinned to a
   commit SHA, no expression is interpolated into a script, and its plan step, run locally against `pins.json`, produces the expected
   six build legs (`scripts/test/images-workflow.test.ts`);
 - `npm run images:pull` against an unreachable registry fails with the friendly message and the local build named; `npm run up` with
   local images starts a working VTA and `npm run hello` passes.
 
-**Not verified:** that the workflow runs on GitHub at all; that the actions' pinned versions behave as written; that the arm64 images
+**Not verified:** that the workflow runs on GitHub at all (including the `attest` and `sign` jobs, `anchore/sbom-action`, `actions/attest-*` and `cosign` against GHCR, and that `gh attestation verify` / `cosign verify` accept the result with the identity `images:verify` expects); that the actions' pinned versions behave as written; that the arm64 images
 build, start and work; build times on the runners; that the org permits package creation; that a participant can pull anonymously; the
 digest flow end to end; `actionlint` was not available, so only the YAML parse and a shell syntax check stood in for it.

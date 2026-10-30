@@ -22,6 +22,10 @@ mediator is **open** (any DID may register and relay). Treat it as a demo you sw
 on the volumes, and `npm run down` when you finish. MODES.md lists the log and setup-output hazards (the mediator setup prints an
 admin private key; the VTC logs an install URL with a token).
 
+## Is this the image you think it is?
+
+Images can be checked: digest against `pins.json`, a GitHub attestation and cosign signature from this repository's workflow, labels, an SBOM, or a local build compared with the published one. What the signature proves and does not (the mediator is open-ACL and these are dev images either way): [VERIFY.md](VERIFY.md). The signing steps are unverified until the workflow has run.
+
 ## What not to do
 
 - Do not reuse any key from `.vta/` or `.env`, anywhere, ever.

@@ -9,7 +9,8 @@ participant's or organiser's rebuild silently changes the wire behaviour.
 
 ```sh
 npm run images:build [vta|vtc|mediator|all]   # build each image from its own pinned ref; tags <image>:<short-sha> and :local (`all` = vta + vtc; the mediator is for MODE=tunnel only)
-npm run images:pull [vta|vtc|mediator|all]   # pull the prebuilt images pinned in pins.json (`images` section); see IMAGES.md
+npm run images:pull [vta|vtc|mediator|all]   # pull the prebuilt images pinned in pins.json (`images` section); see IMAGES.md; `-- --by-digest` = digest or nothing
+npm run images:verify [-- vta|vtc|mediator|all]   # is it the pinned, signed image? see VERIFY.md
 npm run pins:check [-- --strict]     # report drift; changes nothing
 ```
 
@@ -21,6 +22,8 @@ local build, else pulls ([IMAGES.md](IMAGES.md), including `IMAGES=local` to fli
 `../verifiable-trust-infrastructure`) with `git archive`, so whatever is checked out
 there is irrelevant. `VTI_LOCAL=1` builds that checkout's working tree instead (for
 development; tagged `:local` only). Images carry the label `org.buildathon.vti-ref`.
+**Digests.** While `images.<kind>.digest` is `null` an image is pulled by a movable tag; `pins:check` prints a `WARN` for that. After a workflow run, record the digests, and `images:verify` can check them against the signature ([VERIFY.md](VERIFY.md)).
+
 `pins:check` compares, per image, the label, the binary's own `--version`, that the release tag still resolves to the pinned ref, a running VTC's
 `/health` version, the lockfile against `pins.json`, and the newest upstream
 `vta-service-v*` / `vtc-service-v*` tags and `npm outdated`. It is read-only.
