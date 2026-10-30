@@ -8,7 +8,7 @@ export default defineConfig(({ mode }) => {
   return {
     envDir: "../..",
     define: { __CRED__: JSON.stringify({ credential: e.VTA_CREDENTIAL ?? "", url: e.VTA_URL ?? "http://localhost:8100", context: e.VTA_CONTEXT ?? "my-app" }) },
-    server: { port: 5173 },
+    server: { port: 5173, strictPort: true },
     build: { target: "es2022" },
   };
 });
