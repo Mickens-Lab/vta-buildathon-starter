@@ -1,7 +1,7 @@
 import { useRef, useState, type KeyboardEvent } from "react";
 import type { PortalMe } from "@buildathon/vtc-client";
 import { describeError } from "../client.ts";
-import { deliveryNote, runMode } from "../delivery.ts";
+import { builtApplicant, deliveryNote, runMode } from "../delivery.ts";
 import { formatDate, formatDateTime, stripDids } from "../format.ts";
 import { useLoad } from "../hooks.ts";
 import { ANON_COOLDOWN_MS } from "../refresh.ts";
@@ -37,7 +37,7 @@ export function MemberScreen({ actions, communityName, delivered }: { actions: A
 }
 
 function MembershipCard({ actions, communityName, delivered }: { actions: Actions; communityName: string; delivered?: boolean }) {
-  const note = deliveryNote(runMode(), delivered);
+  const note = deliveryNote(runMode(), delivered, builtApplicant().kind);
   // The portal sign-in is plain REST (challenge, auth, me): the VTC rate-limits it like an anonymous caller (burst 10, then one
   // per 5 s per address), so it costs three of those tokens. Global refreshes therefore skip it; this card has its own Refresh.
   const me = useLoad<PortalMe>("proof", (c) => c.memberProof(), true, "member/me", false);

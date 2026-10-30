@@ -23,6 +23,10 @@ export default defineConfig(({ mode }) => {
   }
   const vtcUrl = process.env.VTC_URL ?? e.VTC_URL;
   const vtcDid = process.env.VTC_DID ?? e.VTC_DID;
+  // VTC_APPLICANT=did:peer (tunnel only): apply as a did:peer:2 naming the stack's mediator (.vta/tunnel.json), so the VTC can push to it.
+  const applicant = (process.env.VTC_APPLICANT ?? e.VTC_APPLICANT ?? "").trim().toLowerCase().replace(/^peer$/, "did:peer") === "did:peer" ? "did:peer" : "did:key";
+  let mediatorDid: string | null = null;
+  try { mediatorDid = tunnel ? (JSON.parse(readFileSync(new URL("../../.vta/tunnel.json", import.meta.url), "utf8")).mediatorDid ?? null) : null; } catch { /* no tunnel state */ }
 
   // The version this kit is pinned to, for the status panel's version check.
   const pins = JSON.parse(readFileSync(new URL("../../pins.json", import.meta.url), "utf8"));
@@ -44,6 +48,8 @@ export default defineConfig(({ mode }) => {
     define: {
       __FARM__: JSON.stringify(farm),
       __TUNNEL__: JSON.stringify(tunnel),
+      __APPLICANT__: JSON.stringify(applicant),
+      __MEDIATOR_DID__: JSON.stringify(mediatorDid),
       __VTA_BROWSER_URL__: JSON.stringify(VTA_PROXY),
       __VTA_URL__: JSON.stringify(e.VTA_URL ?? "http://localhost:8100"),
       __VTC_BROWSER_URL__: JSON.stringify(VTC_PROXY),

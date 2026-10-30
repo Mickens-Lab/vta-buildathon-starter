@@ -1,6 +1,9 @@
 // The one VtcClient for this page, its call log, and error wording. The identity is the user's own
-// generated credential (VTA_CREDENTIAL, as in web-vta-app); the community is VTC_URL / VTC_DID.
-import { decodeCredential, explainFetchFailure, identityFromCredential, type Identity } from "@buildathon/vta-client";
+// generated credential (VTA_CREDENTIAL, as in web-vta-app), as its did:key or (VTC_APPLICANT=did:peer, tunnel) a did:peer:2;
+// the community is VTC_URL / VTC_DID.
+import { decodeCredential, explainFetchFailure, identityFromSeed, seedFromMultibase, type Identity } from "@buildathon/vta-client";
+import { didPeerFromSeed } from "@buildathon/tsp-client";
+import { builtApplicant } from "./delivery.ts";
 import { TrustTaskError, VtcClient, refusalCode, type CallEvent } from "@buildathon/vtc-client";
 import { explainRefusal } from "./format.ts";
 import { createStore } from "./store.ts";
@@ -18,7 +21,10 @@ let seq = 0;
 export function identity(): Identity {
   const c = credential();
   if (!c) throw new Error("No app credential. Run `npm run up` at the repo root, then restart the dev server.");
-  return identityFromCredential(decodeCredential(c));
+  const seed = seedFromMultibase(decodeCredential(c).privateKeyMultibase);
+  // VTC_APPLICANT=did:peer in MODE=tunnel: a did:peer:2 from the same seed, naming the stack's mediator (docs/MESSAGING.md).
+  const a = builtApplicant();
+  return a.kind === "did:peer" && a.mediatorDid ? didPeerFromSeed(seed, a.mediatorDid) : identityFromSeed(seed);
 }
 
 let clientPromise: Promise<VtcClient> | undefined;
