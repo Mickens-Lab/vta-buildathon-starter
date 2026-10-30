@@ -61,39 +61,59 @@ export function describePong(r: PingResult): string {
   return `pong from the VTA in ${r.elapsedMs} ms: status ${p.status}, protocols [${(p.protocols ?? []).join(", ")}], nonce echoed, server time ${p.serverTime}`;
 }
 
-export async function tspPing(opts: PingOptions): Promise<PingResult> {
+export interface TspClient {
+  /** The did:key that logged in. */
+  did: string;
+  conn: MediatorConnection;
+  session: TspSession;
+  signing: ReturnType<typeof generateSigningIdentity>;
+  close(): void;
+}
+
+/** Log in to the mediator as a did:key, open the socket and resolve the peer and the mediator to TSP keys. */
+export async function connectTsp(opts: Pick<PingOptions, "vtaDid" | "mediatorDid" | "seed" | "allowInsecure" | "webSocketImpl" | "log">): Promise<TspClient> {
   const log = opts.log ?? (() => {});
-  const t0 = Date.now();
   const signing = opts.seed ? signingIdentityFromSecret(opts.seed) : generateSigningIdentity();
   const ka = didcommKeyAgreementFromSigning(signing);
   const holder = Identity.fromSecretJwk({ did: signing.did, kid: ka.keyAgreementKid, jwk: ka.secretJwk });
   log(`client DID (did:key): ${signing.did}`);
-  let conn: MediatorConnection | undefined;
+  log("logging in to the mediator and opening the socket");
+  const conn = await connectMediatorSession({
+    holder, mediatorDid: opts.mediatorDid, vtaDid: opts.vtaDid,
+    ...(opts.allowInsecure ? { allowInsecure: true } : {}),
+    ...(opts.webSocketImpl ? { webSocketImpl: opts.webSocketImpl } : {}),
+  });
   try {
-    log("logging in to the mediator and opening the socket");
-    conn = await connectMediatorSession({
-      holder, mediatorDid: opts.mediatorDid, vtaDid: opts.vtaDid,
-      ...(opts.allowInsecure ? { allowInsecure: true } : {}),
-      ...(opts.webSocketImpl ? { webSocketImpl: opts.webSocketImpl } : {}),
-    });
-    log("resolving the VTA DID to its TSP keys");
-    const vta = await resolveVtaTspEndpoint(opts.vtaDid);
+    log("resolving the peer DID to its TSP keys");
+    const peer = await resolveVtaTspEndpoint(opts.vtaDid);
     log("resolving the mediator DID to its TSP keys");
     const mediator = await resolveVtaTspEndpoint(opts.mediatorDid);
+    const session = new TspSession(conn, { vid: signing.did, signingKey: signing.privateKey, decryptionKey: ed25519.utils.toMontgomerySecret(signing.privateKey) }, mediator, peer, log);
+    return { did: signing.did, conn, session, signing, close: () => { conn.close(); holder.dispose(); } };
+  } catch (e) {
+    conn.close();
+    holder.dispose();
+    throw e;
+  }
+}
+
+export async function tspPing(opts: PingOptions): Promise<PingResult> {
+  const log = opts.log ?? (() => {});
+  const t0 = Date.now();
+  const c = await connectTsp(opts);
+  try {
     const timeoutMs = opts.timeoutMs ?? 20_000;
-    const session = new TspSession(conn, { vid: signing.did, signingKey: signing.privateKey, decryptionKey: ed25519.utils.toMontgomerySecret(signing.privateKey) }, mediator, vta, log);
     log("TSP relationship invite (waiting for the accept)");
-    await session.relate(4000).catch((e) => log(`no accept seen, continuing: ${(e as Error).message}`));
+    await c.session.relate(4000).catch((e) => log(`no accept seen, continuing: ${(e as Error).message}`));
     const nonce = crypto.randomUUID();
-    const envelope = buildTrustTask(PING_TYPE, { nonce }, { issuer: signing.did, recipient: opts.vtaDid });
-    await signOutboundTask(envelope, asTaskSigner(signing)); // the VTA refuses an unproven document (ProofRequired)
+    const envelope = buildTrustTask(PING_TYPE, { nonce }, { issuer: c.did, recipient: opts.vtaDid });
+    await signOutboundTask(envelope, asTaskSigner(c.signing)); // the VTA refuses an unproven document (ProofRequired)
     log("sending messaging/ping/0.1 over TSP");
-    const reply = await session.request(envelope, timeoutMs, (d) => d.threadId === envelope.id);
+    const reply = await c.session.request(envelope, timeoutMs, (d) => d.threadId === envelope.id);
     const pong = reply.payload as PongPayload;
     if (!isPong(pong, nonce)) throw new Error(`the reply was not a pong for this ping: ${JSON.stringify(pong)}`);
-    return { clientDid: signing.did, nonce, pong, elapsedMs: Date.now() - t0 };
+    return { clientDid: c.did, nonce, pong, elapsedMs: Date.now() - t0 };
   } finally {
-    conn?.close();
-    holder.dispose();
+    c.close();
   }
 }

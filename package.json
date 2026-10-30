@@ -54,7 +54,8 @@
     "approvals:demo": "tsx scripts/approvals-demo.ts",
     "approver": "tsx scripts/approver.ts",
     "tsp:ping": "tsx scripts/tsp-ping.ts",
-    "tsp:ping:browser": "tsx scripts/tsp-ping-browser.ts"
+    "tsp:ping:browser": "tsx scripts/tsp-ping-browser.ts",
+    "tsp:listen": "tsx scripts/tsp-listen.ts"
   },
   "devDependencies": {
     "@types/node": "22.20.5",

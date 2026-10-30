@@ -83,3 +83,14 @@ test("an uncorrelated frame is not taken for the reply", async () => {
   const lost = await Promise.race([wait.then(() => "answered", () => "rejected"), new Promise((r) => setTimeout(() => r("still waiting"), 300))]);
   assert.equal(lost, "still waiting");
 });
+
+test("open() refuses a frame that is not sealed to us by the peer", async () => {
+  const me = party("did:key:me"), med = party("did:peer:mediator"), vta = party("did:webvh:vta"), other = party("did:key:other");
+  const session = new TspSession({ awaitTspFrame: async () => new Uint8Array(), sendBinary: () => {} }, me, med, vta);
+  const good = await pack(wrapEnvelope({ id: "x" }), vta.vid, me.vid, { senderSigningKey: vta.signingKey, receiverEncryptionKey: me.encryptionPublicKey });
+  assert.equal((await session.open(good.bytes)).sender, vta.vid);
+  const forged = await pack(wrapEnvelope({ id: "x" }), vta.vid, me.vid, { senderSigningKey: other.signingKey, receiverEncryptionKey: me.encryptionPublicKey });
+  await assert.rejects(session.open(forged.bytes), /signature|verify|invalid/i, "signed by someone else but claiming the peer's VID");
+  const toSomeoneElse = await pack(wrapEnvelope({ id: "x" }), vta.vid, other.vid, { senderSigningKey: vta.signingKey, receiverEncryptionKey: other.encryptionPublicKey });
+  await assert.rejects(session.open(toSomeoneElse.bytes));
+});

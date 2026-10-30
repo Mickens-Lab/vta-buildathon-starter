@@ -48,7 +48,8 @@ export class TspSession {
     return (await packRoutedRev3(inner, [this.peer.vid], this.me.vid, this.mediator.vid, keys)).bytes;
   }
 
-  private async open(bytes: Uint8Array) {
+  /** Open an inbound frame: it must be sealed to us and proven to come from the peer. */
+  async open(bytes: Uint8Array) {
     const m = await unpack(bytes, { receiverDecryptionKey: this.me.decryptionKey, senderSigningKey: this.peer.signingPublicKey });
     if (m.sender !== this.peer.vid) throw new Error(`sealed by ${m.sender}, not the peer`);
     return m;
