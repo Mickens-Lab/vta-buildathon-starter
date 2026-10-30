@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { farmImageTag, pins } from "./pins.js";
 import { env, LOCAL_VTC_URL } from "./env.js";
-import { checkImageLabels, IMAGE_KINDS, imageSpecs, NO_DIGEST_WARNING, parseImagesMode, undigested } from "./lib/images.js";
+import { checkImageLabels, IMAGE_KINDS, imagesAvailable, imageSpecs, NO_DIGEST_WARNING, parseImagesMode, undigested } from "./lib/images.js";
 
 const p = pins();
 let drift = 0;
@@ -85,7 +85,9 @@ for (const [name, pin] of imgs) {
 let warnings = 0;
 try {
   const missing = undigested(imageSpecs(p, process.env.IMAGE_REGISTRY));
-  if (missing.length) {
+  if (!imagesAvailable(p)) {
+    out(null, "prebuilt images", `not available (pins.json images.available is false): everyone builds locally, so digests${missing.length ? " (none recorded for " + missing.join(", ") + ")" : ""} are not in use; they stay in pins.json for when packages can be public`);
+  } else if (missing.length) {
     warnings++;
     console.log(`WARN  ${"prebuilt images by tag".padEnd(34)} no digest in pins.json for: ${missing.join(", ")}. ${NO_DIGEST_WARNING}`);
   }
@@ -99,7 +101,7 @@ try {
     const spec = specs[kind];
     for (const [ref, origin] of [[spec.pinned, "registry"]] as const) {
       const insp = run("docker", ["image", "inspect", ref, "--format", "{{json .Config.Labels}}|{{json .RepoDigests}}"]);
-      if (insp.status !== 0) { out(null, `image ${ref}`, origin === "registry" ? "not pulled (npm run images:pull); skipped" : "not present"); continue; }
+      if (insp.status !== 0) { out(null, `image ${ref}`, origin === "registry" ? (imagesAvailable(p) ? "not pulled (npm run images:pull); skipped" : "not present (prebuilt images are not available; skipped)") : "not present"); continue; }
       const [l, d] = insp.stdout.trim().split("|");
       for (const r of checkImageLabels(spec, p, ref, origin, JSON.parse(l || "null") ?? {}, JSON.parse(d || "null") ?? [])) out(r.ok, r.what, r.detail);
     }

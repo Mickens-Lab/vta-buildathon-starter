@@ -336,3 +336,17 @@ test("imageStatus and useImages follow pins.json images.available", () => {
   delete process.env.VTA_IMAGE;
   assert.ok(UNAVAILABLE_NOTE.includes("IMAGES=registry"));
 });
+
+test("pullUnavailableMessage: explains, shows how to build, and how people with access use IMAGES=registry", async () => {
+  const { pullUnavailableMessage } = await import("../lib/images.js");
+  const p = pins();
+  const specs = imageSpecs(p);
+  const m = pullUnavailableMessage(specs, ["vta", "vtc"], p.images.why);
+  assert.match(m, /not available yet/);
+  assert.match(m, /npm run images:build vta/);
+  assert.match(m, /npm run images:build vtc/);
+  assert.doesNotMatch(m, /images:build mediator/);
+  assert.match(m, /docker login ghcr.io/);
+  assert.match(m, /IMAGES=registry npm run images:pull/);
+  assert.match(m, /Nothing was pulled/);
+});

@@ -292,6 +292,24 @@ export const undigested = (specs: Record<ImageKind, ImageSpec>, kinds: readonly 
 
 export const NO_DIGEST_WARNING = "pins.json records no digest, so this is pulled by TAG. A tag can be moved to different contents by whoever can push to the registry. Run the images workflow, record the digests in pins.json, then pull with --by-digest (docs/VERIFY.md).";
 
+/** What `images:pull` prints while images.available is false and IMAGES=registry was not asked for. Pure. */
+export function pullUnavailableMessage(specs: Record<ImageKind, ImageSpec>, kinds: readonly ImageKind[], why: string): string {
+  return [
+    "Prebuilt images are not available yet, so there is nothing to pull.",
+    `  Why: ${why}`,
+    "",
+    "Build the images on your own machine instead (once; later runs reuse them):",
+    "  npm run setup                 # builds what your MODE needs: VTA + VTC, plus the mediator for MODE=tunnel",
+    ...kinds.map((k) => `  ${specs[k].buildCmd}`),
+    "  (needs a checkout of the upstream VTI repository; see docs/IMAGES.md and docs/PINS.md#where-the-images-come-from)",
+    "",
+    "If your account can already pull the organisation's packages (an organisation member), log in and ask for them explicitly:",
+    "  docker login ghcr.io",
+    "  IMAGES=registry npm run images:pull && IMAGES=registry npm run up",
+    "Nothing was pulled.",
+  ].join("\n");
+}
+
 /**
  * What `images:pull` pulls. `byDigest` refuses to fall back to a tag: it is for people who want the pin or nothing.
  * Returns the reference to pull, or a message saying why not.
