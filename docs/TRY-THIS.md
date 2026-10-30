@@ -168,6 +168,21 @@ npm run approver -- --match-code 032df1      # in a second terminal: decision se
 You should see the demo print `approved and executed` with the context renamed. Try a wrong code (refused before anything is signed) and `npm run approver -- --deny "not expected"`
 (the demo stops and does not ask again). This is a second key on the same laptop, not a second device: [APPROVALS.md](APPROVALS.md) says what it does and does not protect.
 
+## 8c. Ping the VTA over TSP (tunnel mode, see where it stops)
+
+*Mode: `tunnel` only. Start it with the mediator open to the page: `MODE=tunnel MEDIATOR_CORS_ALLOW_ORIGIN=http://localhost:3000 npm run up`. Needs the images in [MODES.md](MODES.md).*
+
+```sh
+npm run tsp:ping                   # login, relationship invite, signed messaging/ping/0.1 over TSP
+npm run dev -w @buildathon/tsp-ping   # the same in a browser: http://localhost:3000, press "Send ping"
+docker compose logs vta | grep -E "tsp|trust-task"     # what the VTA did with it
+```
+
+With the pinned images you should see the client log in and send, then `TSP ping FAILED: timed out awaiting reply frame`, while the VTA log shows
+`TSP trust-task dispatched ... status=200 OK` followed by `failed to send TSP reply ... unsupported TSP major version 1`. That is the honest result today: the request arrives and the
+mediator pin refuses the answer ([MESSAGING.md](MESSAGING.md)). Try `npm run tsp:ping -- --throwaway` (a DID the VTA does not know: 403) and the page with the credential field cleared.
+If you have a mediator that speaks TSP 1.0 (`MEDIATOR_IMAGE`), the same command should end with `pong from the VTA`; tell the organiser, that is unverified here.
+
 ## 9. Extend it: your own task and an extension
 
 *Mode: any mode.*

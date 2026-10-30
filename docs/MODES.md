@@ -27,7 +27,8 @@ Features and the mode they need (everything in the README and [TRY-THIS](TRY-THI
 | Trust Tasks, the dashboard, roles lab, `npm run e2e`, `npm run test:roles` | yes **[verified]** | yes **[verified: e2e 13/13, roles 36/36 through the public URLs]** | yes (see [FARM.md](FARM.md)) |
 | [Approve on a second device](APPROVALS.md) (software approver) | yes **[verified]** | yes **[verified]** | no: a hosted VTA's policy is set in its portal |
 | Membership credential reaches the member | no (messaging off) | **no**: the kit's applicant has no inbox, `credentialsDelivered:false` **[verified]** | **[unverified]** |
-| DIDComm/TSP application round trip, a phone as approver | no | **no client in the kit** ([MESSAGING.md](MESSAGING.md), [MOBILE-WALLET.md](MOBILE-WALLET.md)) | **[unverified]** |
+| TSP ping reaches the VTA (`npm run tsp:ping`) | no | yes **[verified]**; the pong does not come back (mediator pin refuses TSP 1.0 replies) ([MESSAGING.md](MESSAGING.md)) | **[unverified]** |
+| DIDComm round trip, a phone as approver | no | **no DIDComm client in the kit** ([MOBILE-WALLET.md](MOBILE-WALLET.md)) | **[unverified]** |
 
 In the dashboard the membership card's "Credential delivery" row says which of these applies to the mode the page was built for.
 
@@ -68,6 +69,8 @@ A web page that talks to the mediator directly (the TSP browser client) needs tw
 - **VTA and VTC:** their REST endpoints already allow `http://localhost:5173`, `:3000` and `:8000` by default. For another origin use
   `CORS_ORIGINS_TOML` (VTA) and `VTC_CORS_ORIGINS_TOML` (VTC), first boot only (see the cheatsheet).
 
+_Verified live:_ with `MEDIATOR_CORS_ALLOW_ORIGIN=http://localhost:3000` the mediator answers that origin with a matching `Access-Control-Allow-Origin` and no other, and a headless Chromium page on that origin logs in and opens the TSP socket **[verified]**.
+
 ## Caveats, stated plainly
 
 - **The URLs are public and unauthenticated.** Anyone who has a quick-tunnel URL can reach the VTA, VTC and mediator endpoints. The VTA's
@@ -93,8 +96,8 @@ A web page that talks to the mediator directly (the TSP browser client) needs tw
   `tsp`, `didcomm`, `rest`, the VTC advertises both transports as serviceable, and a VTC approval queues two Trust Task pushes via
   DIDComm that the mediator accepts (outbox `Queued` then `Sent`). What is **not** verified: an application-level message from one peer
   arriving at another, TSP frame handling end to end, and credential pickup (the applicant of this kit is a plain `did:key` with no
-  mediator or listener, so the VTC logs `credentials_delivered=false`). `messaging/ping/0.1` is a capability check, not a peer ping, and this
-  kit has no DIDComm client yet.
+  mediator or listener, so the VTC logs `credentials_delivered=false`). `messaging/ping/0.1` as the status panel uses it is a capability check, not a peer ping. A TSP client now exists (`npm run tsp:ping`): its request reaches the VTA **[verified]**, but no
+  reply comes back, because the pinned mediator reads TSP Rev 3 and the VTA and VTC send TSP 1.0 ([MESSAGING.md](MESSAGING.md)). The kit has no DIDComm client.
 - **A silent REST fallback is made loud.** The VTA keeps serving REST when its mediator connection fails and only logs a warning, so the
   probe and the status panel's Messaging row read the VTA's own protocol list and show `MESSAGING DEGRADED` (a failure) when `didcomm` or
   `tsp` is missing.

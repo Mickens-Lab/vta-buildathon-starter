@@ -39,6 +39,7 @@ Only A is demonstrated, and only with a software stand-in.
 
 - Any phone, any emulator, `did:webvh` resolution from a device, whether a wallet accepts a quick-tunnel VTA, whether a developer build is needed, or whether the relevant features are in store builds.
 - Whether a wallet would accept this kit's mediator (the wallet's own developer mediator is not known to be compatible with the VTA's) **[I]**.
+- Whether a wallet's TSP version matches: the pinned VTA and VTC send TSP 1.0 and the pinned mediator refuses it, so any TSP leg to a phone is blocked at the mediator until that is fixed ([MESSAGING.md](MESSAGING.md)) **[V from the Stage G ping]**.
 - Whether the wallet's mediator CORS needs `cors_allow_origin` for a direct connection ([MODES.md](MODES.md)).
 - The trigger-link sign-in (`auth/oob`): no path with that name exists in the VTA or VTC OpenAPI documents **[V]**, and its step-up purpose is reserved, not defined **[V]**.
 

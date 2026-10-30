@@ -41,7 +41,7 @@ Trouble? See [Troubleshooting](#troubleshooting).
 
 ## Things to try
 
-[docs/TRY-THIS.md](docs/TRY-THIS.md) has ten guided exercises, easy to advanced, each with commands and expected output:
+[docs/TRY-THIS.md](docs/TRY-THIS.md) has guided exercises, easy to advanced, each with commands and expected output:
 a first signed call, the status page, join a community and see the member screens, tamper/replay/wrong-recipient
 against the inbox verifier, reading refusals, calling a task you have not used, a read-only look at the Farm, and ideas to extend,
 plus approving a gated task from a second key ([docs/APPROVALS.md](docs/APPROVALS.md)). Each exercise names the mode it needs.
@@ -55,6 +55,7 @@ plus approving a gated task from a second key ([docs/APPROVALS.md](docs/APPROVAL
 | `templates/inbox-verifier` | Server that accepts signed documents (works offline). |
 | `templates/web-vta-app` | Browser app with a status page and optional wallet (vanilla TypeScript). |
 | `templates/community-dashboard` | React dashboard for the VTC member journey. |
+| `templates/tsp-ping` | Browser page that sends a TSP ping to the VTA (`MODE=tunnel`; the pong does not come back yet, see docs/MESSAGING.md). |
 | `templates/mcp-agent` | Stub for an AI agent with a scoped VTA identity. |
 | `scripts/` | The npm commands (`up`, `hello`, `vtc:*`, `farm:*`, `vta:call`, checks). |
 | `docker-compose.yml`, `docker/` | Local VTA and VTC. |
@@ -85,8 +86,8 @@ when Docker does not cooperate, and only after a pre-event check. There are two 
 (https://vtafarm.firstperson.dev) is supported but currently cannot create agents (`acl/grant/0.2`, a confirmed
 Farm-side bug, 2026-10-29). Organisers run `npm run farm:probe` plus a canary agent (`npm run farm:canary`) the
 day before and on the day (ic3 first, then firstperson), and use local mode for everyone if both fail ([docs/EVENT.md](docs/EVENT.md), [docs/FARM.md](docs/FARM.md)).
-Browser apps work in farm mode through the Vite proxy in each template. Tunnel mode turns DIDComm/TSP on, but this kit has no messaging client, so a
-message round trip and credential delivery are not demonstrated (transport connected, round trip unverified: [docs/MESSAGING.md](docs/MESSAGING.md)).
+Browser apps work in farm mode through the Vite proxy in each template. Tunnel mode turns DIDComm/TSP on. A TSP client (`npm run tsp:ping`, `templates/tsp-ping`) gets a signed ping to the VTA, but no pong comes back and no credential is
+delivered, because the pinned mediator does not read the TSP 1.0 the VTA and VTC send (transport connected, round trip unverified: [docs/MESSAGING.md](docs/MESSAGING.md)).
 A VTC (community) is described in [docs/VTC.md](docs/VTC.md): the client is ready,
 the local Docker VTC (vtc-service 0.15.0, the version the Farm VTC runs) was **verified live** (join, approve, restart, browser; a member cannot get a console session by design, but the sessionless member surface was mapped and verified: docs/VTC-SURFACE.md), the farm community path needs the portal and is unverified.
 
@@ -156,7 +157,7 @@ Linux with Docker 29 and Node 22 only; Windows and macOS hosts are untested.
 
 Every doc marks claims as verified (observed while building this kit) or unverified (documentation or inference). In short:
 **verified live**: the local VTA and VTC flows, the dashboard (browser end to end), the role matrix, `MODE=tunnel` bring-up with the public URLs, the status
-panel Messaging row in a browser, and the software-approver demo in local and tunnel mode. **Not verified**: a DIDComm/TSP message round trip, credential
+panel Messaging row in a browser, and the software-approver demo in local and tunnel mode. **Also verified live**: a TSP ping from Node and from headless Chromium reaches the VTA. **Not verified**: a DIDComm/TSP message round trip (the pong is refused by the mediator pin), credential
 delivery to a member, a phone as approver, a hosted mediator admitting an outside VTA, the Farm community path, and Windows or macOS.
 
 ## Privacy / what this repo does not contain

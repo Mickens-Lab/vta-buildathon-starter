@@ -4,7 +4,7 @@ Back to the [repo README](../README.md). Everything here is for a local playgrou
 
 ## Start here
 
-- [TRY-THIS.md](TRY-THIS.md): ten guided exercises, easy to advanced, with expected output.
+- [TRY-THIS.md](TRY-THIS.md): guided exercises, easy to advanced, with expected output.
 - [TRACKS.md](TRACKS.md): project ideas and which template fits each.
 - [EVENT.md](EVENT.md): checklist for organisers running a build day.
 
@@ -26,7 +26,7 @@ Back to the [repo README](../README.md). Everything here is for a local playgrou
 - [VTC-SURFACE.md](VTC-SURFACE.md): who can call which VTC task (stranger, applicant, member, admin).
 - [APPROVALS.md](APPROVALS.md): approve a gated task on a second device (a software approver first): `npm run approvals:demo`.
 - [MOBILE-WALLET.md](MOBILE-WALLET.md): what a phone wallet could add, what was and was not checked.
-- [MESSAGING.md](MESSAGING.md): what messaging gives in tunnel mode and the gap (no DIDComm/TSP client).
+- [MESSAGING.md](MESSAGING.md): what messaging gives in tunnel mode, the TSP ping client, and where it stops (the mediator pin refuses TSP 1.0 replies).
 - [ROLES.md](ROLES.md): roles lab: personas, separation of duties, lifecycle, strict mode (`npm run roles:matrix`).
 - [trust-tasks/06-troubleshooting-and-glossary.md](trust-tasks/06-troubleshooting-and-glossary.md): error causes and a glossary.
 

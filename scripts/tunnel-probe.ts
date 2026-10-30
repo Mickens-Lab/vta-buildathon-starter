@@ -64,7 +64,7 @@ if (u.vtc) {
 
 // 5. what this probe does not establish
 add("info", "mediator ACL", "OPEN by design (any DID may register and relay): demo data only");
-add("info", "DIDComm/TSP round trip", "transport connected, round trip unverified (this kit has no peer client yet)");
+add("info", "DIDComm/TSP round trip", "transport connected, round trip unverified (`npm run tsp:ping` sends a TSP ping; no pong comes back with the pinned mediator, docs/MESSAGING.md)");
 
 for (const [l, w, d] of rows) console.log(`${l === "ok" ? "ok  " : l === "FAIL" ? "FAIL" : "info"} ${w.padEnd(44)} ${d}`);
 const failed = rows.filter((r) => r[0] === "FAIL").length;
