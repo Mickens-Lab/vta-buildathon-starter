@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { farmImageTag, pins } from "./pins.js";
 import { env, LOCAL_VTC_URL } from "./env.js";
+import { checkImageLabels, IMAGE_KINDS, imageSpecs, parseImagesMode } from "./lib/images.js";
 
 const p = pins();
 let drift = 0;
@@ -78,6 +79,21 @@ for (const [name, pin] of imgs) {
   const cf = run("cloudflared", ["--version"]);
   out(null, "cloudflared", cf.status === 0 ? `${/(\d{4}\.\d+\.\d+)/.exec(cf.stdout + cf.stderr)?.[1] ?? "?"} (validated ${p.messaging.cloudflared.validated})` : "not on PATH (only MODE=tunnel needs it)");
 }
+
+// 3b. The pinned registry images, once pulled: labels and digest against pins.json (the local builds are covered above).
+try {
+  parseImagesMode(process.env.IMAGES);
+  const specs = imageSpecs(p, process.env.IMAGE_REGISTRY);
+  for (const kind of IMAGE_KINDS) {
+    const spec = specs[kind];
+    for (const [ref, origin] of [[spec.pinned, "registry"]] as const) {
+      const insp = run("docker", ["image", "inspect", ref, "--format", "{{json .Config.Labels}}|{{json .RepoDigests}}"]);
+      if (insp.status !== 0) { out(null, `image ${ref}`, origin === "registry" ? "not pulled (npm run images:pull); skipped" : "not present"); continue; }
+      const [l, d] = insp.stdout.trim().split("|");
+      for (const r of checkImageLabels(spec, p, ref, origin, JSON.parse(l || "null") ?? {}, JSON.parse(d || "null") ?? [])) out(r.ok, r.what, r.detail);
+    }
+  }
+} catch (e) { out(null, "prebuilt images", (e as Error).message); }
 
 // 4. A running local VTC reports its version on /health (the VTA's /health does not).
 try {

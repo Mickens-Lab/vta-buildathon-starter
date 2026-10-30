@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  friendlyPullError, imageSpecs, imageStatus, parseImagesMode, registryBase, resolveImage, useImages, type Docker, type ImageKind,
+  checkImageLabels, friendlyPullError, imageSpecs, imageStatus, parseImagesMode, registryBase, resolveImage, useImages, type Docker, type ImageKind,
 } from "../lib/images.js";
 import { pins, type Pins } from "../pins.js";
 
@@ -195,4 +195,27 @@ test("compose defaults are the local tags the resolver knows, and the scripts ex
   }
   const scripts = JSON.parse(read("package.json")).scripts as Record<string, string>;
   assert.equal(scripts["images:pull"], "tsx scripts/images-pull.ts");
+});
+
+test("pins:check rows: labels, features, digest", () => {
+  const p = withDigest({ vta: D });
+  const s = imageSpecs(p);
+  const good = { "org.buildathon.vti-ref": p.vti.vta.ref, "org.buildathon.vta-features": p.vti.vta.features!, "org.opencontainers.image.revision": "0123456789abcdef" };
+  const rows = checkImageLabels(s.vta, p, s.vta.pinned, "registry", good, [`${s.vta.repo}@${D}`]);
+  assert.deepEqual(rows.map((r) => r.ok), [true, true, true, null]);
+  assert.match(rows[3]!.detail, /01234567/);
+  // wrong ref, features without tsp, other digest
+  const bad = checkImageLabels(s.vta, p, "r", "registry", { "org.buildathon.vti-ref": "f".repeat(40), "org.buildathon.vta-features": "setup,rest" }, [`${s.vta.repo}@sha256:${"b".repeat(64)}`]);
+  assert.deepEqual(bad.map((r) => r.ok), [false, false, false]);
+  assert.match(bad[2]!.detail, /images:pull -- vta --force/);
+});
+
+test("pins:check rows: a registry image without labels is drift, a local one only info; no digest recorded is info", () => {
+  const s = imageSpecs(pins());
+  assert.deepEqual(checkImageLabels(s.vtc, pins(), "r", "registry", {}, []).map((r) => r.ok), [false, null]);
+  assert.deepEqual(checkImageLabels(s.vtc, pins(), "vtc-buildathon:local", "local", {}, []).map((r) => r.ok), [null]);
+  const m = checkImageLabels(s.mediator, pins(), "m", "registry", { "org.buildathon.mediator-ref": pins().messaging.mediator.ref }, []);
+  assert.deepEqual(m.map((r) => r.ok), [true, null]);
+  const vtaLocal = checkImageLabels(s.vta, pins(), "vta-buildathon:local", "local", {}, []);
+  assert.deepEqual(vtaLocal.map((r) => r.ok), [null, null]);
 });

@@ -206,3 +206,36 @@ export function useImages(p: Pins, kinds: readonly ImageKind[], opts: { pull: bo
     return r;
   });
 }
+
+// --- pins:check -------------------------------------------------------------------------------------------
+
+export interface CheckRow { ok: boolean | null; what: string; detail: string }
+
+/**
+ * Compare one image's labels (and, for a registry image, its repo digests) with pins.json. Pure.
+ * `origin` "local" = `<name>:local` from images:build (unlabelled is only informational); "registry" = the pinned
+ * registry image, which the publish workflow always labels (a missing label there is drift).
+ */
+export function checkImageLabels(spec: ImageSpec, p: Pins, ref: string, origin: "local" | "registry", labels: Record<string, string>, repoDigests: string[]): CheckRow[] {
+  const rows: CheckRow[] = [];
+  const miss = origin === "registry" ? false : null;
+  const got = labels[spec.refLabel];
+  rows.push(
+    got ? { ok: got === spec.ref, what: `image ${ref} ref`, detail: got === spec.ref ? got.slice(0, 8) : `label ${got.slice(0, 8)}, pinned ${spec.ref.slice(0, 8)}` }
+        : { ok: miss, what: `image ${ref} ref`, detail: `no ${spec.refLabel} label${origin === "local" ? " (not built by images:build)" : ""}; pinned ${spec.ref.slice(0, 8)}` },
+  );
+  if (spec.kind === "vta" && p.vti.vta.features) {
+    const f = labels[FEATURES_LABEL];
+    rows.push(f !== undefined && f !== "" ? { ok: f === p.vti.vta.features, what: `image ${ref} features`, detail: f === p.vti.vta.features ? "match" : `built with ${f}, pinned ${p.vti.vta.features}` }
+                                          : { ok: miss, what: `image ${ref} features`, detail: `no ${FEATURES_LABEL} label` });
+  }
+  if (origin === "registry") {
+    const has = spec.digest !== null && repoDigests.includes(`${spec.repo}@${spec.digest}`);
+    rows.push(spec.digest
+      ? { ok: has, what: `image ${ref} digest`, detail: has ? spec.digest.slice(0, 19) : `pins.json records ${spec.digest.slice(0, 19)}; this copy is ${repoDigests.map((d) => d.split("@")[1]?.slice(0, 19)).join(", ") || "unknown"} (npm run images:pull -- ${spec.kind} --force)` }
+      : { ok: null, what: `image ${ref} digest`, detail: "pins.json records no digest yet (docs/IMAGES.md)" });
+    const rev = labels["org.opencontainers.image.revision"];
+    if (rev) rows.push({ ok: null, what: `image ${ref} built by`, detail: `starter revision ${rev.slice(0, 8)}` });
+  }
+  return rows;
+}
