@@ -2,6 +2,9 @@
 # First boot: phase 1 (mint a setup did:key), wait for the VTA grant, phase 2
 # (`vtc setup --from`), seed the admin ACL, add CORS. Later boots just serve.
 # DEV ONLY (plaintext secrets). Verified end to end against vtc-service 0.15.0: see docs/VTC.md.
+#
+# MODE=tunnel: PUBLIC_HOST (the VTC's quick-tunnel host), MEDIATOR_DID and MEDIATOR_HOST are set by
+# `npm run up`; the VTC advertises tsp + didcomm through that mediator.
 set -eu
 
 : "${ADMIN_DID:?ADMIN_DID is not set. Run \`npm run vta:keygen\` first.}"
@@ -12,6 +15,21 @@ KEY=$DIR/setup-key.json
 CTX="${VTC_CONTEXT:-vtc}"
 DEFAULT_CORS='"http://localhost:3000", "http://localhost:5173", "http://localhost:8000"'
 CORS="${VTC_CORS_ORIGINS_TOML:-$DEFAULT_CORS}"
+PUBLIC_HOST="${PUBLIC_HOST:-}"
+if [ -n "$PUBLIC_HOST" ]; then
+  : "${MEDIATOR_DID:?MODE=tunnel needs MEDIATOR_DID}"
+  : "${MEDIATOR_HOST:?MODE=tunnel needs MEDIATOR_HOST}"
+  BASE_URL="https://$PUBLIC_HOST"
+  MESSAGING_TOML="
+[messaging]
+mediator_did = \"$MEDIATOR_DID\"
+transports   = [\"tsp\", \"didcomm\"]
+mediator_url = \"https://$MEDIATOR_HOST\"
+"
+else
+  BASE_URL="http://localhost:$PORT"
+  MESSAGING_TOML=""
+fi
 
 if [ ! -f "$CONFIG" ]; then
   [ -f "$KEY" ] || vtc setup --setup-key-out "$KEY" --context "$CTX"
@@ -24,13 +42,13 @@ if [ ! -f "$CONFIG" ]; then
   VTA_DID=$(grep -o '"id":"did:[^"#]*"' /tmp/vta.jsonl | head -1 | sed 's/"id":"\(.*\)"/\1/')
   cat > /tmp/vtc-setup.toml <<TOML
 config_path    = "$CONFIG"
-base_url       = "http://localhost:$PORT"
+base_url       = "$BASE_URL"
 vta_did        = "$VTA_DID"
 context        = "$CTX"
 setup_key_file = "$KEY"
 provision_transport = "rest"
 single_admin_mode = true
-
+$MESSAGING_TOML
 [secrets]
 backend = "plaintext"
 TOML

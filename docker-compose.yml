@@ -4,6 +4,10 @@
 #   npm run vta:up      # keygen + compose up --wait + provision
 #   npm run vta:reset   # blank VTA (new DID, empty ACL)
 #
+# MODE=tunnel adds the `messaging` profile (redis + mediator) and public quick-tunnel hosts that
+# `npm run up` passes in as VTA_PUBLIC_HOST / VTC_PUBLIC_HOST / MEDIATOR_PUBLIC_HOST / MEDIATOR_DID;
+# without them every service behaves exactly as in local mode. See docs/MODES.md.
+#
 # MODE=farm skips all of this: see docs/FARM.md.
 # The image is built from source (Rust, ~15 min) and no published image exists.
 # The organiser builds or loads it once; see docs/EVENT.md.
@@ -15,8 +19,11 @@ services:
     env_file: .vta/admin.env
     environment:
       # Lets the VTA resolve its own did:webvh on a loopback host. Dev only.
-      VTA_ALLOW_PRIVATE_ENDPOINTS: "1"
+      VTA_ALLOW_PRIVATE_ENDPOINTS: "${VTA_ALLOW_PRIVATE_ENDPOINTS:-1}"
       VTA_PORT: "${VTA_PORT:-8100}"
+      # MODE=tunnel only (empty = local mode): the VTA's public host and the mediator it uses.
+      PUBLIC_HOST: "${VTA_PUBLIC_HOST:-}"
+      MEDIATOR_DID: "${MEDIATOR_DID:-}"
       CORS_ORIGINS_TOML: "${CORS_ORIGINS_TOML:-}"
     ports:
       - "127.0.0.1:${VTA_PORT:-8100}:${VTA_PORT:-8100}"
@@ -51,8 +58,12 @@ services:
     env_file: .vta/admin.env
     user: "1000"
     environment:
-      VTA_ALLOW_PRIVATE_ENDPOINTS: "1"
+      VTA_ALLOW_PRIVATE_ENDPOINTS: "${VTA_ALLOW_PRIVATE_ENDPOINTS:-1}"
       VTA_PORT: "${VTA_PORT:-8100}"
+      # MODE=tunnel only (empty = local mode).
+      PUBLIC_HOST: "${VTC_PUBLIC_HOST:-}"
+      MEDIATOR_DID: "${MEDIATOR_DID:-}"
+      MEDIATOR_HOST: "${MEDIATOR_PUBLIC_HOST:-}"
       VTC_PORT: "${VTC_PORT:-8200}"
       VTC_SERVER_PORT: "${VTC_PORT:-8200}"
       VTC_CONTEXT: "${VTC_CONTEXT:-vtc}"
@@ -61,6 +72,46 @@ services:
       - vtc-data:/var/lib/vtc
       - ./vtc-entrypoint.sh:/vtc-entrypoint.sh:ro
 
+  # MODE=tunnel only: `docker compose --profile messaging ...` (npm run up does this).
+  # Redis holds the mediator's queues in memory only; nothing is kept across restarts.
+  redis:
+    profiles: ["messaging"]
+    image: ${REDIS_IMAGE:-redis:7.4.6-alpine}
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  # The messaging mediator, OPEN ACL (any DID may register and relay): DEV ONLY, see
+  # mediator-entrypoint.sh and docs/MODES.md. Build the image with `npm run images:build mediator`.
+  mediator:
+    profiles: ["messaging"]
+    image: ${MEDIATOR_IMAGE:-mediator-buildathon:local}
+    entrypoint: ["/bin/sh", "/mediator-entrypoint.sh"]
+    command: []
+    # Starts as root to write the volume; the entrypoint then drops to uid 10002.
+    user: "0:0"
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      MEDIATOR_HOST: "${MEDIATOR_PUBLIC_HOST:-}"
+      REDIS_URL: "redis://redis:6379/"
+    ports:
+      - "127.0.0.1:${MEDIATOR_PORT:-7037}:7037"
+    volumes:
+      - mediator-data:/conf
+      - ./mediator-entrypoint.sh:/mediator-entrypoint.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:7037/mediator/v1/livez >/dev/null"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+
 volumes:
   vta-data:
   vtc-data:
+  mediator-data:
