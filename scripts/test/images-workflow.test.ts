@@ -7,6 +7,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { parse } from "yaml";
+import { buildLabels } from "../lib/images.js";
 import { pins } from "../pins.js";
 
 const root = new URL("../../", import.meta.url);
@@ -89,6 +90,20 @@ test("build step: by-digest push, labels pins:check reads, repository link, no p
     assert.match(wf.jobs.build!.steps.find((s) => s.name === name)!.if ?? "", /outputs\.push == 'true'/);
   }
   assert.match(wf.jobs.merge!.if!, /push == 'true'/);
+});
+
+test("the workflow records the same label keys that images:build records", () => {
+  const w = wf.jobs.build!.steps.find((s) => s.id === "build")!.with as Record<string, string>;
+  const p = pins();
+  for (const kind of ["vta", "vtc", "mediator"] as const) {
+    for (const key of Object.keys(buildLabels(kind, p, { dockerfileSha256: "0".repeat(64) }))) {
+      // the ref label and (VTA only) the features label are templated through the plan matrix
+      const templated = key === "org.buildathon.vta-features" ? "matrix.extra_labels" : key.endsWith("-ref") && key !== "org.buildathon.pinned-ref" ? "matrix.ref_label" : key;
+      assert.ok(w.labels.includes(templated), `${kind}: workflow label ${key}`);
+    }
+  }
+  const dockerfile = wf.jobs.build!.steps.find((s) => s.name === "Hash the Dockerfile")!;
+  assert.equal(dockerfile.env!.DOCKERFILE, "${{ matrix.file }}");
 });
 
 test("the upstream source is fetched at the exact pinned commit and verified", () => {

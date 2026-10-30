@@ -6,6 +6,8 @@
 // VTI_LOCAL=1 build the checkout's working tree instead (development; the image is tagged :local only).
 // --clone   clone the VTI checkout (and fetch its tags) if it is missing, without asking. Without it a terminal is asked; a pipe or CI gets the commands printed.
 // TMPDIR     where the exported source goes (default the OS temp dir; use /var/tmp/<name> for heavy runs).
+// Labels: the same provenance labels the published images carry (pinned ref, upstream source, Dockerfile sha256,
+//         features, build-origin=local); `npm run images:verify --local` and `images:compare` read them (docs/VERIFY.md).
 // Tags: <image>:<short-sha> and <image>:local (what compose defaults to).
 import "./lib/cli.js";
 import { spawnSync } from "node:child_process";
@@ -13,7 +15,9 @@ import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { die } from "./env.js";
+import { buildLabels, labelArgs } from "./lib/images.js";
 import { missingCheckoutMessage, missingRefMessage, parseBuildArgs } from "./lib/build-help.js";
 import { confirm } from "./lib/prompt.js";
 import { MEDIATOR_BUILD_NOTICE, memoryWarning } from "./lib/tunnel.js";
@@ -24,6 +28,7 @@ if (!["vta", "vtc", "mediator", "all"].includes(which)) die("usage: npm run imag
 const vti = pins().vti;
 const repo = resolve(process.env.VTI_PATH ?? "../verifiable-trust-infrastructure");
 const local = process.env.VTI_LOCAL === "1";
+const sha256 = (file: string) => createHash("sha256").update(readFileSync(file)).digest("hex");
 const sh = (cmd: string, args: string[], opts: object = {}) => {
   const r = spawnSync(cmd, args, { stdio: "inherit", ...opts });
   if (r.status !== 0) die(`\`${cmd} ${args.join(" ")}\` failed (exit ${r.status}).`);
@@ -38,8 +43,10 @@ if (which === "mediator") {
   const warn = memoryWarning(avail && !Number.isNaN(avail) ? avail : undefined);
   if (warn) console.warn(`WARNING: ${warn}`);
   const tags = [`${m.image}:${short}`, `${m.image}:local`];
+  const dockerfile = resolve("docker/mediator.Dockerfile");
+  const labels = labelArgs(buildLabels("mediator", pins(), { dockerfileSha256: sha256(dockerfile) }));
   console.log(`building ${tags.join(", ")} from ${m.repo} @ ${m.ref} (mediator ${m.version}, features ${m.features})`);
-  sh("nice", ["-n", "10", "docker", "build", "-f", resolve("docker/mediator.Dockerfile"), "--build-arg", `MEDIATOR_REF=${m.ref}`, "--build-arg", `FEATURES=${m.features}`, ...tags.flatMap((t) => ["-t", t]), resolve("docker")]);
+  sh("nice", ["-n", "10", "docker", "build", "-f", dockerfile, "--build-arg", `MEDIATOR_REF=${m.ref}`, "--build-arg", `FEATURES=${m.features}`, ...labels, ...tags.flatMap((t) => ["-t", t]), resolve("docker")]);
   process.exit(0);
 }
 
@@ -78,8 +85,9 @@ for (const name of which === "all" ? (["vta", "vtc"] as const) : [which as "vta"
     const file = name === "vta" ? join(ctx, "Dockerfile") : resolve("docker/vtc.Dockerfile");
     console.log(`building ${tags.join(", ")} from ${local ? `${repo} (working tree)` : `${tag} ${ref}`}`);
     // The VTA needs `tsp` for MODE=tunnel and the VTI Dockerfile's default feature list lacks it (pins.json vta.features).
-    const features = name === "vta" && vti.vta.features ? ["--build-arg", `FEATURES=${vti.vta.features}`, "--label", `org.buildathon.vta-features=${vti.vta.features}`] : [];
-    sh("nice", ["-n", "10", "docker", "build", "-f", file, "--build-arg", `VTI_REF=${local ? "local" : ref}`, ...features, "--label", `org.buildathon.vti-ref=${local ? "local" : ref}`, ...tags.flatMap((t) => ["-t", t]), ctx]);
+    const features = name === "vta" && vti.vta.features ? ["--build-arg", `FEATURES=${vti.vta.features}`] : [];
+    const labels = labelArgs(buildLabels(name, pins(), { dockerfileSha256: sha256(file), ref: local ? "local" : undefined }));
+    sh("nice", ["-n", "10", "docker", "build", "-f", file, "--build-arg", `VTI_REF=${local ? "local" : ref}`, ...features, ...labels, ...tags.flatMap((t) => ["-t", t]), ctx]);
   } finally {
     if (tmp) rmSync(tmp, { recursive: true, force: true });
   }

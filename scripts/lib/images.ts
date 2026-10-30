@@ -239,3 +239,30 @@ export function checkImageLabels(spec: ImageSpec, p: Pins, ref: string, origin: 
   }
   return rows;
 }
+
+// --- labels both builds record (images:build here, the images workflow on GitHub) -----------------------------
+
+export const DOCKERFILE_LABEL = "org.buildathon.dockerfile-sha256";
+export const ORIGIN_LABEL = "org.buildathon.build-origin";
+
+/**
+ * The labels an image of `kind` carries about what it was built from, as a local build records them.
+ * The workflow records the same keys and values (its extra org.opencontainers.* labels and build-origin differ),
+ * so `images:compare` can line a local build up against the published one. `ref` is "local" for VTI_LOCAL=1.
+ */
+export function buildLabels(kind: ImageKind, p: Pins, o: { dockerfileSha256: string; ref?: string }): Record<string, string> {
+  const spec = imageSpecs(p)[kind];
+  const upstream = kind === "mediator" ? p.messaging.mediator.repo : p.vti.repo;
+  const labels: Record<string, string> = {
+    "org.buildathon.upstream-source": upstream,
+    "org.buildathon.pinned-ref": o.ref ?? spec.ref,
+    [spec.refLabel]: o.ref ?? spec.ref,
+    [DOCKERFILE_LABEL]: o.dockerfileSha256,
+    [ORIGIN_LABEL]: "local",
+  };
+  if (kind === "vta" && p.vti.vta.features) labels[FEATURES_LABEL] = p.vti.vta.features;
+  return labels;
+}
+
+/** `--label k=v` pairs for `docker build`. */
+export const labelArgs = (labels: Record<string, string>): string[] => Object.entries(labels).flatMap(([k, v]) => ["--label", `${k}=${v}`]);

@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   checkImageLabels, friendlyPullError, imageSpecs, imageStatus, parseImagesMode, registryBase, resolveImage, useImages, type Docker, type ImageKind,
 } from "../lib/images.js";
+import { buildLabels, labelArgs, DOCKERFILE_LABEL } from "../lib/images.js";
 import { pins, type Pins } from "../pins.js";
 
 const withDigest = (digests: Partial<Record<ImageKind, string | null>>): Pins => {
@@ -218,4 +219,26 @@ test("pins:check rows: a registry image without labels is drift, a local one onl
   assert.deepEqual(m.map((r) => r.ok), [true, null]);
   const vtaLocal = checkImageLabels(s.vta, pins(), "vta-buildathon:local", "local", {}, []);
   assert.deepEqual(vtaLocal.map((r) => r.ok), [null, null]);
+});
+
+test("buildLabels: what a local build records, per image, and VTI_LOCAL says so", () => {
+  const p = pins();
+  const sha = "a".repeat(64);
+  const vta = buildLabels("vta", p, { dockerfileSha256: sha });
+  assert.equal(vta["org.buildathon.vti-ref"], p.vti.vta.ref);
+  assert.equal(vta["org.buildathon.pinned-ref"], p.vti.vta.ref);
+  assert.equal(vta["org.buildathon.vta-features"], p.vti.vta.features);
+  assert.ok(vta["org.buildathon.vta-features"]!.split(",").includes("tsp"));
+  assert.equal(vta[DOCKERFILE_LABEL], sha);
+  assert.equal(vta["org.buildathon.build-origin"], "local");
+  assert.equal(vta["org.buildathon.upstream-source"], p.vti.repo);
+  const vtc = buildLabels("vtc", p, { dockerfileSha256: sha });
+  assert.equal(vtc["org.buildathon.vti-ref"], p.vti.vtc.ref);
+  assert.ok(!("org.buildathon.vta-features" in vtc));
+  const med = buildLabels("mediator", p, { dockerfileSha256: sha });
+  assert.equal(med["org.buildathon.mediator-ref"], p.messaging.mediator.ref);
+  assert.equal(med["org.buildathon.upstream-source"], p.messaging.mediator.repo);
+  assert.ok(!("org.buildathon.vti-ref" in med));
+  assert.equal(buildLabels("vta", p, { dockerfileSha256: sha, ref: "local" })["org.buildathon.vti-ref"], "local");
+  assert.deepEqual(labelArgs({ a: "1", b: "x=y" }), ["--label", "a=1", "--label", "b=x=y"]);
 });
