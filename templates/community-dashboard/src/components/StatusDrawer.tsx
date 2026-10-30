@@ -15,7 +15,7 @@ export function StatusPanelHost() {
     // Mount on the next tick so React StrictMode's mount -> cleanup -> mount in dev starts the panel's checks once, not twice.
     let handle: ReturnType<typeof mountStatusPanel> | undefined;
     const timer = setTimeout(() => { handle = mountStatusPanel(el, {
-      mode: __FARM__ ? "farm" : "local",
+      mode: __FARM__ ? "farm" : __TUNNEL__ ? "tunnel" : "local",
       vtaUrl,
       vtaDisplayUrl: __VTA_URL__,
       credentialPresent: !!cred,

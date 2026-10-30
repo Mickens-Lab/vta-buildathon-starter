@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [react()],
   define: {
     __FARM__: "false",
+    __TUNNEL__: "false",
     __VTA_BROWSER_URL__: JSON.stringify("http://vta.test"),
     __VTA_URL__: JSON.stringify("http://vta.test"),
     __VTC_BROWSER_URL__: JSON.stringify("http://vtc.test"),

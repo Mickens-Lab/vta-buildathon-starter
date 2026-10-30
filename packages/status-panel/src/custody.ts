@@ -4,7 +4,7 @@ export type Custody = "page" | "backend" | "webcrypto" | "none" | "unknown";
 export type CustodyPill = "ok" | "warn" | "bad" | "unknown" | "info";
 export interface CustodyRow { pill: CustodyPill; label: string; value: string; note?: string; fix?: string }
 export interface CustodyInput {
-  mode: "local" | "farm";
+  mode: "local" | "tunnel" | "farm";
   /** The page embeds the app key (the kit's dev-only default). */
   keyEmbedded?: boolean;
   credentialPresent: boolean;
@@ -48,9 +48,12 @@ export function custodyRows(i: CustodyInput): CustodyRow[] {
     { pill: "info", label: "Next step", value: next[c], fix: i.docsUrl ? `Read ${i.docsUrl}` : undefined },
   ];
   if (/^https?:\/\//.test(i.vtaUrl)) {
-    rows.push({ pill: https ? "info" : i.mode === "local" ? "info" : "warn", label: "Transport", value: https ? "https" : "http (no TLS)", note: https ? undefined : i.mode === "local" ? "Plain http to localhost is the playground default." : "A non-local VTA should be reached over https." });
+    rows.push({ pill: https ? "info" : i.mode !== "farm" ? "info" : "warn", label: "Transport", value: https ? "https" : "http (no TLS)", note: https ? undefined : i.mode !== "farm" ? "Plain http to localhost is the playground default." : "A non-local VTA should be reached over https." });
   }
-  if (i.mode === "local") {
+  if (i.mode === "tunnel") {
+    rows.push({ pill: "warn", label: "Exposure", value: "public quick-tunnel URL, no authentication in front", note: "Anyone with the URL can reach the VTA, VTC and the open mediator; rate limits and ACLs are the only gates. Demo data only (docs/MODES.md)." });
+  }
+  if (i.mode === "local" || i.mode === "tunnel") {
     rows.push({ pill: "info", label: "VTA seed storage", value: "plaintext in the local stack (not read by this page)", note: "From docs/SECURITY.md: the local VTA's secrets backend is plaintext. This page does not query it." });
   }
   return rows;

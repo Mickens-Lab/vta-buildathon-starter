@@ -12,6 +12,7 @@ import { agentUrl, farmId, type FarmTable } from "../../scripts/farm-select.ts";
 export default defineConfig(({ mode }) => {
   const e = loadEnv(mode, "../..", ["VTA_", "VTC_", "MODE", "FARM"]);
   const farm = (process.env.MODE ?? e.MODE) === "farm";
+  const tunnel = (process.env.MODE ?? e.MODE) === "tunnel";
   // FARM=ic3|firstperson + FARM_AGENT=<name> derive the agent URL when VTA_URL is not set.
   const table: FarmTable = JSON.parse(readFileSync(new URL("../../scripts/farm-hosts.json", import.meta.url), "utf8"));
   const fe = (k: string) => process.env[k] ?? e[k];
@@ -56,6 +57,7 @@ export default defineConfig(({ mode }) => {
     plugins: [readme],
     define: {
       __FARM__: JSON.stringify(farm),
+      __TUNNEL__: JSON.stringify(tunnel),
       __VTA_BROWSER_URL__: JSON.stringify(farm ? "/__vta" : e.VTA_URL ?? "http://localhost:8100"),
       __VTA_URL__: JSON.stringify(e.VTA_URL ?? "http://localhost:8100"),
       __FARM_INFO__: JSON.stringify(farm ? farmInfo : null),

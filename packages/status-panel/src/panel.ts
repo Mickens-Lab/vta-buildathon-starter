@@ -1,6 +1,7 @@
 // Connection-status panel: vanilla TS, no dependencies. Call mountStatusPanel(container, options).
 import { CSS } from "./style.ts";
 import { custodyRows, type CustodyInput } from "./custody.ts";
+import { messagingRow, PING_TASK, protocolsOf } from "./messaging.ts";
 import {
   compareVersions, compatHints, didDocFromLog, groupTasks, mediatorDid, parseDidDocServices, relativeTime,
   shortDid, versionFromOpenApi, type DidService,
@@ -15,10 +16,12 @@ export interface PanelClient {
   token?: string;
   whoami(): Promise<Record<string, any>>;
   discover(): Promise<string[]>;
+  /** Optional generic Trust Task call (VtaClient has it); used for messaging/ping/0.1 in tunnel mode. */
+  call?(type: string, payload?: Record<string, unknown>): Promise<unknown>;
 }
 
 export interface PanelOptions {
-  mode: "local" | "farm";
+  mode: "local" | "tunnel" | "farm";
   /** Where the browser sends VTA requests (farm mode: a same-origin proxy path such as `/__vta`). Absolute or origin-relative. */
   vtaUrl: string;
   /** The real VTA URL to show people (farm mode: the hosted URL behind the proxy). Defaults to vtaUrl. */
@@ -215,7 +218,7 @@ export function mountStatusPanel(container: HTMLElement, o: PanelOptions): Panel
     cards.push({
       title: "1. Connection",
       rows: [
-        { pill: "ok", label: "Mode", value: o.mode, note: o.mode === "farm" ? `Hosted VTA on the VTA Farm${o.farm ? ` "${o.farm.name}" (FARM=${o.farm.id}, portal ${o.farm.portalUrl})` : ""}, reached through the dev server's /__vta proxy.${o.farm?.issues?.length ? " Known issue: " + o.farm.issues.join(" ") : ""}` : "Local VTA from this repo's docker compose stack." },
+        { pill: o.mode === "tunnel" ? "warn" : "ok", label: "Mode", value: o.mode, note: o.mode === "tunnel" ? "Local containers behind public Cloudflare quick tunnels, with an OPEN mediator (messaging on). URLs and DIDs are regenerated every run; demo data only (docs/MODES.md)." : o.mode === "farm" ? `Hosted VTA on the VTA Farm${o.farm ? ` "${o.farm.name}" (FARM=${o.farm.id}, portal ${o.farm.portalUrl})` : ""}, reached through the dev server's /__vta proxy.${o.farm?.issues?.length ? " Known issue: " + o.farm.issues.join(" ") : ""}` : "Local VTA from this repo's docker compose stack." },
         { pill: "info", label: "VTA URL", value: vtaShown, note: o.vtaUrl !== vtaShown ? `The browser calls ${o.vtaUrl} (same-origin proxy).` : undefined },
         reachRow("VTA", health, vtaShown, origin, o.mode),
         health.ok
@@ -335,6 +338,13 @@ export function mountStatusPanel(container: HTMLElement, o: PanelOptions): Panel
         extra: h("div", null, h("div", { class: "sp-chips" }, ...groups.map((g) => h("span", { class: "sp-chip", title: g.names.join(", ") }, `${g.family} ${g.count}`))), list) });
       for (const hint of compatHints(types)) capRows.push({ pill: hint.ok === undefined ? "unknown" : hint.ok ? "ok" : "warn", label: hint.label, value: hint.ok ? "supported" : hint.ok === false ? "check" : "unknown", note: hint.text });
     }
+    // Messaging state: in tunnel mode ask the VTA which protocols it serves (a silent REST-only fallback shows up here).
+    let protocols: string[] | undefined;
+    let pingError: string | undefined;
+    if (client && who && o.mode === "tunnel" && client.call) {
+      try { protocols = protocolsOf(await within(client.call(PING_TASK, {}), timeoutMs, "messaging ping")); } catch (e) { pingError = String((e as Error).message).slice(0, 200); }
+    }
+    idRows.push(messagingRow({ mode: o.mode, services, protocols, pingError, haveDidDoc: !!didDoc }));
     cards.push({ title: "4. Auth and session", rows: authRows, details: who ? { whoami: who } : undefined });
     cards.push({ title: "5. Capabilities", rows: capRows, details: types ? { supportedTypes: types } : undefined });
 

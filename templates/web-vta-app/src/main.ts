@@ -38,7 +38,7 @@ const vtc = vtcCfg
   : undefined;
 
 mountStatusPanel($("status-panel"), {
-  mode: __FARM__ ? "farm" : "local",
+  mode: __FARM__ ? "farm" : __TUNNEL__ ? "tunnel" : "local",
   vtaUrl,
   vtaDisplayUrl: __VTA_URL__,
   credentialPresent: !!credential,

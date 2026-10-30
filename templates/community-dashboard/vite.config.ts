@@ -6,13 +6,15 @@ import { agentUrl, farmId, type FarmTable } from "../../scripts/farm-select.ts";
 // Reads the repo-root .env. DEV ONLY: VTA_CREDENTIAL holds a private key and is
 // exposed to the page so the demo can act as the provisioned app.
 //
-// MODE=local: the page calls the local VTA/VTC directly (CORS allows 5173, 3000 and 8000).
+// MODE=local and MODE=tunnel: the page calls the VTA/VTC directly (CORS allows 5173, 3000 and 8000; in tunnel mode the
+//             URLs are the public quick-tunnel hosts from the repo-root .env).
 // MODE=farm:  hosted VTAs/VTCs do not allow http://localhost:5173 (the farm's
 //             default VTA CORS list holds only the wallet extension), so Vite
 //             proxies /__vta and /__vtc to them and the page stays same-origin.
 export default defineConfig(({ mode }) => {
   const e = loadEnv(mode, "../..", ["VTA_", "VTC_", "MODE", "FARM"]);
   const farm = (process.env.MODE ?? e.MODE) === "farm";
+  const tunnel = (process.env.MODE ?? e.MODE) === "tunnel";
   // FARM=ic3|firstperson + FARM_AGENT=<name> derive the agent URL when VTA_URL is not set.
   const table: FarmTable = JSON.parse(readFileSync(new URL("../../scripts/farm-hosts.json", import.meta.url), "utf8"));
   const fe = (k: string) => process.env[k] ?? e[k];
@@ -45,6 +47,7 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     define: {
       __FARM__: JSON.stringify(farm),
+      __TUNNEL__: JSON.stringify(tunnel),
       __VTA_BROWSER_URL__: JSON.stringify(farm ? "/__vta" : e.VTA_URL ?? "http://localhost:8100"),
       __VTA_URL__: JSON.stringify(e.VTA_URL ?? "http://localhost:8100"),
       __VTC_BROWSER_URL__: JSON.stringify(farm ? "/__vtc" : vtcUrl ?? "http://localhost:8200"),
