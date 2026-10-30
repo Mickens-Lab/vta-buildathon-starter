@@ -44,23 +44,20 @@ single demo or a phone experiment, and take it down afterwards.
 
 ### Two weeks before
 
-- [ ] **FIRST, and the biggest local-mode speedup: build the pinned images and put them where
-      participants can get them.** There is no published VTA image (and none for the VTC); a
-      Rust release build per laptop is what makes local setup slow, so nobody should build.
-      `npm run images:build vta` (and `vtc` if a track needs a community), then publish by
-      `docker save vta-buildathon:local | gzip > vta-buildathon.tar.gz` on a share/USB sticks
-      (participants run `docker load -i`), or a push to a registry you control (teams then
-      `export VTA_IMAGE=...`). This kit does not push anything for you. Verify a clean laptop
-      reaches `npm run hello` from the loaded image in minutes.
-- [ ] **Build the images from the pinned refs** (`pins.json`, [PINS.md](PINS.md)), not
-      from whatever is checked out: `npm run images:build all` (each image from its own tag:
-      VTA `vta-service-v0.65.0`, VTC `vtc-service-v0.15.0`; a Rust release build each, see
-      [VTC.md](VTC.md) for times; tags `<image>:<short-sha>` and `:local`).
-      `npm run pins:check` should show no drift on the image refs. Before advancing a
-      pin, re-verify the local VTA + VTC path and the farm note ([PINS.md](PINS.md)).
-- [ ] Export and host it as in the first item (save/load, or your own registry).
-- [ ] Image is amd64 only unless you build multi-arch; check participants' laptops
-      (Apple silicon needs an arm64 build or emulation).
+- [ ] **FIRST, and the biggest local-mode speedup: publish the pinned images, then check a clean laptop pulls them.** A Rust release build
+      per laptop is what makes local setup slow. The kit pulls prebuilt images from GHCR by default (`npm run up` / `npm run images:pull`);
+      the publish workflow and its first-run steps (org permission to create packages, making the packages public, recording the digests in
+      `pins.json`) are in [IMAGES.md](IMAGES.md). **It has not been run yet**, so do the dry run and the first publish well before the event,
+      and verify from a machine with no local images (amd64 and, if participants have them, arm64 such as Apple silicon): `npm ci`,
+      `npm run images:pull`, `npm run pins:check`, `npm run up`, `npm run hello` should take minutes.
+- [ ] **Fallback if the registry is down or unpublished: local images.** Build from the pinned refs, not from whatever is checked out:
+      `npm run images:build all` (VTA `vta-service-v0.65.0`, VTC `vtc-service-v0.15.0`; a Rust release build each, see
+      [VTC.md](VTC.md) for times; tags `<image>:<short-sha>` and `:local`) and participants run with `IMAGES=local npm run up`. Hand the images
+      out as files if the Wi-Fi is weak: `docker save vta-buildathon:local | gzip > vta-buildathon.tar.gz` on a share or USB sticks
+      (`docker load`). `npm run pins:check` should show no drift on the image refs. Before advancing a pin, re-verify the local VTA + VTC path
+      and the farm note ([PINS.md](PINS.md)).
+- [ ] Prebuilt images are published for amd64 and arm64 (native builds); the arm64 images are untested until someone runs them on an arm64
+      machine, so include one in the clean-laptop check. Locally built images match the builder's CPU only.
 - [ ] Test the full checkpoint from a clean clone on Linux, macOS and Windows (WSL2).
       Only Linux was tested for this kit.
 - [ ] Decide whether to ship `vta-mcp` (Rust, `cargo build --release -p vta-mcp`).

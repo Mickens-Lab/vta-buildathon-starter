@@ -64,7 +64,7 @@ flowchart LR
 
 ## Pins and image build
 
-`pins.json` records the upstream release (VTA and VTC come from different commits) and exact npm versions. `npm run images:build [vta|vtc|mediator|all]` builds each image from its own pinned ref of a local checkout of the upstream repository (`VTI_PATH`), tagging `<image>:<short-sha>` and `:local`, the default in compose. `npm run pins:check` reports drift. See [PINS.md](PINS.md). Building the VTA image from source is slow (Rust); an organiser normally supplies the images.
+`pins.json` records the upstream release (VTA and VTC come from different commits) and exact npm versions. `npm run images:build [vta|vtc|mediator|all]` builds each image from its own pinned ref of a local checkout of the upstream repository (`VTI_PATH`), tagging `<image>:<short-sha>` and `:local`, the default in compose. `npm run pins:check` reports drift. See [PINS.md](PINS.md). Building the VTA image from source is slow (Rust), so by default `npm run up` pulls prebuilt images that CI publishes to GHCR from these same pins, and the local build is the fallback ([IMAGES.md](IMAGES.md); the publish workflow has not been run yet).
 
 ## Framework-free and React
 

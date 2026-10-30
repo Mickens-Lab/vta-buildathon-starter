@@ -35,6 +35,7 @@ In the dashboard the membership card's "Credential delivery" row says which of t
 ## Tunnel mode in short
 
 ```bash
+# Prebuilt images are pulled by `npm run up` (docs/IMAGES.md). Local build instead (IMAGES=local):
 npm run images:build vta          # once; tsp is now in the feature list, see below
 npm run images:build vtc          # once
 npm run images:build mediator     # once, heavy: about 15 minutes and plenty of RAM
@@ -150,8 +151,10 @@ VTA build features. Two changes to the images you already know:
   `services.tsp = true` at setup **[verified]**. `npm run images:build vta` now passes the pinned feature list for every VTA build, so one
   image serves all modes. An image built before this change has no `tsp`: rebuild it. (`didcomm` without `tsp` also works **[verified]**,
   but this kit sets both.) `npm run pins:check` flags an unlabelled VTA image and confirms the label matches the pinned list **[verified: an image built by `npm run images:build vta` carries the `org.buildathon.vta-features` label, `pins:check` reports "features match", and `MODE=tunnel npm run up` passed every probe check with it]**.
-- **The mediator image** is built from `docker/mediator.Dockerfile` by `npm run images:build mediator`. As with the others, there is no
-  published image: you build it locally. It is for `MODE=tunnel` only; `images:build all` does not build it.
+- **The mediator image** is built from `docker/mediator.Dockerfile`. By default `npm run up` uses the prebuilt image from the registry
+  ([IMAGES.md](IMAGES.md)), which saves the heavy build; the fallback is `npm run images:build mediator` and `IMAGES=local`. It is for
+  `MODE=tunnel` only; `images:build all` does not build it (`images:pull all` does fetch it, a pull is cheap). The prebuilt images are not
+  published yet, so until they are you build locally.
 
 `cloudflared` is a host binary (quick tunnels need no account) and is not pinned by this repo; 2024.6.1 was validated.
 
@@ -161,7 +164,7 @@ VTA build features. Two changes to the images you already know:
 |---|---|---|
 | `up` says `cloudflared` is missing | not on PATH | Install it (see the error text); no account needed |
 | "cloudflared did not print a tunnel host" | quick tunnels flaky or rate limited | wait a minute and run `MODE=tunnel npm run down` then `up` |
-| "missing image(s)" | images not built | run the `images:build` commands in the message; the mediator build is the long one |
+| "no usable image" | not pulled and not built | `npm run images:pull`, or the `images:build` commands in the message with `IMAGES=local`; the mediator build is the long one |
 | "refusing to start ... volume was set up for" | stale volume for another host | `MODE=tunnel npm run down`, then `up` |
 | probe: "DID names a different host" | a tunnel restarted under a live VTA | the DID is bound to the old host: `down`, then `up` |
 | probe: MESSAGING DEGRADED / VTA reports REST only | mediator refused or unreachable (a closed ACL answers 403 to a `did:webvh` VTA), or `tsp` not built in | `docker compose --profile messaging logs vta mediator`; confirm the mediator ACL is open and the VTA image has `tsp` |

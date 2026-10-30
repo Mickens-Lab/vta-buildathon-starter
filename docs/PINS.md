@@ -9,8 +9,13 @@ participant's or organiser's rebuild silently changes the wire behaviour.
 
 ```sh
 npm run images:build [vta|vtc|mediator|all]   # build each image from its own pinned ref; tags <image>:<short-sha> and :local (`all` = vta + vtc; the mediator is for MODE=tunnel only)
+npm run images:pull [vta|vtc|mediator|all]   # pull the prebuilt images pinned in pins.json (`images` section); see IMAGES.md
 npm run pins:check [-- --strict]     # report drift; changes nothing
 ```
+
+**Prebuilt images are the default, local builds the fallback.** `pins.json` `images` holds the registry, the platforms and, once
+published, each image's digest; the image tag is the first 8 characters of the pinned ref. `npm run up` uses a pulled image, else a
+local build, else pulls ([IMAGES.md](IMAGES.md), including `IMAGES=local` to flip back). The commands below are the local-build path.
 
 `images:build` exports each pinned ref from a VTI checkout (`VTI_PATH`, default
 `../verifiable-trust-infrastructure`) with `git archive`, so whatever is checked out
@@ -58,6 +63,6 @@ Until then, the pins plus the canary's version warning are the guard.
 4. Fix whatever broke (this is where the starter's scripts and docs change), update the verified/unverified notes in
    [VTC.md](VTC.md), and run `npm run farm:probe` and read the [farm note](FARM.md#farm-versions-observed).
 5. Add one line to [PINS_LOG.md](../PINS_LOG.md): date, old -> new, why, what was re-verified.
-6. Rebuild and republish the images ([EVENT.md](EVENT.md)).
+6. Rebuild and republish the images: run the `images` workflow and record the new digests in `pins.json` ([IMAGES.md](IMAGES.md), [EVENT.md](EVENT.md)). Until a digest is recorded, `pins:check` says so.
 
 Pins are what was last validated, advance deliberately and say why.

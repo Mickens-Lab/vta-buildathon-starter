@@ -15,8 +15,11 @@ It is for developers who want to see a signed Trust Task round trip working in m
 ## Prerequisites
 
 - Node 20+ and npm 10+, Docker with Compose v2
-- The images `vta-buildathon:local` (and `vtc-buildathon:local` for the community; `mediator-buildathon:local` for tunnel mode) loaded or built
-  ([docs/PINS.md](docs/PINS.md); an organiser usually hands them out). Without Docker, see Farm mode below.
+- The VTA image (and the VTC image for the community; the mediator image for tunnel mode). **By default `npm run up` uses prebuilt images from
+  the registry** and pulls them for you ([docs/IMAGES.md](docs/IMAGES.md)); that needs internet and no build. **Fallback: build them locally**
+  (`IMAGES=local npm run up` after `npm run images:build all`; needs a checkout of the VTI repository at `../verifiable-trust-infrastructure`,
+  see [docs/PINS.md](docs/PINS.md), and 10 to 25 minutes of Rust compilation). The prebuilt images are not published yet (see docs/IMAGES.md);
+  until they are, build locally. Without Docker, see Farm mode below.
 
 ## Quick start
 
@@ -119,6 +122,7 @@ concepts, finding, using, developing and evaluating them, with a hands-on custom
 | `npm run roles:matrix` / `roles:personas -- create <name> <role>` | Who-can-call-what table / throwaway persona identities, warnings only ([docs/ROLES.md](docs/ROLES.md)) |
 | `npm run approvals:setup` / `approvals:demo` / `approver` | Approve a gated task from a second key: mint the throwaway approver / ask for the task and wait / verify and approve or deny ([docs/APPROVALS.md](docs/APPROVALS.md)); `local` or `tunnel` |
 | `npm run security:check` / `recipe:backend-signer` / `recipe:webcrypto-key` | Key-hygiene scan of the tree / first hardening rungs ([docs/SECURITY.md](docs/SECURITY.md)) |
+| `npm run images:pull [vta\|vtc\|mediator\|all]` | Pull the prebuilt images pinned in `pins.json` (`--check` shows what is present; `IMAGES=local` forces local builds; [docs/IMAGES.md](docs/IMAGES.md)) |
 | `npm run images:build [vta\|vtc\|mediator\|all]` / `pins:check` | Build an image from its pinned ref (the VTA with `tsp`; the mediator is for tunnel mode and is the slow one) / report version drift, including a VTA image without `tsp` ([docs/PINS.md](docs/PINS.md)) |
 | `WITH_VTC=1 npm run up` | Local VTC too (needs a VTC image, see docs/VTC.md) |
 | `npm run vta:provision -- <context>` | New context + app identity (`ENV_FILE=.env.x` to keep several) |
@@ -137,7 +141,7 @@ concepts, finding, using, developing and evaluating them, with a hands-on custom
 
 | Symptom | Fix |
 |---|---|
-| `pull access denied for vta-buildathon` | The image is not loaded. `docker load` it, or set `VTA_IMAGE`. |
+| `pull access denied` for an image | The prebuilt package is private or not published yet, or you are offline. Build locally: `npm run images:build vta` and `IMAGES=local npm run up` ([docs/IMAGES.md](docs/IMAGES.md)). |
 | `.vta/admin.env` not found | `npm run vta:keygen` before `docker compose up`. |
 | `provision` fails with 401 or `permissionDenied` | `.vta/admin.json` is not the key this volume was seeded with. `npm run vta:reset`, then `npm run vta:up`. |
 | `VTA DID changed` | The VTA was recreated. `npm run vta:provision`. |
