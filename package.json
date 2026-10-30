@@ -48,6 +48,8 @@
     "setup": "tsx scripts/images-build.ts needed",
     "images:build": "tsx scripts/images-build.ts",
     "images:pull": "tsx scripts/images-pull.ts",
+    "images:export": "tsx scripts/images-share.ts export",
+    "images:import": "tsx scripts/images-share.ts import",
     "images:verify": "tsx scripts/images-verify.ts",
     "images:compare": "tsx scripts/images-compare.ts",
     "check:generic": "tsx scripts/check-generic.ts",
