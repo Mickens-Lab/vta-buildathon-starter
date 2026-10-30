@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Hello, VTA</title>
+    <style>
+      body { margin: 0; font: 16px/1.5 system-ui, sans-serif; }
+      main { max-width: 40rem; margin: 0 auto; padding: 1rem; }
+      pre { padding: .6rem; overflow: auto; border-radius: 6px; background: rgba(127, 127, 127, .15); font-size: 13px; }
+      button { font: inherit; padding: .3rem .9rem; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Hello, VTA</h1>
+      <p>Signs in with the app identity from <code>.env</code> and calls <code>auth/whoami</code>. DEV ONLY: the key is in this page.</p>
+      <button id="go">Call whoami</button>
+      <pre id="out">press the button</pre>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

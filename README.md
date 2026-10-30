@@ -41,6 +41,16 @@ Expected from `npm run hello` (DIDs differ on your machine):
 Use `WITH_VTC=0 npm run up` if you do not need a VTC. Stop with `npm run down`, wipe everything with `npm run reset`.
 Trouble? See [Troubleshooting](#troubleshooting).
 
+## Your first hack
+
+```sh
+npm run new -- my-app --from hello-web     # or hello-node: copies a ~15-line starting point to apps/my-app and installs it
+# then run the command `new` printed (for hello-web it starts a page at http://localhost:5173)
+```
+
+Both read the credential `npm run up` wrote to `.env` and call the VTA (`whoami`, and for hello-node a `memory/put` and `memory/list`). `apps/` is git-ignored: it is your code.
+`npm run new` alone lists the other starting points.
+
 ## Things to try
 
 [docs/TRY-THIS.md](docs/TRY-THIS.md) has guided exercises, easy to advanced, each with commands and expected output:
@@ -82,6 +92,7 @@ public, ephemeral quick-tunnel URLs, for messaging and TSP; heavy first build) o
 
 | Template | Run it | Good for |
 |---|---|---|
+| [`templates/hello-node`](templates/hello-node), [`templates/hello-web`](templates/hello-web) | `npm run new -- my-app --from hello-node` (or `hello-web`) | The smallest apps: sign in, `whoami`, memory put/list; a one-button page. Start here. |
 | [`templates/inbox-verifier`](templates/inbox-verifier) | `npm run demo -w @buildathon/inbox-verifier` | Servers that accept signed Trust Tasks. Works offline, no VTA needed. |
 | [`templates/web-vta-app`](templates/web-vta-app) | `npm run dev -w @buildathon/web-vta-app` | Browser apps that talk to the VTA. Optional wallet. |
 | [`templates/mcp-agent`](templates/mcp-agent) | see its README | AI agents with a scoped VTA identity. Partial: a stub. |
@@ -103,6 +114,7 @@ The ones you need in the first hour (all of them, grouped: [docs/COMMANDS.md](do
 | `npm run up` | Start the stack (local by default; `-- --tunnel` for messaging, this run only). The community (VTC) is on in every mode, `WITH_VTC=0` leaves it out |
 | `npm run down` / `npm run reset` | Stop and keep data / stop everything, delete volumes, `.vta/` and the keys the kit wrote to `.env` (your own `.env` lines stay). Both work in every mode |
 | `npm run hello` | The checkpoint |
+| `npm run new -- my-app --from hello-web\|hello-node` | Copy a minimal template to `apps/my-app` and install it |
 | `npm run vta:call -- <task> [json]` | Call any Trust Task as your app identity (no argument lists them) |
 | `npm run vtc:hello` / `vtc:join` / `vtc:approve` / `vtc:status` | Community: read the join manifest / apply / admin approves / where do I stand |
 | `npm run tsp:ping` / `tsp:listen` | `MODE=tunnel`: send a signed TSP ping and print the pong / receive the credential frames the VTC pushes ([docs/MESSAGING.md](docs/MESSAGING.md)) |

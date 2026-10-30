@@ -6,10 +6,23 @@
     "strict": true,
     "skipLibCheck": true,
     "noEmit": true,
-    "lib": ["ES2022", "DOM"],
-    "types": ["node"],
+    "lib": [
+      "ES2022",
+      "DOM"
+    ],
+    "types": [
+      "node"
+    ],
     "allowImportingTsExtensions": true,
     "jsx": "react-jsx"
   },
-  "include": ["packages/*/src", "packages/*/test", "scripts", "templates/*/src", "templates/*/vite.config.ts", "templates/mcp-agent/*.ts"]
+  "include": [
+    "packages/*/src",
+    "packages/*/test",
+    "scripts",
+    "templates/*/src",
+    "templates/*/vite.config.ts",
+    "templates/mcp-agent/*.ts",
+    "apps/*/src"
+  ]
 }

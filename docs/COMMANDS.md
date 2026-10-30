@@ -13,6 +13,7 @@ muscle memory keep working; a test fails if a script is missing from this page.
 | `npm run down` | Stop it and keep the data (tunnel mode: also deletes its volumes, which cannot be reused) |
 | `npm run reset` | Stop everything (tunnels too), delete volumes and `.vta/`, remove the keys the kit wrote to `.env`. Works in every mode; lines you added to `.env` stay |
 | `npm run hello` | The checkpoint: discover, authenticate, one signed call |
+| `npm run new -- my-app --from hello-web\|hello-node` | Copy a minimal template to `apps/my-app` (git-ignored) and install it; prints the command that runs it. `npm run new` lists the starting points |
 | `npm run vta:call -- <task> [json]` | Call any Trust Task as your app identity (no argument lists them; invalid JSON is reported, not a stack trace) |
 | `npm run vtc:hello` / `vtc:join` / `vtc:approve` / `vtc:status` | Community: read the join manifest / apply / admin approves / where do I stand |
 | `npm run tsp:ping` / `tsp:listen` | `MODE=tunnel`: TSP ping and pong / receive the credential frames the VTC pushes |

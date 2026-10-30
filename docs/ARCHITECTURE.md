@@ -11,6 +11,7 @@ How the pieces fit, where things live, and how to extend them. Everything here i
 | `packages/tsp-client` | `tspPing` and `connectTsp`: log in to the mediator with a `did:key`, open the raw-TSP socket, send a signed `messaging/ping/0.1` and read the pong, or receive frames (the VTC's credential pushes). Packs TSP 1.0 on `pnm-core`'s login and socket helpers (`MODE=tunnel`). Node and browser. |
 | `packages/status-panel` | `mountStatusPanel(el, opts)`: reachability, DID services, version vs pin, session, capabilities. Plain TypeScript, no dependencies. |
 | `templates/inbox-verifier` | Node server that accepts signed documents and applies the consumer checks (recipient, freshness, proof, schema, replay). `src/inbox.ts` is the place to start. Works offline. |
+| `templates/hello-node`, `templates/hello-web` | The minimal starting points (about 15 lines each: sign in, `whoami`, memory put/list). `npm run new -- <name> --from <template>` copies one to `apps/<name>`, a git-ignored workspace for your own code. |
 | `templates/web-vta-app` | Browser app: the status panel plus an optional wallet panel. Vanilla TypeScript, Vite. |
 | `templates/community-dashboard` | React + Vite dashboard for the VTC member journey. `state.ts` maps signed-call results to a screen; `components/` renders it. |
 | `templates/tsp-ping` | Browser page that sends the TSP ping and shows the pong (Vite, port 3000; `MODE=tunnel`). |

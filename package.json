@@ -10,13 +10,15 @@
   },
   "workspaces": [
     "packages/*",
-    "templates/*"
+    "templates/*",
+    "apps/*"
   ],
   "scripts": {
     "up": "tsx scripts/up.ts",
     "doctor": "tsx scripts/doctor.ts",
     "down": "tsx scripts/up.ts down",
     "reset": "tsx scripts/up.ts reset",
+    "new": "tsx scripts/new.ts",
     "vta:keygen": "tsx scripts/keygen.ts",
     "vta:provision": "tsx scripts/provision.ts",
     "vta:up": "tsx scripts/up.ts",
