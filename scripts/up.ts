@@ -11,6 +11,7 @@ import {
   clearStackFiles, dc, existingStackVolumes, have, imageLabel, readStackMode, readTunnel, sleep, startTunnel, stopTunnels, waitFor200,
   writeStackMode, writeTunnel,
 } from "./lib/compose.js";
+import { useImages, type ImageKind } from "./lib/images.js";
 import { composeEnv, tunnelUrls, TUNNEL_FILE, volumeGuard, type TunnelState } from "./lib/tunnel.js";
 import { pins } from "./pins.js";
 
@@ -18,6 +19,13 @@ const run = (cmd: string, args: string[], extraEnv: Record<string, string> = {})
   const r = spawnSync(cmd, args, { stdio: "inherit", env: { ...process.env, DEV_BANNER_SHOWN: "1", ...extraEnv } });
   if (r.status !== 0) die(`\`${cmd} ${args.join(" ")}\` failed (exit ${r.status}).`);
 };
+/** Pick (and, if needed, pull) the images, exporting VTA_IMAGE etc. for compose. Fatal if one cannot be had. */
+function prepareImages(kinds: ImageKind[]): void {
+  let rs;
+  try { rs = useImages(pins(), kinds, { pull: true, get: env }); } catch (e) { return die((e as Error).message); }
+  const bad = rs.flatMap((r) => (r.ok ? [] : [r.message]));
+  if (bad.length) die(`no usable image:\n  ${bad.join("\n  ")}\n(IMAGES=local forces a local build; see docs/IMAGES.md.)`);
+}
 const npm = (s: string, extraEnv: Record<string, string> = {}) => run("npm", ["run", "--silent", s], extraEnv);
 const guard = (want: "local" | "tunnel") => {
   const g = volumeGuard({ want, marker: readStackMode(), volumes: existingStackVolumes() });
@@ -31,12 +39,7 @@ async function tunnelUp(): Promise<void> {
   const p = pins();
   if (!have("cloudflared")) die("MODE=tunnel needs the `cloudflared` binary on PATH (quick tunnels, no account). Install it from https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/ . Validated with " + p.messaging.cloudflared.validated + ".");
   const withVtc = process.env.WITH_VTC !== "0";
-  const missing = [
-    [process.env.VTA_IMAGE ?? "vta-buildathon:local", "npm run images:build vta"],
-    ...(withVtc ? [[process.env.VTC_IMAGE ?? "vtc-buildathon:local", "npm run images:build vtc"]] : []),
-    [process.env.MEDIATOR_IMAGE ?? "mediator-buildathon:local", "npm run images:build mediator   (about 15 min, see docs/MODES.md)"],
-  ].filter(([img]) => spawnSync("docker", ["image", "inspect", img!], { stdio: "ignore" }).status !== 0);
-  if (missing.length) die(`missing image(s): ${missing.map(([i, how]) => `${i} (${how})`).join("; ")}.`);
+  prepareImages(["vta", ...(withVtc ? ["vtc" as const] : []), "mediator"]);
   const features = imageLabel(process.env.VTA_IMAGE ?? "vta-buildathon:local", "org.buildathon.vta-features");
   if (features !== undefined && features !== "" && !features.split(",").includes("tsp")) {
     die(`the VTA image was built without \`tsp\` (features: ${features}); MODE=tunnel needs it. Rebuild: npm run images:build vta.`);
@@ -113,6 +116,7 @@ if (down && (m === "tunnel" || existsSync(TUNNEL_FILE))) {
     run("docker", ["compose", "--profile", "vtc", "down"]);
   } else {
     guard("local");
+    prepareImages(process.env.WITH_VTC === "1" ? ["vta", "vtc"] : ["vta"]);
     npm("vta:keygen");
     run("docker", ["compose", ...(process.env.WITH_VTC === "1" ? ["--profile", "vtc"] : []), "up", "-d", "--wait"]);
     writeStackMode("local");

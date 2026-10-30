@@ -184,3 +184,15 @@ test("useImages exports the choice for compose and honours an override", () => {
     Object.assign(process.env, saved);
   }
 });
+
+test("compose defaults are the local tags the resolver knows, and the scripts exist", async () => {
+  const { readFileSync } = await import("node:fs");
+  const read = (f: string) => readFileSync(new URL(`../../${f}`, import.meta.url), "utf8");
+  const compose = read("docker-compose.yml");
+  const s = imageSpecs(pins());
+  for (const k of ["vta", "vtc", "mediator"] as const) {
+    assert.ok(compose.includes(`\${${s[k].envVar}:-${s[k].local}}`), `${k}: compose default must be ${s[k].local}`);
+  }
+  const scripts = JSON.parse(read("package.json")).scripts as Record<string, string>;
+  assert.equal(scripts["images:pull"], "tsx scripts/images-pull.ts");
+});
