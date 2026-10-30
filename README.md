@@ -62,8 +62,8 @@ plus approving a gated task from a second key ([docs/APPROVALS.md](docs/APPROVAL
 
 | Path | What |
 |---|---|
-| `packages/vta-client`, `packages/vtc-client` | Discover, authenticate, sign and call any Trust Task; VTC join and member helpers. Node and browser. |
-| `packages/tsp-client` | Log in to the mediator, open the TSP socket, send a signed ping and read the pong; `connectTsp` receives frames. Node and browser. |
+| `packages/vta-client`, `packages/vtc-client` | Discover, authenticate, sign and call any Trust Task; VTC join and member helpers. Node and browser. Each has a README with an example ([vta-client](packages/vta-client/README.md), [vtc-client](packages/vtc-client/README.md)). |
+| `packages/tsp-client` | Log in to the mediator, open the TSP socket, send a signed ping and read the pong; `connectTsp` receives frames. Node and browser. See its [README](packages/tsp-client/README.md). |
 | `packages/status-panel` | Dependency-free connection-status panel (vanilla TypeScript). |
 | `templates/inbox-verifier` | Server that accepts signed documents (works offline). |
 | `templates/web-vta-app` | Browser app with a status page and optional wallet (vanilla TypeScript). |
