@@ -1,9 +1,11 @@
 // Docs check: every relative markdown link resolves to a file, and every `npm run <script>` named in a
-// markdown file exists in a package.json (root, the `-w` workspace, or the package the doc sits in).
+// markdown file exists in a package.json (root, the `-w` workspace, or the package the doc sits in), and no doc repeats a known-stale phrase
+// (scripts/lib/stale-phrases.ts).
 //   npm run check:docs
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, normalize } from "node:path";
+import { staleHits } from "./lib/stale-phrases.js";
 
 const files = execFileSync("git", ["ls-files", "-co", "--exclude-standard", "*.md"], { encoding: "utf8" }).split("\n").filter(Boolean);
 const scriptsOf = (dir: string): Set<string> | undefined => {
@@ -26,6 +28,7 @@ const TEMPLATE = /^docs\/trust-tasks\/templates\/spec\.md$/;
 
 for (const f of files) {
   const text = readFileSync(f, "utf8").replace(/^```[\s\S]*?^```/gm, (b) => b.replace(/\]\(/g, "] ("));  // links inside fenced code are examples
+  if (f !== "PINS_LOG.md") for (const h of staleHits(text)) problems.push(`${f}:${h.replace("line ", "")}`);
   const lines = text.split("\n");
   lines.forEach((line, i) => {
     const at = `${f}:${i + 1}`;

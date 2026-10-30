@@ -1,6 +1,6 @@
 # Try this
 
-Ten exercises, easy to advanced. Exercises 1 to 7 and 8b were run against the local stack (`WITH_VTC=1 npm run up`) and the output shown is what they printed;
+Exercises 1 to 9, easy to advanced, plus 8b and 8c. Exercises 1 to 7, 8b and 8c were run (the first against the local stack with `WITH_VTC=1 npm run up`, 8c in tunnel mode) and the output shown is what they printed;
 exercises 8 and 9 are marked "Idea, not run". DIDs, ids and timestamps differ on your machine. This is a playground: [SECURITY.md](SECURITY.md).
 
 Start the stack once: `npm ci && WITH_VTC=1 npm run up`. Stop and wipe it with `npm run vta:reset`. Each exercise names the mode it needs; `MODE=tunnel` (public

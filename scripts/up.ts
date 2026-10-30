@@ -34,7 +34,7 @@ async function tunnelUp(): Promise<void> {
   const missing = [
     [process.env.VTA_IMAGE ?? "vta-buildathon:local", "npm run images:build vta"],
     ...(withVtc ? [[process.env.VTC_IMAGE ?? "vtc-buildathon:local", "npm run images:build vtc"]] : []),
-    [process.env.MEDIATOR_IMAGE ?? "mediator-buildathon:local", "npm run images:build mediator   (about 15 min, see docs/MODES.md)"],
+    [process.env.MEDIATOR_IMAGE ?? "mediator-buildathon:local", "npm run images:build mediator   (about 12 min, see docs/PINS.md)"],
   ].filter(([img]) => spawnSync("docker", ["image", "inspect", img!], { stdio: "ignore" }).status !== 0);
   if (missing.length) die(`missing image(s): ${missing.map(([i, how]) => `${i} (${how})`).join("; ")}.`);
   const features = imageLabel(process.env.VTA_IMAGE ?? "vta-buildathon:local", "org.buildathon.vta-features");

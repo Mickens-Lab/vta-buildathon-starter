@@ -8,12 +8,14 @@ How the pieces fit, where things live, and how to extend them. Everything here i
 |---|---|
 | `packages/vta-client` | `VtaClient`: reads the VTA's DID, authenticates (`auth/challenge` then `auth/authenticate`), signs and POSTs any Trust Task (`call`), typed helpers (`discover`, `whoami`, `createContext`, `grantAcl`). `identity.ts` makes did:key identities and encodes the credential. Node and browser. |
 | `packages/vtc-client` | `VtcClient`: the same for a community: join manifest, join, status, withdraw, member helpers (card, directory, renew, leave, groups, `memberProof()`), admin list/decide. `onCall` reports every call (used by the dashboard). |
+| `packages/tsp-client` | `tspPing` and `connectTsp`: log in to the mediator with a `did:key`, open the raw-TSP socket, send a signed `messaging/ping/0.1` and read the pong, or receive frames (the VTC's credential pushes). Packs TSP 1.0 on `pnm-core`'s login and socket helpers (`MODE=tunnel`). Node and browser. |
 | `packages/status-panel` | `mountStatusPanel(el, opts)`: reachability, DID services, version vs pin, session, capabilities. Plain TypeScript, no dependencies. |
 | `templates/inbox-verifier` | Node server that accepts signed documents and applies the consumer checks (recipient, freshness, proof, schema, replay). `src/inbox.ts` is the place to start. Works offline. |
 | `templates/web-vta-app` | Browser app: the status panel plus an optional wallet panel. Vanilla TypeScript, Vite. |
 | `templates/community-dashboard` | React + Vite dashboard for the VTC member journey. `state.ts` maps signed-call results to a screen; `components/` renders it. |
+| `templates/tsp-ping` | Browser page that sends the TSP ping and shows the pong (Vite, port 3000; `MODE=tunnel`). |
 | `templates/mcp-agent` | Stub: provisions a scoped identity and writes an MCP host config. Not verified end to end. |
-| `scripts/` | The npm commands. `env.ts` (`.env` and admin key files), `up.ts`, `keygen.ts`, `provision.ts`, `hello.ts`, `call.ts`, `vtc-*.ts`, `farm-*.ts`, `images-build.ts`, `pins*.ts`, `banner.ts`, `tunnel-probe.ts`, `approvals-*.ts`, `approver.ts`, the live tests `test-roles.ts` and `e2e.ts`, and the checks `check-generic.ts`, `check-docs.ts`, `security-check.ts`. `scripts/lib/` has the shared helpers (tunnels, compose, approvals, the CDP browser driver). |
+| `scripts/` | The npm commands. `env.ts` (`.env` and admin key files), `up.ts`, `keygen.ts`, `provision.ts`, `hello.ts`, `call.ts`, `vtc-*.ts`, `farm-*.ts`, `images-build.ts`, `pins*.ts`, `banner.ts`, `tunnel-probe.ts`, `tsp-ping*.ts`, `tsp-listen.ts`, `approvals-*.ts`, `approver.ts`, the live tests `test-roles.ts` and `e2e.ts`, and the checks `check-generic.ts`, `check-docs.ts`, `security-check.ts`. `scripts/lib/` has the shared helpers (tunnels, compose, approvals, the CDP browser driver). |
 | `docker-compose.yml`, `vta-entrypoint.sh`, `vtc-entrypoint.sh`, `mediator-entrypoint.sh`, `docker/` | The local VTA (always), VTC (compose profile `vtc`) and, for `MODE=tunnel`, redis and the mediator (profile `messaging`); `docker/` holds the VTC and mediator Dockerfiles. |
 | `pins.json`, `PINS_LOG.md` | The versions this kit was validated against ([PINS.md](PINS.md)). |
 
@@ -28,7 +30,9 @@ flowchart LR
     subgraph DOCKER["docker compose"]
       VTA["VTA :8100<br/>vta-buildathon image"]
       VTC["VTC :8200<br/>vtc-buildathon image<br/>(shares the VTA's network)"]
+      MED["mediator :7037<br/>(MODE=tunnel only)"]
     end
+    TSP["tsp:ping, tsp:listen,<br/>templates/tsp-ping"]
     FILES[".vta/admin.json (admin key)<br/>.env (app credential)"]
   end
   subgraph FARM["VTA Farm (MODE=farm)"]
@@ -42,6 +46,9 @@ flowchart LR
   BROWSER -. "farm: /__vta and /__vtc, Vite proxy" .-> FVTA
   BROWSER -. "farm proxy" .-> FVTC
   CLI -. "MODE=farm" .-> FVTA
+  TSP -. "MODE=tunnel: login + TSP 1.0 socket (public tunnel URL)" .-> MED
+  MED -. "TSP frames" .-> VTA
+  VTC -. "credential frames (via=tsp)" .-> MED
   VTC -->|"resolves its own DID at the VTA's loopback host"| VTA
   NODE <-->|"signed documents, no VTA needed"| CLI
   FILES --> CLI
@@ -64,7 +71,7 @@ flowchart LR
 
 ## Pins and image build
 
-`pins.json` records the upstream release (VTA and VTC come from different commits) and exact npm versions. `npm run images:build [vta|vtc|mediator|all]` builds each image from its own pinned ref of a local checkout of the upstream repository (`VTI_PATH`), tagging `<image>:<short-sha>` and `:local`, the default in compose. `npm run pins:check` reports drift. See [PINS.md](PINS.md). Building the VTA image from source is slow (Rust); an organiser normally supplies the images.
+`pins.json` records the upstream release (VTA and VTC come from different commits) and exact npm versions. `npm run images:build [vta|vtc|mediator|all]` builds each image from its own pinned ref of a local checkout of the upstream repository (`VTI_PATH`), tagging `<image>:<short-sha>` and `:local`, the default in compose. `npm run pins:check` reports drift. See [PINS.md](PINS.md). Building an image from source is slow (Rust), and no images are published: see [PINS.md](PINS.md#where-the-images-come-from) for the exact cold path.
 
 ## Framework-free and React
 

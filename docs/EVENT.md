@@ -9,7 +9,7 @@ A four-hour buildathon for teams of 1 to 4 building a TypeScript app linked to a
 | Time | What |
 |---|---|
 | 0:00 | Welcome, the Trust Task idea in 10 minutes: envelope, proof, verifier |
-| 0:15 | Setup: `docker load`, `npm i`, `npm run vta:up`, `npm run hello` |
+| 0:15 | Setup: `npm ci`, `npm run up` (or `WITH_VTC=1 npm run up`), `npm run hello` (with the images already built or loaded) |
 | **0:40** | **Setup gate.** Every team shows the four-line `hello` output. Stragglers may use `MODE=farm` only if the Farm canary passed ([FARM.md](FARM.md)); otherwise a mentor fixes their local setup |
 | 0:40 | Build. Pick a track from [TRACKS.md](TRACKS.md); start from a template |
 | 1:30 | Check-in: each team states its round-trip status in one sentence |
@@ -44,14 +44,13 @@ single demo or a phone experiment, and take it down afterwards.
 
 ### Two weeks before
 
-- [ ] **FIRST, and the biggest local-mode speedup: build the pinned images and put them where
-      participants can get them.** There is no published VTA image (and none for the VTC); a
-      Rust release build per laptop is what makes local setup slow, so nobody should build.
-      `npm run images:build vta` (and `vtc` if a track needs a community), then publish by
-      `docker save vta-buildathon:local | gzip > vta-buildathon.tar.gz` on a share/USB sticks
-      (participants run `docker load -i`), or a push to a registry you control (teams then
-      `export VTA_IMAGE=...`). This kit does not push anything for you. Verify a clean laptop
-      reaches `npm run hello` from the loaded image in minutes.
+- [ ] **FIRST, and the biggest local-mode speedup: decide how participants get the images.** No images are published (see
+      [PINS.md](PINS.md#where-the-images-come-from) for the current decision), so by default each laptop builds from source, which is 25 to
+      40 minutes and several GB of RAM and does not fit the 0:40 setup gate. The practical fix is to pre-build once
+      (`npm run images:build vta`, and `vtc` if a track needs a community) and hand the images out:
+      `docker save vta-buildathon:local | gzip > vta-buildathon.tar.gz` on a share or USB sticks (participants run `docker load -i`), or a push to a
+      registry you control (teams then `export VTA_IMAGE=...`). This kit does not push anything for you. Verify a clean laptop
+      reaches `npm run hello` from the loaded image in minutes. If you do not hand them out, tell participants a week ahead to start their builds.
 - [ ] **Build the images from the pinned refs** (`pins.json`, [PINS.md](PINS.md)), not
       from whatever is checked out: `npm run images:build all` (each image from its own tag:
       VTA `vta-service-v0.65.0`, VTC `vtc-service-v0.15.0`; a Rust release build each, see
@@ -130,7 +129,7 @@ mints each team's admin key and prints what to paste.
 ### Day of
 
 - [ ] Farm gate again (probe + canary) if any Farm use is planned; any failure means local mode for everyone.
-- [ ] Ports 8100, 5173, 4000 free on laptops; Docker running before 0:15.
+- [ ] Ports 8100 and 8200 (the stack), 5173, 3000 and 4000 (the templates and the inbox verifier) free on laptops (tunnel mode also uses 7037 and needs `cloudflared`); Docker running before 0:15.
 - [ ] Projector, a timer, the rubric printed.
 - [ ] A mentor on each gate failure: log the symptom and the fix for next time.
 - [ ] After: `npm run vta:reset` is all a participant needs to wipe their local state.

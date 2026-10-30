@@ -16,6 +16,7 @@ Back to the [repo README](../README.md). Everything here is for a local playgrou
 
 ## Operate
 
+- [STATUS.md](STATUS.md): what works in which mode, and what was and was not verified.
 - [MODES.md](MODES.md): local, tunnel (messaging on public quick tunnels) and farm: what each gives, caveats, switching, troubleshooting.
 - [FARM.md](FARM.md): the hosted VTA Farm mode, canary and troubleshooting.
 - [PINS.md](PINS.md): pinned versions, building the images, drift checks (and [PINS_LOG.md](../PINS_LOG.md)).
@@ -26,7 +27,7 @@ Back to the [repo README](../README.md). Everything here is for a local playgrou
 - [VTC-SURFACE.md](VTC-SURFACE.md): who can call which VTC task (stranger, applicant, member, admin).
 - [APPROVALS.md](APPROVALS.md): approve a gated task on a second device (a software approver first): `npm run approvals:demo`.
 - [MOBILE-WALLET.md](MOBILE-WALLET.md): what a phone wallet could add, what was and was not checked.
-- [MESSAGING.md](MESSAGING.md): what messaging gives in tunnel mode, the TSP ping client, and where it stops (the mediator pin refuses TSP 1.0 replies).
+- [MESSAGING.md](MESSAGING.md): what messaging gives in tunnel mode, the TSP ping client, and where it stops (the ping and its pong, and the credential frames, are verified; DIDComm is not).
 - [ROLES.md](ROLES.md): roles lab: personas, separation of duties, lifecycle, strict mode (`npm run roles:matrix`).
 - [trust-tasks/06-troubleshooting-and-glossary.md](trust-tasks/06-troubleshooting-and-glossary.md): error causes and a glossary.
 

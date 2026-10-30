@@ -15,8 +15,9 @@ It is for developers who want to see a signed Trust Task round trip working in m
 ## Prerequisites
 
 - Node 20+ and npm 10+, Docker with Compose v2
-- The images `vta-buildathon:local` (and `vtc-buildathon:local` for the community; `mediator-buildathon:local` for tunnel mode) loaded or built
-  ([docs/PINS.md](docs/PINS.md); an organiser usually hands them out). Without Docker, see Farm mode below.
+- The images `vta-buildathon:local` (plus `vtc-buildathon:local` for the community, and `mediator-buildathon:local` for tunnel mode). **No images are published: you build
+  them locally from the pinned upstream source**, which needs a checkout of the upstream VTI repository next to this one and a Rust build of 10 to 25 minutes per image
+  (exact steps and times: [docs/PINS.md](docs/PINS.md#where-the-images-come-from)). Without Docker, see the Farm mode in [docs/MODES.md](docs/MODES.md).
 
 ## Quick start
 
@@ -51,11 +52,12 @@ plus approving a gated task from a second key ([docs/APPROVALS.md](docs/APPROVAL
 | Path | What |
 |---|---|
 | `packages/vta-client`, `packages/vtc-client` | Discover, authenticate, sign and call any Trust Task; VTC join and member helpers. Node and browser. |
+| `packages/tsp-client` | Log in to the mediator, open the TSP socket, send a signed ping and read the pong; `connectTsp` receives frames. Node and browser. |
 | `packages/status-panel` | Dependency-free connection-status panel (vanilla TypeScript). |
 | `templates/inbox-verifier` | Server that accepts signed documents (works offline). |
 | `templates/web-vta-app` | Browser app with a status page and optional wallet (vanilla TypeScript). |
 | `templates/community-dashboard` | React dashboard for the VTC member journey. |
-| `templates/tsp-ping` | Browser page that sends a TSP ping to the VTA (`MODE=tunnel`; the pong does not come back yet, see docs/MESSAGING.md). |
+| `templates/tsp-ping` | Browser page that sends a TSP ping to the VTA (`MODE=tunnel`; sends a TSP ping and shows the pong, see docs/MESSAGING.md). |
 | `templates/mcp-agent` | Stub for an AI agent with a scoped VTA identity. |
 | `scripts/` | The npm commands (`up`, `hello`, `vtc:*`, `farm:*`, `vta:call`, checks). |
 | `docker-compose.yml`, `docker/` | Local VTA and VTC. |
@@ -69,26 +71,11 @@ Code tour with a diagram: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 [VTC](docs/VTC.md), [VTC-SURFACE](docs/VTC-SURFACE.md), [ROLES](docs/ROLES.md), [MODES](docs/MODES.md), [FARM](docs/FARM.md), [PINS](docs/PINS.md), [EVENT](docs/EVENT.md),
 [TRACKS](docs/TRACKS.md), [SECURITY](docs/SECURITY.md), [Trust Tasks guide](docs/trust-tasks/README.md).
 
-## Three modes
+## Modes
 
-One setting, `MODE` in `.env` (or the environment), chooses where the VTA/VTC run. Exactly three modes, no separate messaging switch.
-Unless a row in [docs/MODES.md](docs/MODES.md) says otherwise, a command works in every mode; that page also says what each mode gives and what each feature needs.
-
-| `MODE` | Runs | Needs | Start |
-|---|---|---|---|
-| `local` (default) | docker compose on your laptop | Docker, the VTA image | `npm run up` |
-| `tunnel` | the local stack plus a mediator (messaging), on **public, ephemeral** quick-tunnel URLs, with an **open** mediator; demo data only | Docker, `cloudflared`, internet, a locally built mediator image (heavy first build) | `MODE=tunnel npm run up` (stop: `MODE=tunnel npm run down`), every caveat in [docs/MODES.md](docs/MODES.md) |
-| `farm` | agents hosted by [VTA Farm](https://vta.farm/) | A browser with a passkey; no Docker, no Rust build | `MODE=farm npm run up`, then [docs/FARM.md](docs/FARM.md) |
-
-**Local mode is the primary, supported path.** Farm mode is an optional shortcut for
-when Docker does not cooperate, and only after a pre-event check. There are two Farms:
-**`FARM=ic3` (https://vtafarm.ic3.dev, staging) is preferred and the default**; `FARM=firstperson`
-(https://vtafarm.firstperson.dev) is supported but currently cannot create agents (`acl/grant/0.2`, a confirmed
-Farm-side bug, 2026-10-29). Organisers run `npm run farm:probe` plus a canary agent (`npm run farm:canary`) the
-day before and on the day (ic3 first, then firstperson), and use local mode for everyone if both fail ([docs/EVENT.md](docs/EVENT.md), [docs/FARM.md](docs/FARM.md)).
-Browser apps work in farm mode through the Vite proxy in each template. Tunnel mode turns DIDComm/TSP on. A TSP client (`npm run tsp:ping`, `templates/tsp-ping`) sends a signed ping to the VTA through the kit's mediator and gets the pong back, and `npm run tsp:listen` receives the credential frames the VTC pushes after an approval; both **verified live** in tunnel mode (a wallet storing the credential, DIDComm and a Farm mediator are not: [docs/MESSAGING.md](docs/MESSAGING.md)).
-A VTC (community) is described in [docs/VTC.md](docs/VTC.md): the client is ready,
-the local Docker VTC (vtc-service 0.15.0, the version the Farm VTC runs) was **verified live** (join, approve, restart, browser; a member cannot get a console session by design, but the sessionless member surface was mapped and verified: docs/VTC-SURFACE.md), the farm community path needs the portal and is unverified.
+One setting, `MODE` in `.env` (or the environment), chooses where the VTA/VTC run: `local` (default, Docker on your laptop), `tunnel` (local stack plus a mediator on
+public, ephemeral quick-tunnel URLs, for messaging and TSP; heavy first build) or `farm` (agents hosted by [VTA Farm](https://vta.farm/), no Docker).
+**Local mode is the primary, supported path.** What each mode gives, what works and what was verified: [docs/MODES.md](docs/MODES.md) and [docs/STATUS.md](docs/STATUS.md).
 
 ## Templates
 
@@ -111,6 +98,7 @@ concepts, finding, using, developing and evaluating them, with a hands-on custom
 |---|---|
 | `npm run up` / `down` | Mode-aware: local = keygen, compose up, provision; tunnel (`MODE=tunnel`) = tunnels, mediator, VTA, VTC, provision, probe, and `down` deletes its volumes; farm = mint admin key, print portal steps, then provision |
 | `npm run tunnel:probe` | `MODE=tunnel`: re-run the checks (public URLs, DID bound to the tunnel host, messaging advertised and live, mediator ACL note) |
+| `npm run tsp:ping` / `tsp:listen` / `tsp:ping:browser` | `MODE=tunnel`: send a signed TSP ping and print the pong / receive the credential frames the VTC pushes / the same ping from headless Chromium ([docs/MESSAGING.md](docs/MESSAGING.md)) |
 | `npm run vta:up` | Local only: keygen, `docker compose up --wait`, provision |
 | `npm run farm:setup` / `farm:check` / `farm:probe` | Farm (`FARM=ic3` default, or `firstperson`; `FARM_AGENT=<name>` derives `VTA_URL`/`VTA_DID`): mint the Admin DID and print portal steps / read-only check of your agent / dated, read-only survey of both Farms side by side (run it the day before and the day of an event) |
 | `npm run farm:canary` | Organisers: with a throwaway agent's URL/DID in `.env.farm`, runs `farm:check` + `provision` + `hello` and prints a GO / switch-to-local verdict |
@@ -137,7 +125,7 @@ concepts, finding, using, developing and evaluating them, with a hands-on custom
 
 | Symptom | Fix |
 |---|---|
-| `pull access denied for vta-buildathon` | The image is not loaded. `docker load` it, or set `VTA_IMAGE`. |
+| `pull access denied for vta-buildathon` | The image is not built here. Build it ([docs/PINS.md](docs/PINS.md#where-the-images-come-from)) or set `VTA_IMAGE` to one you were given. |
 | `.vta/admin.env` not found | `npm run vta:keygen` before `docker compose up`. |
 | `provision` fails with 401 or `permissionDenied` | `.vta/admin.json` is not the key this volume was seeded with. `npm run vta:reset`, then `npm run vta:up`. |
 | `VTA DID changed` | The VTA was recreated. `npm run vta:provision`. |
@@ -149,15 +137,9 @@ concepts, finding, using, developing and evaluating them, with a hands-on custom
 | Tunnel probe fails or shows `MESSAGING DEGRADED` | See the troubleshooting table in [docs/MODES.md](docs/MODES.md#troubleshooting). |
 | Anything else | `npm run vta:logs`; a `Setup failed:` line names the bad field. |
 
-## Verification status
+## Status
 
-See `docs/EVENT.md` for the organiser checklist. This starter was checked on
-Linux with Docker 29 and Node 22 only; Windows and macOS hosts are untested.
-
-Every doc marks claims as verified (observed while building this kit) or unverified (documentation or inference). In short:
-**verified live**: the local VTA and VTC flows, the dashboard (browser end to end), the role matrix, `MODE=tunnel` bring-up with the public URLs, the status
-panel Messaging row in a browser, and the software-approver demo in local and tunnel mode. **Also verified live**: a TSP ping from Node and from headless Chromium reaches the VTA. **Not verified**: a DIDComm/TSP message round trip (the pong is refused by the mediator pin), credential
-delivery to a member, a phone as approver, a hosted mediator admitting an outside VTA, the Farm community path, and Windows or macOS.
+What works in which mode, and what was and was not verified: [docs/STATUS.md](docs/STATUS.md).
 
 ## Privacy / what this repo does not contain
 

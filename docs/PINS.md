@@ -20,6 +20,28 @@ development; tagged `:local` only). Images carry the label `org.buildathon.vti-r
 `/health` version, the lockfile against `pins.json`, and the newest upstream
 `vta-service-v*` / `vtc-service-v*` tags and `npm outdated`. It is read-only.
 
+## Where the images come from
+
+**Current decision: no images are published. Everyone builds them locally from the pinned upstream source.** This is the one place that says so; the other docs link
+here, so if images are published later (a registry, or tarballs from the organiser), change this section and the `Prerequisites` bullet in the README.
+
+The cold path, exactly (Linux, 12 cores, Docker; times are from this kit's own builds, so treat them as a floor on a laptop):
+
+```sh
+# 1. The upstream repository, next to this one (the URL is `vti.repo` in pins.json). images:build never clones silently.
+git clone https://github.com/OpenVTC/verifiable-trust-infrastructure ../verifiable-trust-infrastructure
+git -C ../verifiable-trust-infrastructure fetch --tags origin     # the pinned refs must be present
+# 2. Build what you need (each image is exported from its own pinned ref; niced; the first build is the slow one)
+npm run images:build vta        # about 12 min cold (Rust); local mode needs this
+npm run images:build vtc        # about 8 min with warm caches, about 23 min cold; only for WITH_VTC=1 and the community
+npm run images:build mediator   # about 12 min cold, tunnel mode only; also needs `cloudflared`
+```
+
+Budget several GB of free RAM (the mediator build warns below 8 GB) and about 10 GB of disk for the Rust build layers. If the checkout is somewhere else, set `VTI_PATH`.
+The mediator comes from its own repository (`messaging.mediator.repo` in pins.json), which the Dockerfile fetches itself, so no checkout is needed for it.
+`images:build` names the missing piece. An organiser may still hand out pre-built images (`docker save` / `docker load`,
+or `VTA_IMAGE=...`, see [EVENT.md](EVENT.md)); that is optional, not the plan.
+
 ## What is pinned now
 
 Two refs, because the two releases come from different monorepo commits:

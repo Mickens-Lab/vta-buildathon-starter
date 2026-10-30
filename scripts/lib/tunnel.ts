@@ -93,7 +93,7 @@ export function memoryWarning(availKb: number | undefined, needGb = 8): string |
 }
 
 export const MEDIATOR_BUILD_NOTICE =
-  "Building the mediator from source: about 15 minutes cold on a 12-core machine (upstream estimate 20+ min and 8 GB RAM), run under `nice -n 10`. It is built once; later runs reuse the image.";
+  "Building the mediator from source: about 12 minutes cold on a 12-core machine (upstream estimate 20+ min and 8 GB RAM), run under `nice -n 10`. It is built once; later runs reuse the image.";
 
 // --- messaging state -------------------------------------------------------------------------------
 

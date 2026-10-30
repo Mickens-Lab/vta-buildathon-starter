@@ -37,7 +37,7 @@ In the dashboard the membership card's "Credential delivery" row says which of t
 ```bash
 npm run images:build vta          # once; tsp is now in the feature list, see below
 npm run images:build vtc          # once
-npm run images:build mediator     # once, heavy: about 15 minutes and plenty of RAM
+npm run images:build mediator     # once, heavy: about 12 minutes cold and plenty of RAM
 MODE=tunnel npm run up            # tunnels -> mediator -> VTA -> VTC -> probe
 npm run tunnel:probe              # re-run the checks at any time
 MODE=tunnel npm run down          # stop tunnels, delete the volumes and the tunnel keys in .env
@@ -87,7 +87,7 @@ _Verified live:_ with `MEDIATOR_CORS_ALLOW_ORIGIN=http://localhost:3000` the med
 - **Demo and test data only, never real credentials.** Keys are plaintext on the volumes, the admin key sits in `.vta/`, and the mediator is
   open.
 - **No uptime guarantee.** Cloudflare quick tunnels are for testing: no SLA, they can be rate limited, and they are not for production.
-- **Heavy first build.** The mediator is built from source. A cold build took about 15 minutes on a 12-core machine, building from a
+- **Heavy first build.** The mediator is built from source. A cold build took about 12 minutes on a 12-core machine, building from a
   fresh clone of the pinned commit; the image is about 170 MB; the build's own footprint stayed within about 1.5 GB above idle **[verified,
   one machine]**. Upstream estimates 20+ minutes and 8 GB of RAM, and `npm run images:build mediator` warns when less than that is
   available. Running it (mediator 10 MB, redis 5 MB, VTA 16 MB, VTC 27 MB, each `cloudflared` about 33 MB resident) is light.

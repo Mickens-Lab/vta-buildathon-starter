@@ -133,7 +133,7 @@ anything that changes state. See `templates/inbox-verifier`.
 | `@openvtc/trust-tasks` (0.28.1) | Types and the consumer runtime (`/runtime`) |
 | `@openvtc/trust-tasks-proof` (0.1.6) | Sign and verify Data Integrity proofs; works in browsers |
 | `@openvtc/trust-tasks-gen` | Generate typed modules for the tasks you pin |
-| `@openvtc/pnm-core` | Avoid for REST auth against this VTA: 0.9.1 appears to use the removed `/auth/challenge` routes (unverified). Use `vta-client`. |
+| `@openvtc/pnm-core` | Avoid for REST auth against this VTA: 0.9.1 appears to use the removed `/auth/challenge` routes (unverified), so use `vta-client` for that. It is the base of `tsp-client`, which uses only its mediator login, DID resolution and socket helpers. |
 
 ## Status panel (`@buildathon/status-panel`)
 
