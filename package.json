@@ -1,0 +1,58 @@
+{
+  "name": "vta-buildathon-starter",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "private": true,
+  "description": "Starter kit for building a TypeScript app linked to a VTA",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "workspaces": [
+    "packages/*",
+    "templates/*"
+  ],
+  "scripts": {
+    "up": "tsx scripts/up.ts",
+    "down": "tsx scripts/up.ts down",
+    "vta:keygen": "tsx scripts/keygen.ts",
+    "vta:provision": "tsx scripts/provision.ts",
+    "vta:up": "npm run vta:keygen && docker compose up -d --wait && npm run vta:provision",
+    "vta:down": "docker compose --profile vtc down",
+    "vta:reset": "docker compose --profile vtc down -v && rm -rf .vta .env",
+    "vta:logs": "docker compose logs -f vta",
+    "vtc:up": "tsx scripts/vtc-up.ts",
+    "vtc:hello": "tsx scripts/vtc-hello.ts",
+    "vtc:join": "tsx scripts/vtc-join.ts",
+    "vtc:approve": "tsx scripts/vtc-approve.ts",
+    "vtc:status": "tsx scripts/vtc-status.ts",
+    "vtc:withdraw": "tsx scripts/vtc-withdraw.ts",
+    "vtc:profile": "tsx scripts/vtc-profile.ts",
+    "vtc:refusals": "tsx scripts/vtc-refusals.ts",
+    "vtc:leave": "tsx scripts/vtc-leave.ts",
+    "farm:setup": "tsx scripts/farm-setup.ts",
+    "farm:check": "tsx scripts/farm-check.ts",
+    "farm:probe": "tsx scripts/farm-probe.ts",
+    "farm:canary": "tsx scripts/farm-canary.ts",
+    "hello": "tsx scripts/hello.ts",
+    "vta:call": "tsx scripts/call.ts",
+    "typecheck": "tsc --noEmit && npm run typecheck --workspaces --if-present",
+    "test": "tsx scripts/check-generic.ts && tsx scripts/check-docs.ts && tsx --test scripts/test/*.test.ts && npm test --workspaces --if-present",
+    "pins:check": "tsx scripts/pins-check.ts",
+    "images:build": "tsx scripts/images-build.ts",
+    "check:generic": "tsx scripts/check-generic.ts",
+    "check:docs": "tsx scripts/check-docs.ts",
+    "test:roles": "tsx scripts/test-roles.ts",
+    "e2e": "tsx scripts/e2e.ts",
+    "roles:matrix": "tsx scripts/roles-matrix.ts",
+    "roles:personas": "tsx scripts/personas.ts",
+    "security:check": "tsx scripts/security-check.ts",
+    "recipe:backend-signer": "tsx scripts/recipes/backend-signer.ts",
+    "recipe:webcrypto-key": "tsx scripts/recipes/webcrypto-key.ts"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3"
+  }
+}

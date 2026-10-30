@@ -1,0 +1,61 @@
+{
+  "updated": "2026-10-29",
+  "note": "Pins are the versions this kit was last validated against. Advance only deliberately via the procedure in docs/PINS.md, and log why in PINS_LOG.md. npm versions are exact (see .npmrc) and package-lock.json is committed.",
+  "vti": {
+    "repo": "https://github.com/OpenVTC/verifiable-trust-infrastructure",
+    "vta": {
+      "image": "vta-buildathon",
+      "tag": "vta-service-v0.65.0",
+      "ref": "fc157f76f1177a147ebaa5478176466fd5b4a4af",
+      "version": "0.65.0",
+      "service": "vta-service"
+    },
+    "vtc": {
+      "image": "vtc-buildathon",
+      "tag": "vtc-service-v0.15.0",
+      "ref": "93d36996c1ca6b1136870a91607d9f2e4f134ead",
+      "version": "0.15.0",
+      "service": "vtc-service"
+    },
+    "pinnedOn": "2026-10-29",
+    "why": "Aligned with the VTA Farm: the VTA is the release the portal offers as image 0.65.0-fc157f76 (vta-service-v0.65.0), the VTC is the release a Farm-hosted VTC runs (vtc-service-v0.15.0). Both images are built from their own tag by `npm run images:build all`.",
+    "note": "The two releases come from DIFFERENT monorepo commits (fc157f76 and 93d36996), so each image is built from its own ref. The earlier single pin fff94fc6 (fc157f76 plus an examples-only commit) is retired."
+  },
+  "farm": {
+    "observedOn": "2026-10-29T18:38Z",
+    "assumed": {
+      "vta-service": "0.65.0",
+      "vtc-service": "0.15.0",
+      "did-hosting-control": "0.11.0"
+    },
+    "note": "Dated snapshot, not a fact: the Farm updates almost daily. vta-service is an existing Farm VTA (GET /openapi.json info.version; /health has no version); vtc-service is a Farm-hosted VTC (GET /health). vtc-service is now pinned at the Farm VTC's version (0.15.0) and vtc-client sends join-requests/list and members/list 0.2. Re-run `npm run farm:probe` the day before and on the day; details in docs/FARM.md.",
+    "portalObservedOn": "2026-10-29T19:35Z",
+    "portal": {
+      "imageDefault": "VTI-Eucalyptus-49f5f1be [latest] (2026-10-15)",
+      "imageChosen": "0.65.0-fc157f76",
+      "imagesOffered": "0.67.0-736f6570 nightly, 0.67.0-61c23f20 main, 0.66.0-*, 0.65.0-fc157f76, 0.64.0-* ... 0.60.0-fd1621d9, VTI-Dogwood-*, Cypress-10d74fc5",
+      "agentVersionReported": "vta-service 0.65.0 (setup log)",
+      "didHost": "did-hosting-control 0.11.0 at dids.firstperson.dev",
+      "agentDomain": "firstperson.dev",
+      "blocker": "firstperson.dev only: deploy fails after Admin DID, DID host refuses acl/grant/0.2 (unsupportedVersion); confirmed Farm-side, reproduced by hand 2026-10-29. ic3.dev creates the same image fine.",
+    "preferredFarm": "ic3 (https://vtafarm.ic3.dev, DID host dids.ic3.dev, agents https://vta-<name>.ic3.dev); set FARM=ic3|firstperson, default ic3; table in scripts/farm-hosts.json",
+      "imageToPick": "0.65.0-fc157f76",
+      "imageTrap": "0.56.0 (the portal's default selection at last look; not compatible with this kit)"
+    }
+  },
+  "npm": {
+    "@openvtc/trust-tasks": "0.28.1",
+    "@openvtc/trust-tasks-proof": "0.1.6",
+    "@noble/curves": "2.4.0",
+    "@scure/base": "2.4.0",
+    "vite": "5.4.21",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "@vitejs/plugin-react": "4.7.0",
+    "@types/react": "18.3.31",
+    "@types/react-dom": "18.3.7",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "@types/node": "22.20.5"
+  }
+}

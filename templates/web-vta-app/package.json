@@ -1,0 +1,21 @@
+{
+  "name": "@buildathon/web-vta-app",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 5173",
+    "build": "vite build",
+    "preview": "vite preview --port 5173",
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "@buildathon/status-panel": "*",
+    "@buildathon/vta-client": "*",
+    "@buildathon/vtc-client": "*"
+  },
+  "devDependencies": {
+    "vite": "5.4.21"
+  }
+}

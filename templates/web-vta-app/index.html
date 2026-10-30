@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>VTA web app starter</title>
+    <style>
+      body { margin: 0; font: 16px/1.5 system-ui, sans-serif; background: #f6f7f9; color: #1b1f24; }
+      main { max-width: 72rem; margin: 0 auto; padding: 1rem; }
+      h1 { font-size: 1.5rem; margin: .25rem 0 .75rem; }
+      .actions { margin-top: 1rem; padding: .75rem .9rem; border: 1px solid #dde1e7; border-radius: 12px; background: #fff; }
+      .actions h2 { font-size: 1rem; margin: 0 0 .4rem; }
+      button { font: inherit; color: inherit; background: transparent; border: 1px solid #c3c9d2; border-radius: 8px; padding: .3rem .7rem; margin: 0 .4rem .4rem 0; cursor: pointer; }
+      pre { background: #eef0f4; padding: .6rem; overflow: auto; border-radius: 6px; font-size: 12.5px; }
+      .err { color: #b3201f; }
+      summary { cursor: pointer; opacity: .75; font-size: .9rem; }
+      @media (prefers-color-scheme: dark) {
+        body { background: #14171c; color: #e6e9ee; }
+        .actions { background: #1d2128; border-color: #2d333c; }
+        button { border-color: #3a424d; } pre { background: #12151a; } .err { color: #ff8d8a; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div id="status-panel"></div>
+      <section class="actions" id="wallet-actions" hidden>
+        <h2>Wallet actions <small>(optional)</small></h2>
+        <button id="wallet-profile">Who am I in my wallet?</button>
+        <button id="wallet-sign">Wallet-sign a Trust Task</button>
+        <details id="out-box" hidden open><summary>result (details)</summary><pre id="out"></pre></details>
+      </section>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

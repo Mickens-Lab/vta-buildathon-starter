@@ -1,0 +1,19 @@
+{
+  "name": "@buildathon/inbox-verifier",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/server.ts",
+    "send": "tsx src/send.ts",
+    "demo": "tsx src/demo.ts",
+    "typecheck": "tsc --noEmit -p .",
+    "test": "tsx --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@buildathon/vta-client": "*",
+    "@openvtc/trust-tasks": "0.28.1",
+    "@openvtc/trust-tasks-proof": "0.1.6"
+  }
+}

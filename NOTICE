@@ -1,0 +1,13 @@
+vta-buildathon-starter
+
+This project is licensed under the Apache License 2.0 (see LICENSE).
+
+Portions are adapted from the `examples/buildathon-vta` kit in
+verifiable-trust-infrastructure (https://github.com/OpenVTC/verifiable-trust-infrastructure,
+Apache-2.0): docker-compose.yml, vta-entrypoint.sh, the scripts in scripts/ and
+the client in packages/vta-client. The consumer pipeline in
+templates/inbox-verifier follows the usage documented in
+dtgwg-trust-tasks-tf (Apache-2.0): GETTING-STARTED.md and trust-tasks-ts/README.md.
+
+The `vta-buildathon:local` container image is built from the
+verifiable-trust-infrastructure repository and is not distributed here.

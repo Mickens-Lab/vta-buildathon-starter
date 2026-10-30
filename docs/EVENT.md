@@ -1,0 +1,134 @@
+# Event guide
+
+Part of the [docs index](README.md). Participants start with the [README](../README.md) and [TRY-THIS.md](TRY-THIS.md).
+
+A four-hour buildathon for teams of 1 to 4 building a TypeScript app linked to a VTA.
+
+## Agenda
+
+| Time | What |
+|---|---|
+| 0:00 | Welcome, the Trust Task idea in 10 minutes: envelope, proof, verifier |
+| 0:15 | Setup: `docker load`, `npm i`, `npm run vta:up`, `npm run hello` |
+| **0:40** | **Setup gate.** Every team shows the four-line `hello` output. Stragglers may use `MODE=farm` only if the Farm canary passed ([FARM.md](FARM.md)); otherwise a mentor fixes their local setup |
+| 0:40 | Build. Pick a track from [TRACKS.md](TRACKS.md); start from a template |
+| 1:30 | Check-in: each team states its round-trip status in one sentence |
+| 2:30 | Mentors do a verification and replay review with each team |
+| 3:00 | Feature freeze. Prepare a 3-minute demo |
+| 3:15 | Demos (3 minutes plus 1 for questions) |
+| 3:50 | Judging deliberation, awards |
+
+## Staffing
+
+- 1 lead organiser (runs the clock, owns the gate).
+- 1 infra mentor per ~15 participants: Docker, image loading, ports, VTA logs.
+- 1 protocol mentor per ~15 participants: Trust Task envelopes, proofs, `consumeInbound`.
+- 2 to 3 judges. Give each the rubric below and one hour of demos.
+
+## Judging rubric (100 points)
+
+| Criterion | Points | Look for |
+|---|---|---|
+| Working Trust Task round trip | 30 | A signed request reaches a verifier or the VTA and a valid response comes back, live in the demo |
+| Real VTA feature | 25 | Consent, policy, audit, ACL scopes, or similar, actually used and not just named |
+| UX and story | 25 | A user can follow it; a clear problem and a reason trust matters |
+| Correct verification and replay handling | 20 | Proof checked, recipient checked, replays not re-executed; tampering shown to fail |
+
+Tie-break: the round-trip score.
+
+## Organiser checklist
+
+**Local mode is the plan; the Farm is an optional shortcut behind a go/no-go gate.**
+
+### Two weeks before
+
+- [ ] **FIRST, and the biggest local-mode speedup: build the pinned images and put them where
+      participants can get them.** There is no published VTA image (and none for the VTC); a
+      Rust release build per laptop is what makes local setup slow, so nobody should build.
+      `npm run images:build vta` (and `vtc` if a track needs a community), then publish by
+      `docker save vta-buildathon:local | gzip > vta-buildathon.tar.gz` on a share/USB sticks
+      (participants run `docker load -i`), or a push to a registry you control (teams then
+      `export VTA_IMAGE=...`). This kit does not push anything for you. Verify a clean laptop
+      reaches `npm run hello` from the loaded image in minutes.
+- [ ] **Build the images from the pinned refs** (`pins.json`, [PINS.md](PINS.md)), not
+      from whatever is checked out: `npm run images:build all` (each image from its own tag:
+      VTA `vta-service-v0.65.0`, VTC `vtc-service-v0.15.0`; a Rust release build each, see
+      [VTC.md](VTC.md) for times; tags `<image>:<short-sha>` and `:local`).
+      `npm run pins:check` should show no drift on the image refs. Before advancing a
+      pin, re-verify the local VTA + VTC path and the farm note ([PINS.md](PINS.md)).
+- [ ] Export and host it as in the first item (save/load, or your own registry).
+- [ ] Image is amd64 only unless you build multi-arch; check participants' laptops
+      (Apple silicon needs an arm64 build or emulation).
+- [ ] Test the full checkpoint from a clean clone on Linux, macOS and Windows (WSL2).
+      Only Linux was tested for this kit.
+- [ ] Decide whether to ship `vta-mcp` (Rust, `cargo build --release -p vta-mcp`).
+      If not, tell the agent track to use the TypeScript fallback.
+- [ ] Pre-warm npm: have a clone and `npm ci` result on the share if Wi-Fi is weak.
+
+### MODE=farm (hosted VTA Farm): optional, gated
+
+**Which Farm.** `FARM=ic3` (https://vtafarm.ic3.dev, staging) is the preferred and default Farm; `FARM=firstperson`
+(https://vtafarm.firstperson.dev) currently fails agent creation (`unsupportedVersion: acl/grant/0.2`, confirmed
+Farm-side, 2026-10-29). Send participants to the ic3 portal unless the gate says otherwise.
+Portal screens on ic3: to be confirmed ([FARM.md](FARM.md)).
+
+**Tell every Farm participant which image to pick.** In the portal's image selector choose **`0.65.0-fc157f76`**
+(the pinned VTA release). **Do not keep the portal's default** (`VTI-Eucalyptus ... [latest]`, vta-service 0.56.0): it is
+not compatible with this kit. `npm run farm:check` / `farm:canary` read the deployed agent's version and print a loud
+warning when it is not the pin; a Farm-hosted VTC (vtc-service 0.15.0 when observed) matched the VTC pin.
+
+An optional shortcut, not the plan. Participant steps are in [FARM.md](FARM.md); the kit
+mints each team's admin key and prints what to paste.
+
+- [ ] **GO / NO-GO GATE (the day before AND on the day).** Both must pass, or everyone uses
+      local mode and nobody is sent to the portal:
+      Try **ic3 first, then firstperson, then local mode**.
+      1. `npm run farm:probe` (read-only, both Farms side by side; compare with `pins.json`).
+      2. The canary: create ONE throwaway agent in the portal with the kit's Admin DID, put `FARM=ic3` and
+         `FARM_AGENT=<name>` (or its `VTA_URL` / `VTA_DID`) into `.env.farm`, then `ENV_FILE=.env.farm npm run farm:canary`. Repeat with `FARM=firstperson` only if ic3 fails. It runs
+         `farm:check` + `provision` + `hello` and prints GO or "switch to local mode".
+         Portal creation can fail before the agent exists (as on 2026-10-29); that is a NO-GO too.
+         Procedure and what to record: [FARM.md](FARM.md) "Canary". Delete the canary agent afterwards.
+
+- [ ] **Ask the Farm operators first.** vta.farm is a demo that "may be reset or stop
+      accepting new agents when it runs out of space"; accounts are limited to two
+      agents. Confirm capacity for your head count (or a dedicated farm) and whether
+      sign-up needs an invite. Older docs say invite link, the landing page says open.
+- [ ] Agree who gets communities (VTA + VTC): they are "on request" and each is a full
+      stack, so budget them for the community track only.
+- [ ] Every participant needs a device with passkey support and a browser; sign-up is not
+      scriptable. Do this at 0:15, not at the gate.
+- [ ] **firstperson.dev: agent creation fails** after the Admin DID step, with both the default and the pinned image
+      (`acl/grant/0.2` refused by its DID host; confirmed Farm-side, reproduced by hand 2026-10-29;
+      [FARM.md](FARM.md) "Live result"). On ic3.dev a 0.65.0 agent was created by hand and the canary passed
+      (2026-10-29). Treat either Farm as unproven until that day's canary passes.
+- [ ] Do one dry run yourself: sign up, create an agent with the Admin DID from
+      `npm run farm:setup`, then `MODE=farm npm run up` and `npm run hello`.
+      **None of this was verified live when the kit was written.**
+- [ ] **Run `npm run farm:probe` the day before and again on the day of the event.** It is read-only and prints
+      a dated table of the Farm's vta-service / vtc-service versions, CORS and `/trust-tasks` door, compared with
+      `pins.json`. The Farm updates almost daily; if a version moved past the pin, read "Compatibility" in
+      [FARM.md](FARM.md) before the event, and add a new dated block there. A participant's own agent can differ:
+      `npm run farm:check` probes the VTA/VTC in their `.env`.
+- [ ] Check the farm's VTA image serves `POST /trust-tasks` with the task versions this kit sends (a dry run of
+      `provision` shows it; the probe only proves the path exists).
+- [ ] Browser apps: the farm VTA does not allow `http://localhost:5173` in CORS. The
+      templates proxy through Vite in farm mode; ask the operators to add your origin
+      if teams deploy elsewhere.
+- [ ] Hosted VTC admin (approving join requests) is a passkey flow in the VTC console,
+      not scriptable; assign a mentor as community admin.
+
+### Local VTC (optional; verified locally, cold build ~23 min)
+
+- [ ] A VTC needs its own image: `npm run images:build vtc` (`docker/vtc.Dockerfile`, see
+      [VTC.md](VTC.md)). Build it once from the pinned ref, as for the VTA, only if a track needs a community and Farm communities are
+      not available. Build it with features `setup,website,tsp` (already the default). Dry-run
+      `WITH_VTC=1 npm run up && npm run vtc:hello && npm run vtc:join && npm run vtc:approve` before the event.
+
+### Day of
+
+- [ ] Farm gate again (probe + canary) if any Farm use is planned; any failure means local mode for everyone.
+- [ ] Ports 8100, 5173, 4000 free on laptops; Docker running before 0:15.
+- [ ] Projector, a timer, the rubric printed.
+- [ ] A mentor on each gate failure: log the symptom and the fix for next time.
+- [ ] After: `npm run vta:reset` is all a participant needs to wipe their local state.

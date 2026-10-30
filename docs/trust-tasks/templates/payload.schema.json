@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://trusttasks.org/spec/<slug>/<version>",
+  "title": "<Title> — payload",
+  "description": "What the request payload carries. The outer members (id, type, issuer, recipient, issuedAt, expiresAt, proof) belong to the framework, not to this schema. For a private task replace the $id host with your own authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["exampleMember"],
+  "properties": {
+    "exampleMember": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Free text must declare maxLength. Say in spec.md who reads it, whether it is retained and that it is untrusted."
+    },
+    "when": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Instants are RFC 3339 strings named <event>At (for example recordedAt), never Unix seconds."
+    },
+    "ttlSeconds": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Durations are integers with the unit in the name."
+    }
+  },
+  "$defs": {
+    "Response": {
+      "$anchor": "response",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["outcome"],
+      "description": "Success payload, for documents typed <Type URI>#response. Delete this whole $defs.Response for a fire-and-forget task. Failures use trust-task-error, never this shape.",
+      "properties": {
+        "outcome": {
+          "type": "string",
+          "enum": ["accepted"],
+          "description": "Prefer a closed enum to free text."
+        }
+      }
+    }
+  }
+}

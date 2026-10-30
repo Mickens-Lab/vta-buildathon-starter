@@ -1,0 +1,15 @@
+node_modules/
+.vta/
+.env*
+dist/
+*.log
+.mcp.json
+# per-user generated state: never commit
+.env
+.env.*
+.vta/
+*.passkey
+*passkey*.json
+*.pem
+*.key
+.webauthn/

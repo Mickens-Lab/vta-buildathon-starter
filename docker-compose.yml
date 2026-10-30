@@ -1,0 +1,66 @@
+# Disposable VTA for the buildathon. NOT for production: plaintext seed,
+# loopback DID, http, no mediator.
+#
+#   npm run vta:up      # keygen + compose up --wait + provision
+#   npm run vta:reset   # blank VTA (new DID, empty ACL)
+#
+# MODE=farm skips all of this: see docs/FARM.md.
+# The image is built from source (Rust, ~15 min) and no published image exists.
+# The organiser builds or loads it once; see docs/EVENT.md.
+services:
+  vta:
+    image: ${VTA_IMAGE:-vta-buildathon:local}
+    entrypoint: ["/bin/sh", "/vta-entrypoint.sh"]
+    command: []
+    env_file: .vta/admin.env
+    environment:
+      # Lets the VTA resolve its own did:webvh on a loopback host. Dev only.
+      VTA_ALLOW_PRIVATE_ENDPOINTS: "1"
+      VTA_PORT: "${VTA_PORT:-8100}"
+      CORS_ORIGINS_TOML: "${CORS_ORIGINS_TOML:-}"
+    ports:
+      - "127.0.0.1:${VTA_PORT:-8100}:${VTA_PORT:-8100}"
+      # The VTC shares this container's network namespace (see `vtc` below), so its
+      # port is published here.
+      - "127.0.0.1:${VTC_PORT:-8200}:${VTC_PORT:-8200}"
+    volumes:
+      - vta-data:/var/lib/vta
+      - ./vta-entrypoint.sh:/vta-entrypoint.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:$${VTA_PORT}/health >/dev/null && wget -qO- http://localhost:$${VTA_PORT}/.well-known/did.jsonl >/dev/null"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  # Optional VTC, behind a compose profile: `docker compose --profile vtc up -d`
+  # (or `WITH_VTC=1 npm run up`). Verified against vtc-service 0.15.0 (docs/VTC.md).
+  # The VTA image does not contain the VTC. Build one with docker/vtc.Dockerfile (see
+  # docs/VTC.md) or point VTC_IMAGE at one you were given.
+  vtc:
+    profiles: ["vtc"]
+    image: ${VTC_IMAGE:-vtc-buildathon:local}
+    # Share the VTA's network namespace so the VTA's loopback DID host
+    # (localhost:8100) is reachable from the VTC during setup and at runtime.
+    network_mode: "service:vta"
+    depends_on:
+      vta:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "/vtc-entrypoint.sh"]
+    command: []
+    env_file: .vta/admin.env
+    user: "1000"
+    environment:
+      VTA_ALLOW_PRIVATE_ENDPOINTS: "1"
+      VTA_PORT: "${VTA_PORT:-8100}"
+      VTC_PORT: "${VTC_PORT:-8200}"
+      VTC_SERVER_PORT: "${VTC_PORT:-8200}"
+      VTC_CONTEXT: "${VTC_CONTEXT:-vtc}"
+      VTC_CORS_ORIGINS_TOML: "${VTC_CORS_ORIGINS_TOML:-}"
+    volumes:
+      - vtc-data:/var/lib/vtc
+      - ./vtc-entrypoint.sh:/vtc-entrypoint.sh:ro
+
+volumes:
+  vta-data:
+  vtc-data:

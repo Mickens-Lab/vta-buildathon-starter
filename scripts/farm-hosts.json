@@ -1,0 +1,38 @@
+{
+  "note": "Public host patterns of the two VTA Farms, as last observed (see docs/FARM.md). No agents or communities are listed here: supply your own with FARM_AGENT / VTA_URL / VTC_URL / VTC_DID. Select a Farm with FARM=ic3|firstperson (default: defaultFarm). Edit, or point FARM_HOSTS at another file.",
+  "defaultFarm": "ic3",
+  "farms": {
+    "ic3": {
+      "name": "ic3.dev (staging)",
+      "preferred": true,
+      "domain": "ic3.dev",
+      "portalUrl": "https://vtafarm.ic3.dev",
+      "apiUrl": "https://vtafarm-api.ic3.dev",
+      "didHostUrl": "https://dids.ic3.dev",
+      "restUrlTemplate": "https://vta-<name>.ic3.dev",
+      "issues": []
+    },
+    "firstperson": {
+      "name": "firstperson.dev",
+      "preferred": false,
+      "domain": "firstperson.dev",
+      "portalUrl": "https://vtafarm.firstperson.dev",
+      "apiUrl": "https://vtafarm-api.firstperson.dev",
+      "didHostUrl": "https://dids.firstperson.dev",
+      "restUrlTemplate": "https://vta-<name>.firstperson.dev",
+      "issues": [
+        "Agent creation fails after the Admin DID step: the DID host answers unsupportedVersion for acl/grant/0.2 (observed 2026-10-29, reproduced by hand, so a Farm-side bug rather than this kit). Use ic3 until it is fixed."
+      ]
+    }
+  },
+  "web": [
+    {
+      "name": "landing",
+      "url": "https://vta.farm/"
+    }
+  ],
+  "origins": [
+    "http://localhost:5173",
+    "chrome-extension://dbjgfkjlgfamanmbiihldgncpjeknphl"
+  ]
+}
