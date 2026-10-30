@@ -8,7 +8,9 @@
       "tag": "vta-service-v0.65.0",
       "ref": "fc157f76f1177a147ebaa5478176466fd5b4a4af",
       "version": "0.65.0",
-      "service": "vta-service"
+      "service": "vta-service",
+      "features": "setup,rest,didcomm,tsp,cli-synthesis,aws-secrets,webvh",
+      "featuresNote": "The VTI Dockerfile default has no `tsp`, and the VTA then refuses services.tsp = true (MODE=tunnel). images:build passes this list as the FEATURES build arg for every VTA image, so one image serves all modes."
     },
     "vtc": {
       "image": "vtc-buildathon",
@@ -20,6 +22,27 @@
     "pinnedOn": "2026-10-29",
     "why": "Aligned with the VTA Farm: the VTA is the release the portal offers as image 0.65.0-fc157f76 (vta-service-v0.65.0), the VTC is the release a Farm-hosted VTC runs (vtc-service-v0.15.0). Both images are built from their own tag by `npm run images:build all`.",
     "note": "The two releases come from DIFFERENT monorepo commits (fc157f76 and 93d36996), so each image is built from its own ref. The earlier single pin fff94fc6 (fc157f76 plus an examples-only commit) is retired."
+  },
+  "messaging": {
+    "pinnedOn": "2026-10-29",
+    "mediator": {
+      "image": "mediator-buildathon",
+      "repo": "https://github.com/affinidi/affinidi-tdk-rs",
+      "ref": "555806151b30a4ba2085a29384c8e048307e0083",
+      "version": "0.33.1",
+      "features": "tsp,secrets-aws",
+      "service": "affinidi-messaging-mediator"
+    },
+    "redis": {
+      "image": "redis",
+      "tag": "7.4.6-alpine"
+    },
+    "cloudflared": {
+      "validated": "2024.6.1",
+      "note": "Host binary on PATH (not pinned by this repo); quick tunnels only. Validated with this version in the tunnel spike."
+    },
+    "why": "MODE=tunnel (docs/MODES.md): the mediator and the VTA/VTC messaging setup were validated against this mediator commit (v0.33.1, built with tsp). Build it with `npm run images:build mediator`.",
+    "note": "Advance only deliberately via docs/PINS.md. The mediator is open-ACL in this kit by design (docs/MODES.md)."
   },
   "farm": {
     "observedOn": "2026-10-29T18:38Z",
@@ -38,7 +61,7 @@
       "didHost": "did-hosting-control 0.11.0 at dids.firstperson.dev",
       "agentDomain": "firstperson.dev",
       "blocker": "firstperson.dev only: deploy fails after Admin DID, DID host refuses acl/grant/0.2 (unsupportedVersion); confirmed Farm-side, reproduced by hand 2026-10-29. ic3.dev creates the same image fine.",
-    "preferredFarm": "ic3 (https://vtafarm.ic3.dev, DID host dids.ic3.dev, agents https://vta-<name>.ic3.dev); set FARM=ic3|firstperson, default ic3; table in scripts/farm-hosts.json",
+      "preferredFarm": "ic3 (https://vtafarm.ic3.dev, DID host dids.ic3.dev, agents https://vta-<name>.ic3.dev); set FARM=ic3|firstperson, default ic3; table in scripts/farm-hosts.json",
       "imageToPick": "0.65.0-fc157f76",
       "imageTrap": "0.56.0 (the portal's default selection at last look; not compatible with this kit)"
     }

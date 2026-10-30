@@ -1,6 +1,6 @@
-// Build the VTA and/or VTC image, each from its own VTI ref pinned in pins.json
-// (the two releases come from different monorepo commits).
-//   npm run images:build [vta|vtc|all]
+// Build the VTA, VTC and/or mediator image, each from its own ref pinned in pins.json
+// (the releases come from different commits and repositories).
+//   npm run images:build [vta|vtc|mediator|all]     (`all` is vta + vtc; the mediator is only for MODE=tunnel)
 // VTI_PATH   a verifiable-trust-infrastructure checkout (default ../verifiable-trust-infrastructure);
 //            each pinned ref is exported with `git archive`, so its working tree is never used.
 // VTI_LOCAL=1 build the checkout's working tree instead (development; the image is tagged :local only).
@@ -10,11 +10,13 @@ import { spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { readFileSync } from "node:fs";
 import { die } from "./env.js";
+import { MEDIATOR_BUILD_NOTICE, memoryWarning } from "./lib/tunnel.js";
 import { pins } from "./pins.js";
 
 const which = process.argv[2] ?? "all";
-if (!["vta", "vtc", "all"].includes(which)) die("usage: npm run images:build [vta|vtc|all]");
+if (!["vta", "vtc", "mediator", "all"].includes(which)) die("usage: npm run images:build [vta|vtc|mediator|all]");
 const vti = pins().vti;
 const repo = resolve(process.env.VTI_PATH ?? "../verifiable-trust-infrastructure");
 const local = process.env.VTI_LOCAL === "1";
@@ -22,6 +24,20 @@ const sh = (cmd: string, args: string[], opts: object = {}) => {
   const r = spawnSync(cmd, args, { stdio: "inherit", ...opts });
   if (r.status !== 0) die(`\`${cmd} ${args.join(" ")}\` failed (exit ${r.status}).`);
 };
+
+if (which === "mediator") {
+  const m = pins().messaging.mediator;
+  const short = m.ref.slice(0, 8);
+  console.log(MEDIATOR_BUILD_NOTICE);
+  let avail: number | undefined;
+  try { avail = Number(/MemAvailable:\s+(\d+)/.exec(readFileSync("/proc/meminfo", "utf8"))?.[1]); } catch { /* not Linux */ }
+  const warn = memoryWarning(avail && !Number.isNaN(avail) ? avail : undefined);
+  if (warn) console.warn(`WARNING: ${warn}`);
+  const tags = [`${m.image}:${short}`, `${m.image}:local`];
+  console.log(`building ${tags.join(", ")} from ${m.repo} @ ${m.ref} (mediator ${m.version}, features ${m.features})`);
+  sh("nice", ["-n", "10", "docker", "build", "-f", resolve("docker/mediator.Dockerfile"), "--build-arg", `MEDIATOR_REF=${m.ref}`, "--build-arg", `FEATURES=${m.features}`, ...tags.flatMap((t) => ["-t", t]), resolve("docker")]);
+  process.exit(0);
+}
 
 for (const name of which === "all" ? (["vta", "vtc"] as const) : [which as "vta" | "vtc"]) {
   const { image, ref, tag } = vti[name];
@@ -40,7 +56,9 @@ for (const name of which === "all" ? (["vta", "vtc"] as const) : [which as "vta"
     const tags = local ? [`${image}:local`] : [`${image}:${short}`, `${image}:local`];
     const file = name === "vta" ? join(ctx, "Dockerfile") : resolve("docker/vtc.Dockerfile");
     console.log(`building ${tags.join(", ")} from ${local ? `${repo} (working tree)` : `${tag} ${ref}`}`);
-    sh("nice", ["-n", "10", "docker", "build", "-f", file, "--build-arg", `VTI_REF=${local ? "local" : ref}`, "--label", `org.buildathon.vti-ref=${local ? "local" : ref}`, ...tags.flatMap((t) => ["-t", t]), ctx]);
+    // The VTA needs `tsp` for MODE=tunnel and the VTI Dockerfile's default feature list lacks it (pins.json vta.features).
+    const features = name === "vta" && vti.vta.features ? ["--build-arg", `FEATURES=${vti.vta.features}`, "--label", `org.buildathon.vta-features=${vti.vta.features}`] : [];
+    sh("nice", ["-n", "10", "docker", "build", "-f", file, "--build-arg", `VTI_REF=${local ? "local" : ref}`, ...features, "--label", `org.buildathon.vti-ref=${local ? "local" : ref}`, ...tags.flatMap((t) => ["-t", t]), ctx]);
   } finally {
     if (tmp) rmSync(tmp, { recursive: true, force: true });
   }

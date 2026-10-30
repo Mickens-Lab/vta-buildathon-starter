@@ -1,10 +1,17 @@
 import { readFileSync } from "node:fs";
 
 /** One image built from its own ref of the VTI monorepo. */
-export interface ImagePin { image: string; tag: string; ref: string; version: string; service: string }
+export interface ImagePin { image: string; tag: string; ref: string; version: string; service: string; features?: string }
 export interface Pins {
   updated: string;
   vti: { repo: string; vta: ImagePin; vtc: ImagePin; pinnedOn: string; why: string; note: string };
+  messaging: {
+    mediator: { image: string; repo: string; ref: string; version: string; features: string; service: string };
+    redis: { image: string; tag: string };
+    cloudflared: { validated: string; note: string };
+    why: string;
+    note: string;
+  };
   farm: { assumed: Record<string, string>; note: string; portal: Record<string, string> };
   npm: Record<string, string>;
 }

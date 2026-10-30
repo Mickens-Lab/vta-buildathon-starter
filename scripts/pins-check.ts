@@ -54,9 +54,29 @@ for (const [name, pin] of imgs) {
   const ref = lab.stdout.trim();
   const labelled = ref !== "" && ref !== "<no value>";
   out(labelled ? ref === pin.ref : null, `image ${image} ref`, labelled ? ref.slice(0, 8) : `unlabelled (not built by images:build); pinned ${pin.ref.slice(0, 8)}`);
+  if (name === "vta" && pin.features) {
+    const f = run("docker", ["image", "inspect", image, "--format", '{{ index .Config.Labels "org.buildathon.vta-features" }}']).stdout.trim();
+    const has = f !== "" && f !== "<no value>";
+    out(has ? f === pin.features : null, `image ${image} features`, has ? (f === pin.features ? "match (includes tsp)" : `built with ${f}, pinned ${pin.features}`) : "unlabelled (built before MODE=tunnel); rebuild with `npm run images:build vta` to be sure it has tsp");
+  }
   const v = run("docker", ["run", "--rm", "--entrypoint", name, image, "--version"]);
   const ver = /(\d+\.\d+\.\d+)/.exec(v.stdout + v.stderr.replace(/\x1b\[[0-9;]*m/g, ""))?.[1];
   out(ver ? ver === pin.version : null, `image ${image} version`, ver ?? "could not read");
+}
+
+// 3b. The mediator image (MODE=tunnel only; absent is normal).
+{
+  const m = p.messaging.mediator;
+  const lab = run("docker", ["image", "inspect", `${m.image}:local`, "--format", '{{ index .Config.Labels "org.buildathon.mediator-ref" }}']);
+  if (lab.status !== 0) out(null, `image ${m.image}:local`, "not present (only MODE=tunnel needs it: npm run images:build mediator)");
+  else {
+    const ref = lab.stdout.trim();
+    const labelled = ref !== "" && ref !== "<no value>";
+    out(labelled ? ref === m.ref : null, `image ${m.image}:local ref`, labelled ? ref.slice(0, 8) : `unlabelled; pinned ${m.ref.slice(0, 8)}`);
+  }
+  out(null, "redis image", `${p.messaging.redis.image}:${p.messaging.redis.tag} (compose default)`);
+  const cf = run("cloudflared", ["--version"]);
+  out(null, "cloudflared", cf.status === 0 ? `${/(\d{4}\.\d+\.\d+)/.exec(cf.stdout + cf.stderr)?.[1] ?? "?"} (validated ${p.messaging.cloudflared.validated})` : "not on PATH (only MODE=tunnel needs it)");
 }
 
 // 4. A running local VTC reports its version on /health (the VTA's /health does not).

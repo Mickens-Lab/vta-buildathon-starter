@@ -8,7 +8,7 @@ verifiable-trust-infrastructure (VTI) refs that the VTA and VTC images are built
 participant's or organiser's rebuild silently changes the wire behaviour.
 
 ```sh
-npm run images:build [vta|vtc|all]   # build each image from its own pinned ref; tags <image>:<short-sha> and :local
+npm run images:build [vta|vtc|mediator|all]   # build each image from its own pinned ref; tags <image>:<short-sha> and :local (`all` = vta + vtc; the mediator is for MODE=tunnel only)
 npm run pins:check [-- --strict]     # report drift; changes nothing
 ```
 
@@ -28,6 +28,15 @@ Two refs, because the two releases come from different monorepo commits:
 |---|---|---|---|
 | `vta-buildathon` | `vta-service-v0.65.0` | `fc157f76` | The Farm portal's selector offers it as image `0.65.0-fc157f76`; it is what the Farm runs. |
 | `vtc-buildathon` | `vtc-service-v0.15.0` | `93d36996` | A Farm-hosted VTC ran vtc-service 0.15.0 when observed. |
+
+For `MODE=tunnel` ([MODES.md](MODES.md)) there are three more pins, in `pins.json` under `messaging`:
+
+| What | Pin | Why |
+|---|---|---|
+| `mediator-buildathon` | affinidi-tdk-rs `55580615`, mediator v0.33.1, features `tsp,secrets-aws` | The mediator the tunnel spike validated; built from `docker/mediator.Dockerfile` (heavy: see MODES.md). |
+| `redis` | `7.4.6-alpine` | In-memory queue store for the mediator. |
+| `cloudflared` | validated 2024.6.1 (host binary, not pinned) | Quick tunnels. |
+| VTA build features | `setup,rest,didcomm,tsp,cli-synthesis,aws-secrets,webvh` | The VTI default has no `tsp`; the VTA then refuses `services.tsp = true`. |
 
 Farm participants must pick the image `0.65.0-fc157f76`, never the portal default (0.56.0).
 `npm run farm:check` and `farm:canary` compare the deployed agent's `/openapi.json` `info.version` with this pin and warn loudly.
