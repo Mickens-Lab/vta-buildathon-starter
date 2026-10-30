@@ -1,5 +1,5 @@
 # Builds the messaging mediator used by MODE=tunnel (docs/MODES.md). It is the Affinidi mediator
-# from affinidi-tdk-rs at the ref pinned in pins.json (mediator.ref), built with DIDComm and TSP.
+# from the affinidi-messaging-mediator repo at the ref pinned in pins.json (mediator.ref), built with DIDComm and TSP.
 #
 #   npm run images:build mediator        (checks memory, then runs this file)
 #   docker build -f docker/mediator.Dockerfile -t mediator-buildathon:local docker
@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       build-essential pkg-config libdbus-1-dev libssl-dev git ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /src
-ARG MEDIATOR_REPO=https://github.com/affinidi/affinidi-tdk-rs.git
+ARG MEDIATOR_REPO=https://github.com/affinidi/affinidi-messaging-mediator.git
 ARG MEDIATOR_REF
 RUN test -n "${MEDIATOR_REF}" \
     && git init -q . \
@@ -30,14 +30,14 @@ RUN cargo build --release --locked -p affinidi-messaging-mediator-setup \
 
 FROM debian:bookworm-slim
 ARG MEDIATOR_REF=unknown
-LABEL org.opencontainers.image.source="https://github.com/affinidi/affinidi-tdk-rs" \
+LABEL org.opencontainers.image.source="https://github.com/affinidi/affinidi-messaging-mediator" \
       org.opencontainers.image.title="buildathon mediator" \
       org.opencontainers.image.licenses="Apache-2.0" \
       org.buildathon.mediator-ref="${MEDIATOR_REF}"
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
-COPY --from=builder /src/crates/messaging/affinidi-messaging-mediator/conf conf
+COPY --from=builder /src/crates/affinidi-messaging-mediator/conf conf
 COPY --from=builder /src/target/release/mediator /usr/local/bin/
 COPY --from=builder /src/target/release/mediator-setup /usr/local/bin/
 RUN groupadd -r -g 10002 mediator && useradd -r -u 10002 -g mediator mediator

@@ -120,8 +120,8 @@ _Verified live:_ with `MEDIATOR_CORS_ALLOW_ORIGIN=http://localhost:3000` the med
 - Flushing the mediator's redis while the VTA and VTC are connected leaves both answering 500 ("No challenge found") until they are
   restarted **[verified]**. Redis here is memory only and is started fresh with the stack; do not flush it by hand. Restarting the mediator
   container alone is fine: the VTA and VTC reconnected on their own within about a second.
-- Version skew: the VTC 0.15.0 sends a `messaging/message/status/0.2` Trust Task that mediator 0.33.1 answers with a "trust task unsupported"
-  problem report. It is harmless to the flows above **[verified]** but shows the two are not built for each other.
+- Version skew: the VTC 0.15.0 sends a `messaging/message/status/0.2` Trust Task that the earlier mediator pin (0.33.1) answered with a "trust task unsupported"
+  problem report; harmless to the flows above **[verified with 0.33.1; not re-checked with 0.45.0]**.
 - The VTA's `VTA_ALLOW_PRIVATE_ENDPOINTS` loopback allowance is switched off in tunnel mode; the VTA resolves its own DID over the public
   network and that works.
 
@@ -144,7 +144,7 @@ refusal is also enforced inside the VTA and mediator entrypoints (a volume made 
 
 ## Images and pins
 
-`pins.json` records the mediator (affinidi-tdk-rs commit `55580615`, mediator v0.33.1, features `tsp,secrets-aws`), the redis tag, and the
+`pins.json` records the mediator (affinidi-messaging-mediator commit `7e378c03`, tag v0.45.0, features `tsp,secrets-aws`), the redis tag, and the
 VTA build features. Two changes to the images you already know:
 
 - **The VTA image must be built with `tsp`.** The VTI Dockerfile's default feature list has none, and then the VTA refuses

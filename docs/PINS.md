@@ -33,7 +33,7 @@ For `MODE=tunnel` ([MODES.md](MODES.md)) there are more pins, in `pins.json` und
 
 | What | Pin | Why |
 |---|---|---|
-| `mediator-buildathon` | affinidi-tdk-rs `55580615`, mediator v0.33.1, features `tsp,secrets-aws` | The mediator the tunnel spike validated; built from `docker/mediator.Dockerfile` (heavy: see MODES.md). |
+| `mediator-buildathon` | affinidi-messaging-mediator `7e378c03` (tag v0.45.0), features `tsp,secrets-aws` | The mediator release the VTA 0.65.0 lockfile names; it reads TSP 1.0 like the VTA and VTC (the earlier pin, affinidi-tdk-rs `55580615` / v0.33.1, read only Rev 3); built from `docker/mediator.Dockerfile` (heavy: see MODES.md). |
 | `redis` | `7.4.6-alpine` | In-memory queue store for the mediator. |
 | `cloudflared` | validated 2024.6.1 (host binary, not pinned) | Quick tunnels. |
 | VTA build features | `setup,rest,didcomm,tsp,cli-synthesis,aws-secrets,webvh` | The VTI default has no `tsp`; the VTA then refuses `services.tsp = true`. |
