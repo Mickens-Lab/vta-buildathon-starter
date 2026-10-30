@@ -54,7 +54,7 @@
       "issuer": "https://token.actions.githubusercontent.com",
       "note": "Who must have built and signed the published images: this repository's images workflow, via GitHub OIDC. `npm run images:verify` checks exactly this (GitHub attestation and cosign signature). A fork that publishes its own images sets IMAGE_REGISTRY and VERIFY_REPO. UNVERIFIED until the workflow has run: docs/VERIFY.md."
     },
-    "vta": { "digest": null },
+    "vta": { "digest": "sha256:371f1a9d528e634cc6d02cd95fc18ca277d4e2aff11c485cc3646253777c2029" },
     "vtc": { "digest": null },
     "mediator": { "digest": null }
   },
