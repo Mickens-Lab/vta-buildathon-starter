@@ -1,5 +1,6 @@
 // VTC checkpoint: resolve the community DID, read its public join manifest.
 // No membership needed. Then report the app identity's latest join request, if any.
+import "./lib/cli.js";
 import { decodeCredential, identityFromCredential, newIdentity } from "@buildathon/vta-client";
 import { TrustTaskError, VtcClient } from "@buildathon/vtc-client";
 import { env, mode, reachable, vtcUrl } from "./env.js";

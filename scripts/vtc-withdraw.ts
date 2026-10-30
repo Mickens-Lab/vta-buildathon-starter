@@ -1,5 +1,6 @@
 // Withdraw the app identity's open join request (an applicant action; a member cannot).
 //   npm run vtc:withdraw [-- --reason "text"]
+import "./lib/cli.js";
 import { decodeCredential, identityFromCredential } from "@buildathon/vta-client";
 import { TrustTaskError, VtcClient } from "@buildathon/vtc-client";
 import { die, env, reachable, refusal, vtcUrl } from "./env.js";

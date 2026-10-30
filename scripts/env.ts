@@ -1,5 +1,5 @@
 // Tiny .env reader and the admin key file; Node only.
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { identityFromSeed, seedFromMultibase, seedToMultibase, type Identity } from "@buildathon/vta-client";
 
 export const ADMIN_FILE = ".vta/admin.json";
@@ -41,6 +41,18 @@ export function parseMode(raw: string | undefined, where = ENV_FILE): Mode {
 /** `MODE=local|tunnel|farm` from the environment or `.env`. Default: local. */
 export function mode(): Mode {
   return parseMode(env("MODE"));
+}
+
+/** Keys the kit itself writes to `.env`. `reset` removes exactly these and leaves any line you added. */
+export const GENERATED_ENV_KEYS = ["MODE", "FARM", "VTA_URL", "VTA_DID", "VTA_CONTEXT", "APP_DID", "VTA_CREDENTIAL", "VTC_URL", "VTC_DID", "VTC_REQUEST_ID", "APPROVER_DID"];
+
+/** Remove the kit's own keys from the env file; delete the file if nothing else is left. Returns the keys that stay. */
+export function clearGeneratedEnv(): string[] {
+  if (!existsSync(ENV_FILE)) return [];
+  removeEnv(GENERATED_ENV_KEYS);
+  const left = readFileSync(ENV_FILE, "utf8").split("\n").filter((l) => l.trim() !== "");
+  if (left.length === 0) rmSync(ENV_FILE, { force: true });
+  return left.map((l) => l.split("=")[0]);
 }
 
 /** Where the mode came from, for messages: the environment, .env, or the default. */

@@ -23,7 +23,7 @@ npm run roles:personas -- clean                       # delete every persona
 For an applicant or member persona (with a stack up), the helper also writes `.vta/personas/<name>.env`. Use it as the identity
 for any script: `ENV_FILE=.vta/personas/alice.env npm run vta:provision` grants it the app ACL entry (provision reuses the identity
 already in that file; source), then `ENV_FILE=.vta/personas/alice.env npm run vtc:join`. The persona files, and the
-admin key in `.vta/admin.json`, stay out of git; `npm run vta:reset` deletes `.vta/`, personas included.
+admin key in `.vta/admin.json`, stay out of git; `npm run reset` deletes `.vta/`, personas included.
 
 The scripts warn, and continue, when the application identity is the admin key: `vtc:join` says so, and `vtc:approve` says so when
 the request it approves belongs to its own signer. An admin persona is just a key: giving it an admin entry at the VTC is done by the

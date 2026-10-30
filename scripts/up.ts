@@ -1,12 +1,16 @@
-// One entry point for all modes: `npm run up`, `npm run down`.
+// One entry point for all modes:
+//   npm run up      start the stack for MODE (local, tunnel or farm)
+//   npm run down    stop it and keep the data (a tunnel stack is not resumable, so there it also deletes its volumes)
+//   npm run reset   stop it, stop any tunnels, delete volumes, .vta/ and the kit's own keys in .env (your other .env lines stay); any mode
 //   MODE=local   keygen + docker compose up (VTA) + provision   [+ VTC with WITH_VTC=1]
 //   MODE=tunnel  keygen, 3 public quick tunnels, mediator, VTA, VTC (default; WITH_VTC=0 to skip), provision, probe
 //   MODE=farm    mint the admin key and print the portal steps; once VTA_URL is in
 //                .env, provision.
+import "./lib/cli.js";
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, rmSync } from "node:fs";
 import { devBanner, tunnelBanner } from "./banner.js";
-import { die, env, mode, removeEnv, updateEnv, withVtc } from "./env.js";
+import { clearGeneratedEnv, die, ENV_FILE, env, mode, removeEnv, updateEnv, withVtc } from "./env.js";
 import {
   clearStackFiles, dc, existingStackVolumes, have, imageLabel, readStackMode, readTunnel, sleep, startTunnel, stopTunnels, waitFor200,
   writeStackMode, writeTunnel,
@@ -96,28 +100,50 @@ function tunnelDown(): void {
   console.log(`stopped ${n} tunnel(s); deleted the tunnel volumes (their DIDs were bound to hosts that are gone) and the tunnel keys in .env.`);
 }
 
-const down = process.argv[2] === "down";
-if (!down) devBanner();
+/** Stop the stack and keep its data (local). A tunnel stack is never resumable, so there `down` also deletes the volumes. */
+function stop(): void {
+  const r = dc("tunnel", true, ["down", "--remove-orphans"], { inherit: true });
+  if (r.status !== 0) console.error("docker compose down did not finish cleanly (is Docker running?).");
+}
+
+/** Everything: stop the stack and any tunnels, delete the volumes, the generated keys (`.vta/`) and the kit's own `.env` keys. Works in every mode. */
+function resetAll(): void {
+  const t = readTunnel();
+  const hadDocker = have("docker");
+  if (hadDocker) {
+    const r = dc("tunnel", true, ["down", "-v", "--remove-orphans"], { inherit: true });
+    if (r.status !== 0) console.error("docker compose down -v did not finish cleanly (is Docker running?). Volumes may remain: docker volume ls.");
+  }
+  const n = stopTunnels(t?.pids ?? []);
+  clearStackFiles();
+  rmSync(".vta", { recursive: true, force: true });
+  const kept = clearGeneratedEnv();
+  console.log(`reset: containers and volumes removed${n ? `, ${n} tunnel(s) stopped` : ""}, .vta/ deleted, the kit's keys removed from ${ENV_FILE}${kept.length ? ` (kept your own: ${kept.join(", ")})` : ""}.`);
+}
+
+const sub = process.argv[2] === "down" || process.argv[2] === "reset" ? process.argv[2] : "up";
+const down = sub === "down";
+if (sub === "up") devBanner();
 const m = mode();
-if (down && (m === "tunnel" || existsSync(TUNNEL_FILE))) {
+if (sub === "reset") {
+  resetAll();
+} else if (down && (m === "tunnel" || existsSync(TUNNEL_FILE))) {
   tunnelDown();
+} else if (down && m !== "farm") {
+  stop();
+  console.log("stopped; the volumes are kept (npm run up resumes it, npm run reset wipes everything).");
 } else if (m === "tunnel") {
-  if (down) die("unreachable");
   await tunnelUp();
 } else if (m === "local") {
-  if (down) {
-    run("docker", ["compose", "--profile", "vtc", "down"]);
-  } else {
-    await runPreflight({ mode: "local", withVtc: withVtc() });
-    guard("local");
-    npm("vta:keygen");
-    run("docker", ["compose", ...(withVtc() ? ["--profile", "vtc"] : []), "up", "-d", "--wait"]);
-    writeStackMode("local");
-    npm("vta:provision");
-    if (withVtc()) npm("vtc:up");
-  }
+  await runPreflight({ mode: "local", withVtc: withVtc() });
+  guard("local");
+  npm("vta:keygen");
+  run("docker", ["compose", ...(withVtc() ? ["--profile", "vtc"] : []), "up", "-d", "--wait"]);
+  writeStackMode("local");
+  npm("vta:provision");
+  if (withVtc()) npm("vtc:up");
 } else if (down) {
-  console.log("MODE=farm: nothing runs locally. Delete the agent in the VTA Farm portal if you are done.");
+  console.log("MODE=farm: nothing runs locally. Delete the agent in the VTA Farm portal if you are done (npm run reset clears the local keys).");
 } else if (env("VTA_URL")?.startsWith("https://")) {
   npm("vta:keygen");
   npm("vta:provision");

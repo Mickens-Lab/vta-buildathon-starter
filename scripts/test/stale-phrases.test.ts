@@ -6,7 +6,7 @@ test("flags the stale TSP and image statements", () => {
   assert.equal(staleHits("the pong does not come back yet").length, 1);
   assert.equal(staleHits("(the mediator pin refuses TSP 1.0 replies)").length, 1);
   assert.equal(staleHits("an organiser usually hands them out").length, 1);
-  assert.equal(staleHits("Setup: `docker load`, `npm i`, `npm run vta:up`").length, 1);
+  assert.equal(staleHits("Setup: `docker load`, `npm i`, `npm run up`").length, 1);
 });
 
 test("passes current wording and clearly historical lines", () => {

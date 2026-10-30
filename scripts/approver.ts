@@ -3,6 +3,7 @@
 // The request comes from the requester's refusal (npm run approvals:demo writes .vta/refusal.json). Without --match-code
 // it asks you to type the code shown on the requester's screen. This is a second KEY on the same machine: it demonstrates the
 // protocol, not the security of a second device (docs/APPROVALS.md, docs/MOBILE-WALLET.md).
+import "./lib/cli.js";
 import { readFileSync } from "node:fs";
 import { createInterface } from "node:readline/promises";
 import { VtaClient, buildDecision, extractRequests, fetchVtaDocument, submitDecision, verifyConsentRequest } from "@buildathon/vta-client";

@@ -1,6 +1,7 @@
 // Read refusals: the same signed calls as a stranger (fresh did:key) and as your app identity.
 // The VTC decides by the signer's records at the moment of the call (see docs/VTC-SURFACE.md).
 //   npm run vtc:refusals
+import "./lib/cli.js";
 import { TT, decodeCredential, identityFromCredential, newIdentity } from "@buildathon/vta-client";
 import { TrustTaskError, VtcClient } from "@buildathon/vtc-client";
 import { die, env, reachable, vtcUrl } from "./env.js";

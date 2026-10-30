@@ -1,4 +1,5 @@
 // Ping the VTA over TSP from a throwaway did:key (MODE=tunnel stack): `npm run tsp:ping`.
+import "./lib/cli.js";
 import { decodeCredential, seedFromMultibase } from "@buildathon/vta-client";
 import { describePong, tspPing } from "@buildathon/tsp-client";
 import { readTunnel } from "./lib/compose.js";

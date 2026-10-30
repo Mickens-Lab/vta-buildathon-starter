@@ -2,6 +2,7 @@
 // rule gates (vta/contexts/update/1.0). The VTA refuses with auth:consent_required; this prints the match code, writes the
 // refusal to .vta/refusal.json for the approver, and waits. Approve from a second terminal with `npm run approver`, or pass
 // --self-approve to let this script play the approver too (one laptop, no human comparison: for tests and demos only).
+import "./lib/cli.js";
 import { writeFileSync } from "node:fs";
 import { TASK_CONTEXT_UPDATE, VtaClient, buildDecision, extractRequests, fetchVtaDocument, submitDecision, verifyConsentRequest, withConsent } from "@buildathon/vta-client";
 import { devBanner } from "./banner.js";

@@ -73,13 +73,13 @@ export function volumeGuard(i: { want: StackMode; marker: StackMode | null; volu
   const had: StackMode | null = i.marker ?? (i.volumes.includes("mediator-data") ? "tunnel" : "local");
   if (i.want === "local" && had === "local") return { ok: true };
   if (i.want === "local") {
-    return { ok: false, message: `Found volumes from a MODE=tunnel run (${i.volumes.join(", ")}). Their DIDs are bound to tunnel hosts that no longer exist, and a local VTA must not reuse them.\nReset: MODE=tunnel npm run down   (stops tunnels, deletes those volumes), then npm run up.` };
+    return { ok: false, message: `Found volumes from a MODE=tunnel run (${i.volumes.join(", ")}). Their DIDs are bound to tunnel hosts that no longer exist, and a local VTA must not reuse them.\nReset: npm run reset   (stops tunnels, deletes those volumes), then npm run up.` };
   }
   return {
     ok: false,
     message: had === "local"
-      ? `Found volumes from a MODE=local run (${i.volumes.join(", ")}). MODE=tunnel needs a fresh VTA: a did:webvh DID is bound to its host, so the local one cannot move to a tunnel host. Your local data would be lost.\nReset: npm run vta:reset (deletes the local VTA/VTC volumes, .env and .vta), then MODE=tunnel npm run up.`
-      : `Found volumes from an earlier MODE=tunnel run (${i.volumes.join(", ")}). Every tunnel run gets new hostnames and therefore new DIDs; the old ones are dead.\nReset: MODE=tunnel npm run down, then MODE=tunnel npm run up.`,
+      ? `Found volumes from a MODE=local run (${i.volumes.join(", ")}). MODE=tunnel needs a fresh VTA: a did:webvh DID is bound to its host, so the local one cannot move to a tunnel host. Your local data would be lost.\nReset: npm run reset (deletes the local VTA/VTC volumes, .vta and the kit's keys in .env), then MODE=tunnel npm run up.`
+      : `Found volumes from an earlier MODE=tunnel run (${i.volumes.join(", ")}). Every tunnel run gets new hostnames and therefore new DIDs; the old ones are dead.\nReset: npm run reset, then MODE=tunnel npm run up.`,
   };
 }
 

@@ -1,6 +1,7 @@
 // Apply to the VTC as the app identity (the did:key your VTA granted an ACL entry),
 // then poll the request. Re-running reuses the saved request id.
 //   npm run vtc:join [-- --criterion <requirementsDigest>] [--name "Display Name"]
+import "./lib/cli.js";
 import { decodeCredential, identityFromCredential } from "@buildathon/vta-client";
 import { VtcClient, pickCriterion } from "@buildathon/vtc-client";
 import { TrustTaskError } from "@buildathon/vta-client";

@@ -2,6 +2,7 @@
 // backend, wide CORS, key files not git-ignored. Read-only; never prints a secret.
 //   npm run security:check [-- --root <dir>] [--production]
 // Exit 1 on any error; with --production, warnings (the playground's plaintext backend) fail too. See docs/SECURITY.md.
+import "./lib/cli.js";
 import { display, securityCheck } from "./lib/security.js";
 
 const i = process.argv.indexOf("--root");

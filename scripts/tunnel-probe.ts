@@ -2,6 +2,7 @@
 // Read-only. Checks the public hosts, the VTA's DID at its tunnel host, and the messaging state, loudly:
 // a VTA whose mediator connection failed keeps serving REST and only logs a warning.
 // "messaging ok" means the transport is connected. It does NOT prove an app-level DIDComm/TSP round trip.
+import "./lib/cli.js";
 import { VtaClient, TT, decodeCredential, seedFromMultibase } from "@buildathon/vta-client";
 import { describePong, tspPing } from "@buildathon/tsp-client";
 import { env, loadAdmin } from "./env.js";

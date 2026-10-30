@@ -2,6 +2,7 @@
 //   npm run doctor                 # mode from .env or the environment
 //   npm run doctor -- --tunnel     # check as if MODE=tunnel (also --local)
 // `npm run up` runs the blocking subset first (runPreflight), so a missing image or a busy port is a short message, not a Docker error.
+import "./lib/cli.js";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import net from "node:net";

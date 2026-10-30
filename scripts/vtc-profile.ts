@@ -2,6 +2,7 @@
 // community profile, the member's own directory card, the directory fields, who is in the directory,
 // the groups it can see. An applicant or non-member is refused with a code; see docs/VTC-SURFACE.md.
 //   npm run vtc:profile
+import "./lib/cli.js";
 import { decodeCredential, identityFromCredential } from "@buildathon/vta-client";
 import { TrustTaskError, VtcClient } from "@buildathon/vtc-client";
 import { die, env, reachable, refusal, vtcUrl } from "./env.js";

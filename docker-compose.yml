@@ -1,8 +1,8 @@
 # Disposable VTA for the buildathon. NOT for production: plaintext seed,
 # loopback DID, http, no mediator.
 #
-#   npm run vta:up      # keygen + compose up --wait + provision
-#   npm run vta:reset   # blank VTA (new DID, empty ACL)
+#   npm run up      # keygen + compose up --wait + provision
+#   npm run reset   # blank VTA (new DID, empty ACL)
 #
 # MODE=tunnel adds the `messaging` profile (redis + mediator) and public quick-tunnel hosts that
 # `npm run up` passes in as VTA_PUBLIC_HOST / VTC_PUBLIC_HOST / MEDIATOR_PUBLIC_HOST / MEDIATOR_DID;

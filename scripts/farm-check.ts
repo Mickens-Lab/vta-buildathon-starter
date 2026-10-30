@@ -1,6 +1,7 @@
 // Read-only: probe the VTA/VTC named in .env with the same checks as farm:probe
 // (shared scripts/farm-lib.ts). Sends no Trust Task and no credentials.
 // To survey the Farm's own public hosts instead, run `npm run farm:probe`.
+import "./lib/cli.js";
 import { ENV_FILE, env } from "./env.js";
 import { resolveFarmAgent } from "./farm-config.js";
 import { WALLET_EXTENSION_ORIGIN, cmpVersion, probeAgent, table, vtaMismatchWarning, type Row } from "./farm-lib.js";

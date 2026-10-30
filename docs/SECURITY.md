@@ -27,7 +27,7 @@ admin private key; the VTC logs an install URL with a token).
 - Do not reuse any key from `.vta/` or `.env`, anywhere, ever.
 - Do not deploy the output of `vite build` or the dev servers: the key is inside.
 - Do not commit `.env`, `.env.*` or `.vta/` (they are git-ignored; keep it that way).
-- Do not point this kit, or its credentials, at a production VTA, VTC or community. Use `npm run vta:reset` to throw everything away.
+- Do not point this kit, or its credentials, at a production VTA, VTC or community. Use `npm run reset` to throw everything away.
 - Do not paste a `VTA_CREDENTIAL`, an admin key or a seed into chats, tickets or screenshots.
 
 The scripts that create keys (`npm run up`, `vta:keygen`, `vta:provision`) print a one-line `DEV ONLY` reminder; set `QUIET=1` or `CI=1` to silence it.

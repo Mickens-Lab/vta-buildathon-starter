@@ -2,6 +2,7 @@
 // Starts the page with Vite on :3000, opens headless Chromium, clicks "Send ping" and reports what the page says.
 // The mediator must allow http://localhost:3000 (start the stack with MEDIATOR_CORS_ALLOW_ORIGIN=http://localhost:3000).
 // Optional: not part of `npm test`. Exit 0 only if the page showed a genuine pong.
+import "./lib/cli.js";
 import { spawn } from "node:child_process";
 import { join, resolve } from "node:path";
 import { Browser, findChrome, tmpProfile } from "./lib/cdp.js";

@@ -38,7 +38,7 @@ Expected from `npm run hello` (DIDs differ on your machine):
 ```
 
 `npm run doctor` checks Docker, memory, ports (8100, 8200, 5173, 3000, 4000), the images (with the exact build command for a missing one) and the VTI checkout; `npm run up` runs the blocking part first, so a missing image or a busy port is a short message, not a Docker or Node stack trace.
-Use `npm run up` alone if you do not need a VTC. Clean up with `npm run vta:reset`.
+Use `npm run up` alone if you do not need a VTC. Clean up with `npm run reset`.
 Trouble? See [Troubleshooting](#troubleshooting).
 
 ## Things to try
@@ -95,33 +95,22 @@ concepts, finding, using, developing and evaluating them, with a hands-on custom
 
 ## Commands
 
+The ones you need in the first hour (all of them, grouped: [docs/COMMANDS.md](docs/COMMANDS.md); every script has `--help`):
+
 | Command | Does |
 |---|---|
 | `npm run doctor` | Is this machine ready: Node, Docker, memory, ports, images (exact build command for a missing one), VTI checkout, mode. `up` runs the blocking checks first |
-| `npm run up` / `down` | Mode-aware: local = keygen, compose up, provision; tunnel (`MODE=tunnel`) = tunnels, mediator, VTA, VTC, provision, probe, and `down` deletes its volumes; farm = mint admin key, print portal steps, then provision |
-| `npm run tunnel:probe` | `MODE=tunnel`: re-run the checks (public URLs, DID bound to the tunnel host, messaging advertised and live, mediator ACL note) |
-| `npm run tsp:ping` / `tsp:listen` / `tsp:ping:browser` | `MODE=tunnel`: send a signed TSP ping and print the pong / receive the credential frames the VTC pushes / the same ping from headless Chromium ([docs/MESSAGING.md](docs/MESSAGING.md)) |
-| `npm run vta:up` | Local only: keygen, `docker compose up --wait`, provision |
-| `npm run farm:setup` / `farm:check` / `farm:probe` | Farm (`FARM=ic3` default, or `firstperson`; `FARM_AGENT=<name>` derives `VTA_URL`/`VTA_DID`): mint the Admin DID and print portal steps / read-only check of your agent / dated, read-only survey of both Farms side by side (run it the day before and the day of an event) |
-| `npm run farm:canary` | Organisers: with a throwaway agent's URL/DID in `.env.farm`, runs `farm:check` + `provision` + `hello` and prints a GO / switch-to-local verdict |
-| `npm run vtc:hello` / `vtc:join` / `vtc:approve` | VTC checkpoint / apply as your app identity / admin approves |
-| `npm run vtc:status` / `vtc:profile` / `vtc:withdraw` / `vtc:leave -- --yes` | member: status + membership proof / community profile, my card, directory, groups / withdraw the open request / leave the community now |
-| `npm run roles:matrix` / `roles:personas -- create <name> <role>` | Who-can-call-what table / throwaway persona identities, warnings only ([docs/ROLES.md](docs/ROLES.md)) |
-| `npm run approvals:setup` / `approvals:demo` / `approver` | Approve a gated task from a second key: mint the throwaway approver / ask for the task and wait / verify and approve or deny ([docs/APPROVALS.md](docs/APPROVALS.md)); `local` or `tunnel` |
-| `npm run security:check` / `recipe:backend-signer` / `recipe:webcrypto-key` | Key-hygiene scan of the tree / first hardening rungs ([docs/SECURITY.md](docs/SECURITY.md)) |
-| `npm run images:build [vta\|vtc\|mediator\|all]` / `pins:check` | Build an image from its pinned ref (the VTA with `tsp`; the mediator is for tunnel mode and is the slow one) / report version drift, including a VTA image without `tsp` ([docs/PINS.md](docs/PINS.md)) |
-| `WITH_VTC=1 npm run up` | Local VTC too (needs a VTC image, see docs/VTC.md) |
-| `npm run vta:provision -- <context>` | New context + app identity (`ENV_FILE=.env.x` to keep several) |
-| `npm run vta:logs` | Follow VTA logs |
-| `npm run vta:reset` | Delete the VTA, VTC and mediator containers, their volumes, `.vta/` and `.env` (in tunnel mode use `MODE=tunnel npm run down`, which also stops the tunnels) |
+| `npm run up` | Start the stack for the current mode. `WITH_VTC=1 npm run up` adds the community |
+| `npm run down` / `npm run reset` | Stop and keep data / stop everything, delete volumes, `.vta/` and the keys the kit wrote to `.env` (your own `.env` lines stay). Both work in every mode |
 | `npm run hello` | The checkpoint |
 | `npm run vta:call -- <task> [json]` | Call any Trust Task as your app identity (no argument lists them) |
-| `npm run vtc:refusals` | The same signed calls as a stranger and as your app: who is refused what |
-| `npm run test:roles` | Live contract test (local or tunnel stack): safe read tasks as stranger, applicant, member and admin, checked against [docs/VTC-SURFACE.md](docs/VTC-SURFACE.md). Not in `npm test`. |
-| `npm run e2e` | Live browser test (local or tunnel stack, Chromium): the dashboard journey, refresh and local hints. Optional, about 3 minutes, not in `npm test`. |
-| `npm test` / `npm run typecheck` | Unit tests (no VTA needed; includes `check:generic` and `check:docs`) / typecheck all packages |
-| `npm run check:docs` | Every relative markdown link resolves and every `npm run` script named in the docs exists |
-| `npm run check:generic` | Fails if the tree holds personal keys, agent names, accounts, emails, machine paths or a default community (`-- --history` also scans commits) |
+| `npm run vtc:hello` / `vtc:join` / `vtc:approve` / `vtc:status` | Community: read the join manifest / apply / admin approves / where do I stand |
+| `npm run tsp:ping` / `tsp:listen` | `MODE=tunnel`: send a signed TSP ping and print the pong / receive the credential frames the VTC pushes ([docs/MESSAGING.md](docs/MESSAGING.md)) |
+| `npm run roles:matrix` / `approvals:demo` / `security:check` | Who can call what / approve a gated task from a second key / key-hygiene scan ([ROLES](docs/ROLES.md), [APPROVALS](docs/APPROVALS.md), [SECURITY](docs/SECURITY.md)) |
+| `npm run images:build [vta\|vtc\|mediator\|all]` / `pins:check` | Organiser/first run: build an image from its pinned ref / report version drift ([docs/PINS.md](docs/PINS.md)) |
+| `npm test` / `npm run typecheck` / `npm run check:docs` / `npm run check:generic` | Unit tests (no VTA needed) / typecheck / links and script names in the docs / no personal specifics in the tree |
+
+Old names `vta:up`, `vta:down` and `vta:reset` still work. Farm, tunnel, VTC, live-test and maintainer commands are in [docs/COMMANDS.md](docs/COMMANDS.md).
 
 ## Troubleshooting
 
@@ -130,11 +119,11 @@ concepts, finding, using, developing and evaluating them, with a hands-on custom
 | Port busy, or `pull access denied` | `npm run doctor` names the busy port with a free alternative, or the missing image with its build command. |
 | `pull access denied for vta-buildathon` | The image is not built here. Build it ([docs/PINS.md](docs/PINS.md#where-the-images-come-from)) or set `VTA_IMAGE` to one you were given. |
 | `.vta/admin.env` not found | `npm run vta:keygen` before `docker compose up`. |
-| `provision` fails with 401 or `permissionDenied` | `.vta/admin.json` is not the key this volume was seeded with. `npm run vta:reset`, then `npm run vta:up`. |
+| `provision` fails with 401 or `permissionDenied` | `.vta/admin.json` is not the key this volume was seeded with. `npm run reset`, then `npm run up`. |
 | `VTA DID changed` | The VTA was recreated. `npm run vta:provision`. |
 | `429` | Auth is rate limited per IP; the kit allows burst 60. Wait a few seconds. |
 | Browser CORS error | Your origin is not allowed. Use port 5173, 3000 or 8000, or see the cheatsheet. |
-| Port 8100 taken | `VTA_PORT=8101 npm run vta:up` on a fresh volume (`vta:reset` first) and `VTA_URL=http://localhost:8101`. Not tested here. |
+| Port 8100 taken | `VTA_PORT=8101 npm run up` on a fresh volume (`reset` first) and `VTA_URL=http://localhost:8101`. Not tested here. |
 | `MODE=farm` errors | See the troubleshooting table in [docs/FARM.md](docs/FARM.md). |
 | `refusing to start ... volume was set up for` / `Found volumes from a MODE=local run` | Volumes from another mode: follow the printed reset; table in [docs/MODES.md](docs/MODES.md#switching-modes). |
 | Tunnel probe fails or shows `MESSAGING DEGRADED` | See the troubleshooting table in [docs/MODES.md](docs/MODES.md#troubleshooting). |

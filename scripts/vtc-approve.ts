@@ -3,6 +3,7 @@
 // Local: `npm run vtc:up` seeds that entry. Farm: the farm VTC's admin is a
 // different DID claimed with a passkey in the browser, so approve in the VTC
 // admin console instead (see docs/FARM.md); this script will answer 403.
+import "./lib/cli.js";
 import { TrustTaskError } from "@buildathon/vta-client";
 import { VtcClient } from "@buildathon/vtc-client";
 import { die, env, loadAdmin, reachable, refusal, vtcUrl } from "./env.js";
@@ -28,6 +29,6 @@ try {
     }
   }
 } catch (e) {
-  if (e instanceof TrustTaskError) die(`the VTC refused (HTTP ${e.status}): ${refusal(e.body)}${e.status === 403 ? `\nThe admin DID ${vtc.me.did} needs an admin ACL entry at the VTC (a stale VTC volume from an earlier \`vta:reset\` does this; reset with \`docker compose --profile vtc down -v\`).` : ""}`);
+  if (e instanceof TrustTaskError) die(`the VTC refused (HTTP ${e.status}): ${refusal(e.body)}${e.status === 403 ? `\nThe admin DID ${vtc.me.did} needs an admin ACL entry at the VTC (a stale VTC volume from an earlier \`reset\` does this; reset with \`docker compose --profile vtc down -v\`).` : ""}`);
   throw e;
 }

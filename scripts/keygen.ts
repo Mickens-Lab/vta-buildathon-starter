@@ -1,5 +1,6 @@
 // Mint the admin did:key BEFORE the VTA first boots: the VTA seeds it as
 // super-admin during `vta setup --from`.
+import "./lib/cli.js";
 import { existsSync, writeFileSync } from "node:fs";
 import { newIdentity } from "@buildathon/vta-client";
 import { devBanner } from "./banner.js";

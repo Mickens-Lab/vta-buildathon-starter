@@ -10,6 +10,7 @@
 // It drives the app identity from .env: if that identity already has a request or membership, it is withdrawn / left first.
 // The journey: visit, apply, in review, approve from the CLI (the page must NOT follow until Refresh), member screens,
 // edit card, renew, cooldown, forget local hints, leave, re-apply, then return-to-tab refresh.
+import "./lib/cli.js";
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { mkdirSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";

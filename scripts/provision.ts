@@ -5,6 +5,7 @@
 // MODE=tunnel: like local, but the VTA is reached at its public quick-tunnel URL (VTA_URL, set by `npm run up`).
 // MODE=farm:  the same key must have been pasted into the VTA Farm portal as the
 //             agent's "Admin DID" (see docs/FARM.md). Needs VTA_URL (+ VTA_DID).
+import "./lib/cli.js";
 import { existsSync } from "node:fs";
 import {
   TrustTaskError,
@@ -47,7 +48,7 @@ try {
       `the VTA at ${baseUrl} refused the admin (HTTP ${e.status}): ${JSON.stringify(e.body)}\n` +
         (m === "farm"
           ? `Is ${admin.me.did} the "Admin DID" you gave the portal, and does the agent show "online"? A VTA older than the Trust Task door also answers 404 on /trust-tasks. See docs/FARM.md.`
-          : "Run `npm run vta:reset && npm run vta:up` if you changed the admin key."),
+          : "Run `npm run reset && npm run up` if you changed the admin key."),
     );
   }
   throw e;

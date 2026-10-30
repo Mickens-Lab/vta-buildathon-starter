@@ -1,6 +1,7 @@
 // "Where do I stand?" for the app identity, with no session: the signed join status, and, once
 // admitted, the member portal proof (`/v1/member/me`: role, joinedAt, personhood).
 //   npm run vtc:status
+import "./lib/cli.js";
 import { decodeCredential, identityFromCredential } from "@buildathon/vta-client";
 import { TrustTaskError, VtcClient } from "@buildathon/vtc-client";
 import { die, env, reachable, refusal, vtcUrl } from "./env.js";

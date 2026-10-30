@@ -3,6 +3,7 @@
 // Then from a page on an allowed origin:  fetch("http://127.0.0.1:8300/api/call", { method: "POST", body: JSON.stringify({ type, payload }) })
 // A demo of the shape, not a hardened service: add your own sign-in for the page's users (this server trusts the Origin header
 // only, which a non-browser client can forge), TLS, rate limits and logging.
+import "../lib/cli.js";
 import { createServer } from "node:http";
 import { pathToFileURL } from "node:url";
 import { TASK, TrustTaskError, VtaClient } from "@buildathon/vta-client";

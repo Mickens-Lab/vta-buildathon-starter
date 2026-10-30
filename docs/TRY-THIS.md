@@ -3,8 +3,8 @@
 Exercises 1 to 9, easy to advanced, plus 8b and 8c. Exercises 1 to 7, 8b and 8c were run (the first against the local stack with `WITH_VTC=1 npm run up`, 8c in tunnel mode) and the output shown is what they printed;
 exercises 8 and 9 are marked "Idea, not run". DIDs, ids and timestamps differ on your machine. This is a playground: [SECURITY.md](SECURITY.md).
 
-Start the stack once: `npm ci && WITH_VTC=1 npm run up`. Stop and wipe it with `npm run vta:reset`. Each exercise names the mode it needs; `MODE=tunnel` (public
-quick-tunnel URLs, messaging on, [MODES.md](MODES.md)) replaces `up` and `vta:reset` with `MODE=tunnel npm run up` and `MODE=tunnel npm run down`.
+Start the stack once: `npm ci && WITH_VTC=1 npm run up`. Stop and wipe it with `npm run reset`. Each exercise names the mode it needs; `MODE=tunnel` (public
+quick-tunnel URLs, messaging on, [MODES.md](MODES.md)) replaces `up` and `reset` with `MODE=tunnel npm run up` and `MODE=tunnel npm run down`.
 
 ## 1. Your first signed call
 
@@ -158,7 +158,7 @@ Idea, not run: give each of two app identities its own context (`npm run vta:pro
 A VTA can refuse a task until a different key agrees to that exact task. Set it up on a fresh stack, then ask for a gated task and approve it from a second terminal:
 
 ```sh
-npm run vta:reset                  # only if a stack exists
+npm run reset                  # only if a stack exists
 npm run approvals:setup            # mints the throwaway approver key
 WITH_VTC=1 npm run up
 npm run approvals:demo             # WAITING FOR APPROVAL   match code: 032df1

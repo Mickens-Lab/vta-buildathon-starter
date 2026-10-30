@@ -1,5 +1,6 @@
 // Print who can call what, for stranger / applicant / member / admin. Guidance only: reads docs/VTC-SURFACE.md,
 // needs no stack and no network.   npm run roles:matrix [-- --full]
+import "./lib/cli.js";
 import { readFileSync } from "node:fs";
 import { formatMatrix, parseMatrix } from "./lib/matrix.js";
 

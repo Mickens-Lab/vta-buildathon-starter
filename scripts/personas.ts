@@ -3,6 +3,7 @@
 //   npm run roles:personas -- create <name> <applicant|member|admin> [--expires-hours N]
 //   npm run roles:personas -- list | check | clean
 // Add --strict (or ROLES_STRICT=1) for extra guardrails: recorded expiry hints by default, hygiene warnings.
+import "./lib/cli.js";
 import { existsSync, readFileSync } from "node:fs";
 import { decodeCredential } from "@buildathon/vta-client";
 import { ADMIN_FILE, ENV_FILE, env } from "./env.js";

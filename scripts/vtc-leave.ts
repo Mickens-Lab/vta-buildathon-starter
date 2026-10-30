@@ -1,5 +1,6 @@
 // LEAVE the community as the app identity (members/self-remove). Immediate; needs --yes.
 //   npm run vtc:leave -- --yes
+import "./lib/cli.js";
 import { decodeCredential, identityFromCredential } from "@buildathon/vta-client";
 import { TrustTaskError, VtcClient } from "@buildathon/vtc-client";
 import { die, env, reachable, refusal, vtcUrl } from "./env.js";

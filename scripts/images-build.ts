@@ -7,6 +7,7 @@
 // --clone   clone the VTI checkout (and fetch its tags) if it is missing, without asking. Without it a terminal is asked; a pipe or CI gets the commands printed.
 // TMPDIR     where the exported source goes (default the OS temp dir; use /var/tmp/<name> for heavy runs).
 // Tags: <image>:<short-sha> and <image>:local (what compose defaults to).
+import "./lib/cli.js";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";

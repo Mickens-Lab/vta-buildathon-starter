@@ -1,6 +1,7 @@
 // Listen on the mediator socket as the app did:key and log every TSP frame that reaches it: `npm run tsp:listen [-- --peer <did>] [--seconds 90]`.
 // Default peer is the VTC (VTC_DID). Used for the credential-push experiment in docs/MESSAGING.md: start this, then in another
 // shell run `npm run vtc:join` and `npm run vtc:approve`, and see whether `credential-exchange/issue/0.1` arrives. Read-only.
+import "./lib/cli.js";
 import { connectTsp } from "@buildathon/tsp-client";
 import { decodeCredential, seedFromMultibase } from "@buildathon/vta-client";
 import { readTunnel } from "./lib/compose.js";

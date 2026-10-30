@@ -24,7 +24,7 @@ status varies.
 | `expired` | `expiresAt` passed, or the document is older than the server's acceptance window | Mint a **new** document with a fresh `id`; do not resend the old bytes |
 | `idConflict` / "duplicate" | A document id was reused | New `id` per document. A byte-identical resend is absorbed silently by design |
 | HTTP 429 | Rate limit. Auth is limited per IP; a signer with no ACL entry shares one per-address budget (burst 10, then one document per about 5 s); a known signer has its own (burst 60, then one per 500 ms) | Back off; cache the bearer token (about 15 min); do not poll in a tight loop |
-| `provision` fails 401 or `permissionDenied` | `.vta/admin.json` is not the key this VTA volume was seeded with | `npm run vta:reset`, then `npm run vta:up` |
+| `provision` fails 401 or `permissionDenied` | `.vta/admin.json` is not the key this VTA volume was seeded with | `npm run reset`, then `npm run up` |
 | Success but nothing happened / something unexpected happened | **Empty payload** `{}` is valid for several member tasks and they act: an empty `members/self-remove` removed the member, an empty `join-requests/withdraw` withdrew a request | Read the spec before sending `{}`; wrap destructive calls behind a confirmation |
 | Joined, approved, but no credential arrives | The VMC is pushed over DIDComm/TSP, which the local stack leaves off; `status` returns `credentialsDelivered: false` | Admin `decide` response contains it, or enable messaging |
 | Bearer works once then 401 | The session expired (about 15 min) | `authenticate()` again; `whoami` shows `session.expiresAt` |

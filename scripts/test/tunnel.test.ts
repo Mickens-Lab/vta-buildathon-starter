@@ -64,20 +64,20 @@ test("stale-volume refusal: local data is never reused by tunnel, and says how t
     const g = volumeGuard({ want: "tunnel", marker, volumes: ["vta-data"] });
     assert.equal(g.ok, false);
     assert.match((g as any).message, /MODE=local run/);
-    assert.match((g as any).message, /npm run vta:reset/);
+    assert.match((g as any).message, /npm run reset/);
   }
 });
 test("stale-volume refusal: every tunnel run needs fresh volumes, even after another tunnel run", () => {
   const g = volumeGuard({ want: "tunnel", marker: "tunnel", volumes: ["vta-data", "mediator-data"] });
   assert.equal(g.ok, false);
   assert.match((g as any).message, /new hostnames and therefore new DIDs/);
-  assert.match((g as any).message, /MODE=tunnel npm run down/);
+  assert.match((g as any).message, /npm run reset/);
 });
 test("stale-volume refusal: tunnel leftovers never reach local mode, with or without the marker", () => {
   for (const marker of ["tunnel", null] as const) {
     const g = volumeGuard({ want: "local", marker, volumes: ["vta-data", "mediator-data"] });
     assert.equal(g.ok, false);
-    assert.match((g as any).message, /MODE=tunnel npm run down/);
+    assert.match((g as any).message, /npm run reset/);
   }
 });
 test("local to local keeps its volumes, including a legacy local volume with no marker", () => {

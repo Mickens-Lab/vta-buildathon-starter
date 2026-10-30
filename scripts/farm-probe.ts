@@ -9,6 +9,7 @@
 //   (VTA_URL / VTC_URL, or FARM_VTA_URL / FARM_VTC_URL, work too; with none set only the hosts are probed)
 //   FARM_PACE_MS=3000 ...                   # gap between requests (default 2000)
 //   npm run farm:probe -- --json            # machine-readable output
+import "./lib/cli.js";
 import { PACE_MS, cmpVersion, probeAgent, probeDidHost, probeWeb, req, table, type Row } from "./farm-lib.js";
 import { HOSTS_FILE, loadTable } from "./farm-config.js";
 import { env } from "./env.js";

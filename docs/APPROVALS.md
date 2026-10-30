@@ -23,7 +23,7 @@ excluded from counting as an approver, so one stolen key cannot both ask and agr
 ## Try it
 
 ```sh
-npm run vta:reset              # only if a stack already exists: the rule is seeded once, on a volume's first boot
+npm run reset              # only if a stack already exists: the rule is seeded once, on a volume's first boot
 npm run approvals:setup        # mints the approver key (.vta/approver.json) and writes APPROVER_DID to .env
 WITH_VTC=1 npm run up          # the VTA entrypoint turns enforcement on and seeds one rule (below)
 npm run approvals:demo         # the admin (requester) renames the context my-app; the VTA refuses and the demo waits
@@ -54,7 +54,7 @@ last 15 minutes and an approval 10 **[docs]**.
   with no contexts. In `MODE=tunnel` the VTA also pushes the request to the approver over messaging, which this kit cannot receive ([MESSAGING.md](MESSAGING.md)).
 - **No effects are shown.** The VTA's request carried an empty `effects` list for this task **[verified]**, so the approver says "NOT DETERMINED", never "no effects".
 - **There is no "is it approved yet?" call.** The requester asks again by submitting again; while pending the VTA repeats the same challenge **[verified]**.
-- `npm run vta:reset` deletes `.vta/` including the approver key; run `approvals:setup` again afterwards.
+- `npm run reset` deletes `.vta/` including the approver key; run `approvals:setup` again afterwards.
 
 ## What this does and does not protect
 

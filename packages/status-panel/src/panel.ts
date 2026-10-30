@@ -140,14 +140,14 @@ function reachRow(name: string, p: Probe, url: string, origin: string, mode: str
   }
   if (p.status) {
     return { pill: "bad", label: "Reachable", value: `answered HTTP ${p.status} on /health`, note: `Something is listening at ${url} but it is not healthy (or not a ${name}).`,
-      fix: `Check ${url} is the ${name} URL (${mode === "farm" ? "VTA_URL in .env must match the Farm portal" : "run `npm run vta:up`"}) and look at the service logs.` };
+      fix: `Check ${url} is the ${name} URL (${mode === "farm" ? "VTA_URL in .env must match the Farm portal" : "run `npm run up`"}) and look at the service logs.` };
   }
   if (p.corsBlocked) {
     return { pill: "bad", label: "Reachable", value: "blocked by the browser (CORS)", note: `${name} is up, but it does not allow this page's origin (${origin}).`,
       fix: mode === "farm" ? "Use MODE=farm so Vite proxies the hosted VTA (the page stays same-origin), and restart `npm run dev`." : "Serve this page from an allowed origin (http://localhost:5173, :3000 or :8000), or add yours via CORS_ORIGINS_TOML and re-provision the VTA." };
   }
   return { pill: "bad", label: "Reachable", value: `no (${p.error ?? "no answer"})`, note: `Nothing answered at ${url}.`,
-    fix: mode === "farm" ? "Check VTA_URL in the repo-root .env against the Farm portal, and that the agent shows \"online\"." : "Start the stack with `npm run vta:up` (or `npm run up`), then refresh." };
+    fix: mode === "farm" ? "Check VTA_URL in the repo-root .env against the Farm portal, and that the agent shows \"online\"." : "Start the stack with `npm run up` (or `npm run up`), then refresh." };
 }
 
 /** Classify a thrown connect/call error into a pill row with a fix. */
@@ -296,7 +296,7 @@ export function mountStatusPanel(container: HTMLElement, o: PanelOptions): Panel
     let authFailed = false;
     if (!o.credentialPresent) {
       authRows.push({ pill: "bad", label: "Authenticated", value: "no", note: "No app credential (VTA_CREDENTIAL) was found when this page was built.",
-        fix: o.mode === "farm" ? "Run `npm run farm:setup`, then restart `npm run dev`." : "Run `npm run vta:up` at the repo root, then restart `npm run dev`." });
+        fix: o.mode === "farm" ? "Run `npm run farm:setup`, then restart `npm run dev`." : "Run `npm run up` at the repo root, then restart `npm run dev`." });
     } else if (!reachable) {
       authRows.push({ pill: "unknown", label: "Authenticated", value: "unknown", note: "Cannot sign in: the VTA is not reachable. A credential is configured." });
     } else if (!o.connect) {

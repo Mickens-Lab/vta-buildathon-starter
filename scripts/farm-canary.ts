@@ -8,6 +8,7 @@
 // context and an app identity over the Trust Task API, as the Admin DID) and hello (a signed
 // round trip). Creating the agent in the portal is manual (passkey); this script cannot do it.
 // It writes only to ENV_FILE and .vta/, like a participant's own run.
+import "./lib/cli.js";
 import { spawnSync } from "node:child_process";
 import { req, vtaMismatchWarning } from "./farm-lib.js";
 import { farmImageTag, pins } from "./pins.js";
@@ -60,7 +61,7 @@ if (pass) {
   const others = Object.keys(loadTable().farms).filter((k) => k !== sel.id);
   console.log(`\nVERDICT: NO-GO for farm "${sel.id}". Order of preference: ic3, then firstperson, then local mode.`);
   if (others.length) console.log(`Try the other farm: ${others.map((k) => `FARM=${k}`).join(" or ")} with an agent created there (docs/FARM.md).`);
-  console.log("If no farm passes, SWITCH TO LOCAL MODE for everyone (MODE=local, `npm run vta:up`, README prerequisites).");
+  console.log("If no farm passes, SWITCH TO LOCAL MODE for everyone (MODE=local, `npm run up`, README prerequisites).");
   console.log("If the agent could not be created at all (portal step failed), that is also NO-GO: record the portal's error text for the operators.");
 }
 process.exit(pass ? 0 : 1);

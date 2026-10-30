@@ -16,7 +16,7 @@ With nothing reachable the page still renders and says what to fix (VTA down, CO
 blocked, credential missing, wrong version image in farm mode).
 
 ```sh
-npm run vta:up                              # repo root, once
+npm run up                              # repo root, once
 npm run dev -w @buildathon/web-vta-app      # http://localhost:5173
 npm run build -w @buildathon/web-vta-app
 ```
@@ -31,7 +31,7 @@ The dev server defaults to 5173 (3000 and 8000 are also allowed by the VTA: `-- 
   the browser: fine for a throwaway local VTA, wrong for anything else. Move
   calls behind a small backend, or sign with the wallet.
 - **Other origin.** Set `CORS_ORIGINS_TOML='"http://localhost:4200"'` and run
-  `npm run vta:reset && npm run vta:up`. Alternatively proxy `/trust-tasks`
+  `npm run reset && npm run up`. Alternatively proxy `/trust-tasks`
   through Vite's `server.proxy`. Neither was tested.
 - **Wallet API.** The local `window.vtaWallet` typing in `src/main.ts` covers
   only `walletProfile` and `signTrustTask`; the full surface is in

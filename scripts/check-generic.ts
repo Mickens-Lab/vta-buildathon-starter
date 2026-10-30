@@ -3,6 +3,7 @@
 //   npm run check:generic            # scans tracked and untracked-but-not-ignored files
 //   npm run check:generic -- --history   # also scans every commit's diff and message (the Signed-off-by trailer is exempt) on the current branch
 // Fake test fixtures are fine as long as they are short or say "fake" (e.g. did:webvh:Qmfake:localhost).
+import "./lib/cli.js";
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 

@@ -130,7 +130,7 @@ Volumes are never silently reused across modes. `npm run up` refuses, says why, 
 
 | You have | You run | Result |
 |---|---|---|
-| a `local` stack (volumes) | `MODE=tunnel npm run up` | **refused.** Local data cannot move to a tunnel host. Reset with `npm run vta:reset` (deletes the local volumes, `.env`, `.vta`), then try again |
+| a `local` stack (volumes) | `MODE=tunnel npm run up` | **refused.** Local data cannot move to a tunnel host. `npm run reset` (deletes the local volumes, `.vta` and the kit's `.env` keys), then try again |
 | tunnel volumes (a run you did not take down) | `MODE=tunnel npm run up` | **refused.** New hostnames mean new DIDs. `MODE=tunnel npm run down`, then up again |
 | tunnel volumes | `npm run up` (local) | **refused.** `MODE=tunnel npm run down` first |
 | a `local` stack | `npm run up` | fine, as before. A local stack made before modes existed counts as local |
@@ -138,8 +138,7 @@ Volumes are never silently reused across modes. `npm run up` refuses, says why, 
 `MODE=tunnel npm run down` stops the tunnels it started, removes the containers **and deletes the volumes** (they cannot be used again),
 removes `.vta/tunnel.json`, and removes the dead URLs and the app credential from `.env`. It keeps `MODE` and the admin key in `.vta/`. The
 refusal is also enforced inside the VTA and mediator entrypoints (a volume made for one host will not start for another), so running
-`docker compose` by hand cannot reuse it either. `npm run vta:reset` also clears the messaging volume but does not stop tunnels: use
-`MODE=tunnel npm run down` in tunnel mode.
+`docker compose` by hand cannot reuse it either. `npm run reset` does all of that in any mode: it also stops any recorded tunnels, deletes every volume (local and messaging) and `.vta/`, and removes only the keys the kit wrote to `.env`.
 
 ## Images and pins
 

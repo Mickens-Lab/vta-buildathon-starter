@@ -5,6 +5,7 @@
 // What this does NOT do: plug into VtaClient. The kit's `Signer` is synchronous and WebCrypto signing is async, so wiring this key
 // into `vta-client` needs an async signer path that does not exist yet (not implemented here). Browser support for Ed25519 in
 // WebCrypto varies by browser and version: check `generateNonExtractableDid()` rejecting before relying on it (not verified for browsers).
+import "../lib/cli.js";
 import { didKeyFromPublicKey } from "@openvtc/trust-tasks-proof";
 import { pathToFileURL } from "node:url";
 

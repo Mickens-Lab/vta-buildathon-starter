@@ -2,6 +2,7 @@
 // markdown file exists in a package.json (root, the `-w` workspace, or the package the doc sits in), and no doc repeats a known-stale phrase
 // (scripts/lib/stale-phrases.ts).
 //   npm run check:docs
+import "./lib/cli.js";
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, normalize } from "node:path";

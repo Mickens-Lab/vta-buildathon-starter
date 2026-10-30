@@ -1,5 +1,6 @@
 // Report drift between pins.json and what is installed, running and upstream.
 // Read-only; never advances a pin. `npm run pins:check [-- --strict]` (strict exits 1 on drift).
+import "./lib/cli.js";
 import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { farmImageTag, pins } from "./pins.js";

@@ -1,5 +1,6 @@
 // MODE=farm step 1: mint the admin did:key and print exactly what to do in the
 // VTA Farm portal. Makes no network request.
+import "./lib/cli.js";
 import { existsSync } from "node:fs";
 import { newIdentity } from "@buildathon/vta-client";
 import { selectedFarm } from "./farm-config.js";

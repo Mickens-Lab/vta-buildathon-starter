@@ -66,7 +66,7 @@ flowchart LR
 1. `npm run vta:keygen` makes an **admin** Ed25519 `did:key` and writes the private key to `.vta/admin.json` (mode 0600) and the public DID to `.vta/admin.env`. Compose passes the DID to the VTA, which seeds it as super-admin on first boot (`vta-entrypoint.sh`).
 2. `npm run vta:provision` signs in as the admin, creates the context (default `my-app`), generates a fresh **app** `did:key`, grants it the `application` role scoped to that context, and writes `.env`: `VTA_URL`, `VTA_DID`, `VTA_CONTEXT`, `APP_DID` and `VTA_CREDENTIAL` (a base64 bundle containing the app's private key). It is idempotent; `ENV_FILE=.env.other` keeps several identities.
 3. `VtaClient.fromCredential(...)` / `VtcClient.connect(...)` sign every request with that key. A Trust Task is a JSON document with `id`, `type`, `issuer`, `recipient`, `issuedAt` and `payload`, plus a Data Integrity proof.
-4. The VTA's own seed is a plaintext file on its Docker volume (`vta-data`). `npm run vta:reset` deletes the volumes, `.vta/` and `.env`.
+4. The VTA's own seed is a plaintext file on its Docker volume (`vta-data`). `npm run reset` deletes the volumes, `.vta/` and `.env`.
 5. A VTC member is the same app DID after a join request is approved. Members are sessionless: they sign each request; there is no console session for them ([VTC.md](VTC.md), [VTC-SURFACE.md](VTC-SURFACE.md)).
 
 ## Pins and image build

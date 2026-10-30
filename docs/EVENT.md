@@ -132,4 +132,4 @@ mints each team's admin key and prints what to paste.
 - [ ] Ports 8100 and 8200 (the stack), 5173, 3000 and 4000 (the templates and the inbox verifier) free on laptops (tunnel mode also uses 7037 and needs `cloudflared`); Docker running before 0:15.
 - [ ] Projector, a timer, the rubric printed.
 - [ ] A mentor on each gate failure: log the symptom and the fix for next time.
-- [ ] After: `npm run vta:reset` is all a participant needs to wipe their local state.
+- [ ] After: `npm run reset` is all a participant needs to wipe their local state.
