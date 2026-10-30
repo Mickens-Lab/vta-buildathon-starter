@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { farmImageTag, pins } from "./pins.js";
 import { env, LOCAL_VTC_URL } from "./env.js";
-import { checkImageLabels, IMAGE_KINDS, imageSpecs, parseImagesMode } from "./lib/images.js";
+import { checkImageLabels, IMAGE_KINDS, imageSpecs, NO_DIGEST_WARNING, parseImagesMode, undigested } from "./lib/images.js";
 
 const p = pins();
 let drift = 0;
@@ -81,6 +81,16 @@ for (const [name, pin] of imgs) {
   out(null, "cloudflared", cf.status === 0 ? `${/(\d{4}\.\d+\.\d+)/.exec(cf.stdout + cf.stderr)?.[1] ?? "?"} (validated ${p.messaging.cloudflared.validated})` : "not on PATH (only MODE=tunnel needs it)");
 }
 
+// 3a. Prebuilt images pinned only by tag: a tag can be moved, a digest cannot. Not drift, but never quiet.
+let warnings = 0;
+try {
+  const missing = undigested(imageSpecs(p, process.env.IMAGE_REGISTRY));
+  if (missing.length) {
+    warnings++;
+    console.log(`WARN  ${"prebuilt images by tag".padEnd(34)} no digest in pins.json for: ${missing.join(", ")}. ${NO_DIGEST_WARNING}`);
+  }
+} catch { /* a bad pins.json images block is reported just below */ }
+
 // 3b. The pinned registry images, once pulled: labels and digest against pins.json (the local builds are covered above).
 try {
   parseImagesMode(process.env.IMAGES);
@@ -106,4 +116,5 @@ try {
 out(null, "farm portal image to pick", `${farmImageTag(p)} (the portal default is NOT compatible)`);
 out(null, "farm", p.farm.note);
 console.log(drift ? `\n${drift} drift item(s). Nothing was changed. To advance deliberately: docs/PINS.md.` : "\nno drift.");
+if (warnings) console.log(`${warnings} warning(s) above (WARN): not drift, but read them before an event. Check what you run: npm run images:verify (docs/VERIFY.md).`);
 if (drift && process.argv.includes("--strict")) process.exit(1);

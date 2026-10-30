@@ -266,3 +266,20 @@ export function buildLabels(kind: ImageKind, p: Pins, o: { dockerfileSha256: str
 
 /** `--label k=v` pairs for `docker build`. */
 export const labelArgs = (labels: Record<string, string>): string[] => Object.entries(labels).flatMap(([k, v]) => ["--label", `${k}=${v}`]);
+
+// --- pulling by digest ----------------------------------------------------------------------------------------
+
+/** Kinds whose pin has no recorded digest (so they are pulled by a tag that the publisher can move). */
+export const undigested = (specs: Record<ImageKind, ImageSpec>, kinds: readonly ImageKind[] = IMAGE_KINDS): ImageKind[] => kinds.filter((k) => specs[k].digest === null);
+
+export const NO_DIGEST_WARNING = "pins.json records no digest, so this is pulled by TAG. A tag can be moved to different contents by whoever can push to the registry. Run the images workflow, record the digests in pins.json, then pull with --by-digest (docs/VERIFY.md).";
+
+/**
+ * What `images:pull` pulls. `byDigest` refuses to fall back to a tag: it is for people who want the pin or nothing.
+ * Returns the reference to pull, or a message saying why not.
+ */
+export function pullTarget(spec: ImageSpec, byDigest: boolean): { ok: true; ref: string; byTag: boolean } | { ok: false; message: string } {
+  if (spec.digest) return { ok: true, ref: spec.pinned, byTag: false };
+  if (byDigest) return { ok: false, message: `${spec.kind}: --by-digest was asked for but pins.json records no digest for it (images.${spec.kind}.digest is null). Nothing was pulled. The digest appears after the images workflow has run; see docs/IMAGES.md. Without --by-digest the tag ${spec.tagged} is pulled, unverified.` };
+  return { ok: true, ref: spec.tagged, byTag: true };
+}

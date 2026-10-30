@@ -3,7 +3,7 @@ import { test } from "node:test";
 import {
   checkImageLabels, friendlyPullError, imageSpecs, imageStatus, parseImagesMode, registryBase, resolveImage, useImages, type Docker, type ImageKind,
 } from "../lib/images.js";
-import { buildLabels, labelArgs, DOCKERFILE_LABEL } from "../lib/images.js";
+import { buildLabels, labelArgs, DOCKERFILE_LABEL, NO_DIGEST_WARNING, pullTarget, undigested } from "../lib/images.js";
 import { pins, type Pins } from "../pins.js";
 
 const withDigest = (digests: Partial<Record<ImageKind, string | null>>): Pins => {
@@ -241,4 +241,22 @@ test("buildLabels: what a local build records, per image, and VTI_LOCAL says so"
   assert.ok(!("org.buildathon.vti-ref" in med));
   assert.equal(buildLabels("vta", p, { dockerfileSha256: sha, ref: "local" })["org.buildathon.vti-ref"], "local");
   assert.deepEqual(labelArgs({ a: "1", b: "x=y" }), ["--label", "a=1", "--label", "b=x=y"]);
+});
+
+test("pullTarget: a recorded digest is always pulled by digest; --by-digest refuses a tag; otherwise the tag with a warning flag", () => {
+  const D = `sha256:${"a".repeat(64)}`;
+  const withD = structuredClone(pins()); withD.images.vtc.digest = D;
+  const s = imageSpecs(withD);
+  for (const by of [true, false]) {
+    const t = pullTarget(s.vtc, by);
+    assert.deepEqual(t, { ok: true, ref: `${s.vtc.repo}@${D}`, byTag: false });
+  }
+  const none = imageSpecs(pins());
+  const refused = pullTarget(none.vta, true);
+  assert.equal(refused.ok, false);
+  assert.match((refused as { message: string }).message, /Nothing was pulled/);
+  assert.deepEqual(pullTarget(none.vta, false), { ok: true, ref: none.vta.tagged, byTag: true });
+  assert.deepEqual(undigested(none), ["vta", "vtc", "mediator"]);
+  assert.deepEqual(undigested(s), ["vta", "mediator"]);
+  assert.match(NO_DIGEST_WARNING, /TAG.*moved/);
 });
