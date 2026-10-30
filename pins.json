@@ -89,6 +89,7 @@
     "typescript": "5.9.3",
     "@types/node": "22.20.5",
     "@noble/hashes": "2.4.0",
+    "yaml": "2.9.1",
     "@openvtc/pnm-core": "0.9.1",
     "packages/tsp-client/node_modules/@openvtc/vti-tsp-js": "0.4.0"
   },

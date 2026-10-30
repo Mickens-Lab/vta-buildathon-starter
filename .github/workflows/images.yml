@@ -1,0 +1,328 @@
+# Publish the prebuilt container images (VTA, VTC, mediator) to GHCR. Procedure and first-run steps: docs/IMAGES.md.
+#
+# STATUS: written and statically checked (YAML parse, tests in scripts/test/images-workflow.test.ts) but NEVER RUN.
+# The first run is the real test; expect to fix something. Use a dry run first (push: false, below).
+#
+# What it does
+#   plan   reads pins.json (single source of truth: refs, features, registry, platforms) and builds the matrix.
+#   build  one job per image and architecture, each on a NATIVE runner (amd64: ubuntu-24.04, arm64: ubuntu-24.04-arm),
+#          so no QEMU. The VTA and VTC are built from the VTI monorepo fetched at the exact pinned commit (verified);
+#          the mediator Dockerfile fetches its own source at the pinned commit. Each leg pushes its image BY DIGEST only.
+#   merge  per image: stitches the per-arch digests into one multi-arch tag <registry>/<name>:<short ref>
+#          (for example ghcr.io/<org>/vta-buildathon:fc157f76), checks both platforms are in it, pulls it and checks
+#          the labels, and records the index digest.
+#   digests  one artifact and a job summary with the digests, ready to paste into pins.json (images.<kind>.digest).
+#
+# Triggers: manual (Actions tab > images > Run workflow) or pushing a tag named images-* (for example images-2026-11-01).
+#   Manual inputs: images (all|vta|vtc|mediator), push (false = build and smoke-test only, push nothing),
+#   registry (default: pins.json images.registry; must be under ghcr.io/ because the login uses GITHUB_TOKEN).
+#   There is no pull_request trigger, on purpose: a pull request must not be able to publish.
+#
+# Permissions are least privilege: the workflow default is contents: read; only build and merge get packages: write.
+# Every action is pinned to a full commit SHA (the comment names the release); bump them deliberately.
+#
+# Timeouts, honestly (estimates, NOT measured on these runners):
+#   The mediator took about 12 minutes cold on a 12-core desktop, the VTA and VTC similar. GitHub's standard public
+#   runners have 4 vCPUs and 16 GB, so expect roughly 25 to 45 minutes per image. The job timeouts (90 / 90 / 120 minutes)
+#   leave about 2 to 3 times that headroom, so a hung job is stopped without eating the whole 6-hour default.
+#   Build legs run in parallel, so the whole run should take about as long as the slowest leg.
+#   arm64 on the native ubuntu-24.04-arm runner is expected to be as fast as amd64. If that runner is unavailable to the
+#   organisation, the fallback is QEMU on the amd64 runner (docker/setup-qemu-action, platforms: linux/amd64,linux/arm64
+#   in one job); a Rust release build under QEMU is typically 5 to 10 times slower (hours), so raise the timeouts
+#   a lot, or publish amd64 only and say so in docs/IMAGES.md.
+#   The BuildKit cache (type=gha) speeds up reruns; it counts against the repository's 10 GB cache quota and a Rust
+#   target directory is large, so old entries may be evicted. A cache miss just means a full build.
+name: images
+
+on:
+  workflow_dispatch:
+    inputs:
+      images:
+        description: Which images to build
+        type: choice
+        options: [all, vta, vtc, mediator]
+        default: all
+      push:
+        description: Push to the registry (false = build and smoke-test only)
+        type: boolean
+        default: true
+      registry:
+        description: Registry path override (default from pins.json), for example ghcr.io/my-org
+        type: string
+        default: ""
+  push:
+    tags:
+      - "images-*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: images-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    name: plan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      kinds: ${{ steps.plan.outputs.kinds }}
+      push: ${{ steps.plan.outputs.push }}
+      registry: ${{ steps.plan.outputs.registry }}
+      platforms: ${{ steps.plan.outputs.platforms }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: plan
+        env:
+          SELECT: ${{ inputs.images || 'all' }}
+          REGISTRY_INPUT: ${{ inputs.registry }}
+          PUSH: ${{ github.event_name == 'workflow_dispatch' && format('{0}', inputs.push) || 'true' }}
+        run: |
+          set -euo pipefail
+          case "$SELECT" in all|vta|vtc|mediator) ;; *) echo "::error::images must be all, vta, vtc or mediator"; exit 1;; esac
+          case "$PUSH" in true|false) ;; *) echo "::error::push must be true or false"; exit 1;; esac
+          # The VTA must carry tsp (MODE=tunnel); the VTC Dockerfile keeps it in its default features.
+          jq -e '.vti.vta.features | split(",") | index("tsp")' pins.json >/dev/null \
+            || { echo "::error::pins.json vti.vta.features must include tsp"; exit 1; }
+          REG="${REGISTRY_INPUT:-$(jq -r .images.registry pins.json)}"
+          REG="${REG%/}"
+          [[ "$REG" =~ ^ghcr\.io/[a-z0-9][a-z0-9._/-]*$ ]] \
+            || { echo "::error::registry must look like ghcr.io/<org> (lower case); GITHUB_TOKEN only logs in to ghcr.io"; exit 1; }
+          kinds=$(jq -c --arg sel "$SELECT" --arg reg "$REG" '
+            [
+              { kind: "vta", name: .vti.vta.image, ref: .vti.vta.ref, version: .vti.vta.version, upstream: .vti.repo,
+                file: "src/Dockerfile", context: "src", needs_src: true, bin: "vta", timeout: 90,
+                ref_label: "org.buildathon.vti-ref",
+                extra_labels: ("org.buildathon.vta-features=" + .vti.vta.features),
+                build_args: ("VTI_REF=" + .vti.vta.ref + "\nFEATURES=" + .vti.vta.features) },
+              { kind: "vtc", name: .vti.vtc.image, ref: .vti.vtc.ref, version: .vti.vtc.version, upstream: .vti.repo,
+                file: "docker/vtc.Dockerfile", context: "src", needs_src: true, bin: "vtc", timeout: 90,
+                ref_label: "org.buildathon.vti-ref", extra_labels: "",
+                build_args: ("VTI_REF=" + .vti.vtc.ref) },
+              { kind: "mediator", name: .messaging.mediator.image, ref: .messaging.mediator.ref, version: .messaging.mediator.version,
+                upstream: .messaging.mediator.repo, file: "docker/mediator.Dockerfile", context: "docker", needs_src: false, bin: "", timeout: 120,
+                ref_label: "org.buildathon.mediator-ref", extra_labels: "",
+                build_args: ("MEDIATOR_REF=" + .messaging.mediator.ref + "\nFEATURES=" + .messaging.mediator.features) }
+            ]
+            | map(select($sel == "all" or .kind == $sel))
+            | map(. + { repo: ($reg + "/" + .name), short: .ref[0:8] })' pins.json)
+          matrix=$(jq -c --argjson kinds "$kinds" '
+            .images.platforms as $pl
+            | [ $kinds[] as $k | $pl[]
+                | . as $p
+                | $k + { platform: $p, arch: ($p | split("/")[1]),
+                          runner: (if ($p | endswith("/arm64")) then "ubuntu-24.04-arm" else "ubuntu-24.04" end) } ]' pins.json)
+          {
+            echo "matrix=$matrix"
+            echo "kinds=$kinds"
+            echo "push=$PUSH"
+            echo "registry=$REG"
+            echo "platforms=$(jq -c .images.platforms pins.json)"
+          } >> "$GITHUB_OUTPUT"
+          echo "### Plan" >> "$GITHUB_STEP_SUMMARY"
+          echo "registry \`$REG\`, push \`$PUSH\`, images \`$SELECT\`, $(jq length <<<"$matrix") build legs" >> "$GITHUB_STEP_SUMMARY"
+
+  build:
+    name: build ${{ matrix.kind }} ${{ matrix.arch }}
+    needs: plan
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: ${{ matrix.timeout }}
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # VTA and VTC: the VTI monorepo at the exact pinned commit (not a branch, not a tag that could move).
+      - name: Fetch upstream source at the pinned commit
+        if: matrix.needs_src
+        env:
+          UPSTREAM: ${{ matrix.upstream }}
+          REF: ${{ matrix.ref }}
+        run: |
+          set -euo pipefail
+          mkdir src
+          git -C src init -q .
+          git -C src remote add origin "${UPSTREAM}.git"
+          git -C src fetch -q --depth 1 origin "$REF"
+          git -C src checkout -q FETCH_HEAD
+          test "$(git -C src rev-parse HEAD)" = "$REF"
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Log in to GHCR
+        if: needs.plan.outputs.push == 'true'
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # org.opencontainers.image.source points at THIS repository: that is what links the package to the repository on
+      # GHCR (inherits its access, shows on the repo page). The upstream project is in org.buildathon.upstream-source.
+      # org.buildathon.vti-ref / mediator-ref and vta-features are what `npm run pins:check` reads.
+      - name: Build
+        id: build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          platforms: ${{ matrix.platform }}
+          build-args: ${{ matrix.build_args }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.licenses=Apache-2.0
+            org.opencontainers.image.title=${{ matrix.name }}
+            org.opencontainers.image.description=Buildathon starter ${{ matrix.kind }} image, ${{ matrix.version }} at ${{ matrix.short }}. Dev use only.
+            org.opencontainers.image.version=${{ matrix.version }}
+            org.buildathon.upstream-source=${{ matrix.upstream }}
+            org.buildathon.pinned-ref=${{ matrix.ref }}
+            ${{ matrix.ref_label }}=${{ matrix.ref }}
+            ${{ matrix.extra_labels }}
+          provenance: false
+          sbom: false
+          cache-from: type=gha,scope=${{ matrix.kind }}-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.kind }}-${{ matrix.arch }}
+          # push: by digest only, no tag (the merge job tags the multi-arch index). dry run: load into the local daemon.
+          outputs: ${{ needs.plan.outputs.push == 'true' && format('type=image,name={0}/{1},push-by-digest=true,name-canonical=true,push=true', needs.plan.outputs.registry, matrix.name) || 'type=docker' }}
+          tags: ${{ needs.plan.outputs.push != 'true' && format('smoke/{0}:test', matrix.name) || '' }}
+
+      - name: Smoke test (dry run only)
+        if: needs.plan.outputs.push != 'true'
+        env:
+          IMG: smoke/${{ matrix.name }}:test
+          REF: ${{ matrix.ref }}
+          REF_LABEL: ${{ matrix.ref_label }}
+          BIN: ${{ matrix.bin }}
+        run: |
+          set -euo pipefail
+          docker image inspect "$IMG" --format '{{json .Config.Labels}}' | jq -e --arg l "$REF_LABEL" --arg r "$REF" '.[$l] == $r' >/dev/null
+          if [ -n "$BIN" ]; then docker run --rm --entrypoint "$BIN" "$IMG" --version; fi
+
+      - name: Record digest
+        if: needs.plan.outputs.push == 'true'
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          set -euo pipefail
+          [[ "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "::error::no image digest from the build"; exit 1; }
+          mkdir -p digests
+          touch "digests/${DIGEST#sha256:}"
+
+      - name: Upload digest
+        if: needs.plan.outputs.push == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: digest-${{ matrix.kind }}-${{ matrix.arch }}
+          path: digests/*
+          if-no-files-found: error
+          retention-days: 7
+
+  merge:
+    name: publish ${{ matrix.kind }}
+    needs: [plan, build]
+    if: needs.plan.outputs.push == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.kinds) }}
+    steps:
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: digest-${{ matrix.kind }}-*
+          path: digests
+          merge-multiple: true
+
+      - name: Create the multi-arch tag and verify it
+        id: index
+        env:
+          REPO: ${{ matrix.repo }}
+          SHORT: ${{ matrix.short }}
+          KIND: ${{ matrix.kind }}
+          REF: ${{ matrix.ref }}
+          REF_LABEL: ${{ matrix.ref_label }}
+          BIN: ${{ matrix.bin }}
+          PLATFORMS: ${{ needs.plan.outputs.platforms }}
+        run: |
+          set -euo pipefail
+          want=$(jq 'length' <<<"$PLATFORMS")
+          have=$(ls digests | wc -l)
+          [ "$have" -eq "$want" ] || { echo "::error::expected $want digests, found $have"; exit 1; }
+          docker buildx imagetools create -t "$REPO:$SHORT" $(printf "$REPO@sha256:%s " $(ls digests))
+          digest=$(docker buildx imagetools inspect "$REPO:$SHORT" --format '{{json .Manifest}}' | jq -r .digest)
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "::error::could not read the index digest"; exit 1; }
+          # Both platforms must be in the index.
+          got=$(docker buildx imagetools inspect "$REPO@$digest" --raw | jq -c '[.manifests[].platform | select(.os != "unknown") | .os + "/" + .architecture] | sort')
+          [ "$got" = "$(jq -c 'sort' <<<"$PLATFORMS")" ] || { echo "::error::index platforms $got differ from pins.json $PLATFORMS"; exit 1; }
+          # Pull the published image and check what pins:check will check.
+          docker pull -q "$REPO@$digest" >/dev/null
+          docker image inspect "$REPO@$digest" --format '{{json .Config.Labels}}' | jq -e --arg l "$REF_LABEL" --arg r "$REF" '.[$l] == $r' >/dev/null
+          if [ -n "$BIN" ]; then docker run --rm --entrypoint "$BIN" "$REPO@$digest" --version; fi
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          jq -n --arg kind "$KIND" --arg image "$REPO" --arg tag "$SHORT" --arg digest "$digest" '{kind:$kind, image:$image, tag:$tag, digest:$digest}' > "result-$KIND.json"
+
+      - name: Upload result
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: result-${{ matrix.kind }}
+          path: result-${{ matrix.kind }}.json
+          if-no-files-found: error
+          retention-days: 30
+
+  digests:
+    name: record digests
+    needs: [plan, merge]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: result-*
+          path: results
+          merge-multiple: true
+
+      - name: Summarise
+        run: |
+          set -euo pipefail
+          jq -s '.' results/*.json > images-digests.json
+          {
+            echo "### Published images"
+            echo
+            echo "Set these in pins.json (images.<kind>.digest), commit, and see docs/IMAGES.md for the rest:"
+            echo
+            echo '```sh'
+            jq -r '.[] | "jq --arg d \"" + .digest + "\" '.images." + .kind + ".digest = $d' pins.json > pins.tmp && mv pins.tmp pins.json   # " + .image + ":" + .tag' images-digests.json
+            echo '```'
+            echo
+            jq -r '.[] | "- `" + .image + ":" + .tag + "` = `" + .digest + "`"' images-digests.json
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: images-digests
+          path: images-digests.json
+          retention-days: 90
