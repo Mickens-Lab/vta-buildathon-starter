@@ -8,6 +8,8 @@ import { dirname, join, normalize } from "node:path";
 import { repoFiles } from "./lib/files.js";
 import { staleHits } from "./lib/stale-phrases.js";
 
+const imagesAvailable = JSON.parse(readFileSync("pins.json", "utf8")).images?.available === true;
+
 const files = repoFiles(/\.md$/);
 const scriptsOf = (dir: string): Set<string> | undefined => {
   const p = join(dir, "package.json");
@@ -29,7 +31,7 @@ const TEMPLATE = /^docs\/trust-tasks\/templates\/spec\.md$/;
 
 for (const f of files) {
   const text = readFileSync(f, "utf8").replace(/^```[\s\S]*?^```/gm, (b) => b.replace(/\]\(/g, "] ("));  // links inside fenced code are examples
-  if (f !== "PINS_LOG.md") for (const h of staleHits(text)) problems.push(`${f}:${h.replace("line ", "")}`);
+  if (f !== "PINS_LOG.md") for (const h of staleHits(text, imagesAvailable)) problems.push(`${f}:${h.replace("line ", "")}`);
   const lines = text.split("\n");
   lines.forEach((line, i) => {
     const at = `${f}:${i + 1}`;
