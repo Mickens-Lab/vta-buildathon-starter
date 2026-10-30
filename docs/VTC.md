@@ -98,7 +98,7 @@ The full matrix for stranger, applicant, member and admin, and every served task
 | `auth/authenticate`, `auth/whoami`, any console session | Only administrator ACL entries sign in; the console session is for operating the community | Signed requests; `memberProof()` for an identity read |
 | List the roster, read another member's DID, show a member by DID | `members/list/show` need `vtc.members.manage`; the directory hides DIDs from members | Directory entries by `entryId`; have members share their DID out of band, or have an admin-run backend publish a roster |
 | Approve joins, invite, issue endorsements, edit profile/branding/directory fields, run groups/rooms/website | Each needs a named capability on the signer's live ACL row (`vtc.join.decide`, `vtc.invitations.manage`, `vtc.credentials.issue`, `vtc.surface.admin`, `vtc.groups.manage`, `vtc.rooms.manage`) | An admin grants the capability (`acl/update`), or the app uses an admin identity on the backend |
-| Receive their VMC or role VAC over HTTP | `status` returns `credentialsDelivered:false`; delivery is pushed over DIDComm/TSP, off in the local stack | Turn messaging on (see VTC setup), or let an admin read it from the `decide` response |
+| Receive their VMC or role VAC over HTTP | `status` returns `credentialsDelivered:false`; delivery is pushed over DIDComm/TSP, off in the local stack | `MODE=tunnel` turns messaging on, but the applicant also needs its own inbox, which a `did:key` lacks ([MESSAGING.md](MESSAGING.md)); or let an admin read it from the `decide` response |
 | Vote, chat, post, feed | No such tasks at this pin: `elections/*` are not served (feature off); rooms are credential-gated on a VTA room host | Build it in the app; use the VTC only to check membership |
 | Undo `self-remove` | Immediate tombstone. The same DID can re-apply and be approved again (verified) | Guard it behind a confirmation |
 | Use the portal token for tasks | Different audience (`VTC-member`); consumers are `/v1/member/me` and passkey routes only | Sign each task |
@@ -121,7 +121,7 @@ npm run dev -w @buildathon/community-dashboard   # the same flow in a browser
 
 All of them read `VTC_URL` (and `VTC_DID` if the VTC's DID is not at
 `/.well-known/did.jsonl`) from `.env`, or default to `http://localhost:8200` in
-`MODE=local`. In `MODE=farm` see [FARM.md](FARM.md).
+`MODE=local`. In `MODE=tunnel` they are the public URLs `up` writes to `.env` ([MODES.md](MODES.md)); in `MODE=farm` see [FARM.md](FARM.md).
 
 ## Local VTC in Docker
 
@@ -222,7 +222,7 @@ Not verified:
 
 - Playwright's locators timed out on the page after a `reload()` here while `evaluate` showed the DOM was fine; it looks like a
   tooling quirk, not a page bug, and was not chased.
-- Receiving the membership credential (needs messaging, which is off here).
+- Receiving the membership credential (needs messaging and an applicant with an inbox; messaging is off in local mode, and in tunnel mode this kit's applicant has none: [MESSAGING.md](MESSAGING.md)).
 - Farm mode ([FARM.md](FARM.md)); criteria needing credentials, invitations or vetting; the VTA browser wallet.
 
 If the local VTC does not come up in your time box, use MODE=farm for the community

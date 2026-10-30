@@ -69,15 +69,17 @@ An applicant is not a member, so it cannot `authenticate`; it submits and polls 
 
 ## Modes
 
-| | `MODE=local` | `MODE=farm` |
-|---|---|---|
-| `VTA_URL` default | `http://localhost:8100` | required: `https://vta-<name>.<domain>` from the portal |
-| `VTC_URL` default | `http://localhost:8200` | required for a community: `https://vtc-<name>.<domain>` |
-| `VTA_DID` / `VTC_DID` | read from `/.well-known/did.jsonl` | copy from the portal (trusted as given) |
-| Admin key | seeded into the VTA by compose | pasted into the portal as "Admin DID" (`npm run farm:setup`) |
-| Browser CORS | allowed: 3000, 5173, 8000 | blocked; templates proxy `/__vta`, `/__vtc` via Vite |
+| | `MODE=local` | `MODE=tunnel` | `MODE=farm` |
+|---|---|---|---|
+| `VTA_URL` default | `http://localhost:8100` | public `https://<random>.trycloudflare.com`, written to `.env` by `up` | required: `https://vta-<name>.<domain>` from the portal |
+| `VTC_URL` default | `http://localhost:8200` | public `https://<random>.trycloudflare.com`, written by `up` | required for a community: `https://vtc-<name>.<domain>` |
+| `VTA_DID` / `VTC_DID` | read from `/.well-known/did.jsonl` | read from it (a `did:webvh` bound to the tunnel host) | copy from the portal (trusted as given) |
+| Admin key | seeded into the VTA by compose | same | pasted into the portal as "Admin DID" (`npm run farm:setup`) |
+| Messaging (DIDComm, TSP) | off | on, through the kit's open mediator | the Farm's (unverified for this kit) |
+| Browser CORS | allowed: 3000, 5173, 8000 | same origins | blocked; templates proxy `/__vta`, `/__vtc` via Vite |
+| Start / stop | `npm run up` / `down` | `MODE=tunnel npm run up` / `down` (deletes volumes) | `MODE=farm npm run up` |
 
-`MODE=tunnel` behaves like local, except `VTA_URL` and `VTC_URL` are public `https://<random>.trycloudflare.com` hosts that `up` writes to `.env` and that die with the run (see [MODES.md](MODES.md)).
+Tunnel URLs and DIDs die with the run; what each mode gives and every caveat: [MODES.md](MODES.md). Re-run the tunnel checks with `npm run tunnel:probe`.
 
 ## Env vars
 
@@ -99,7 +101,9 @@ An applicant is not a member, so it cannot `authenticate`; it submits and polls 
 | `VTA_CONTEXT` | `.env` | Context your app is scoped to |
 | `APP_DID` | `.env` | Your app's did:key |
 | `VTA_CREDENTIAL` | `.env` | base64url JSON `{did, privateKeyMultibase, vtaDid, vtaUrl}`; contains a private key |
-| `VTA_IMAGE` | compose | Image to run, default `vta-buildathon:local` |
+| `VTA_IMAGE` | compose | Image to run, default `vta-buildathon:local` (built with `tsp`: [PINS.md](PINS.md)) |
+| `MEDIATOR_IMAGE`, `REDIS_IMAGE` | compose | `MODE=tunnel` only: default `mediator-buildathon:local` and `redis:7.4.6-alpine` |
+| `APPROVER_DID` | `.env` | Set by `npm run approvals:setup`; makes a fresh VTA require a second key's approval for a gated task ([APPROVALS.md](APPROVALS.md)) |
 | `VTA_PORT` | compose | Port, default 8100; baked into the VTA DID on first boot |
 | `CORS_ORIGINS_TOML` | compose | TOML array body of allowed origins, e.g. `'"http://localhost:4200"'`; first boot only |
 | `ENV_FILE` | provision/hello | Alternate env file, e.g. `.env.agent` |
@@ -132,7 +136,7 @@ anything that changes state. See `templates/inbox-verifier`.
 
 ## Status panel (`@buildathon/status-panel`)
 
-`mountStatusPanel(container, opts)` renders seven cards (connection, VTA identity, version vs `pins.json`, session,
+`mountStatusPanel(container, opts)` renders seven cards (connection with the mode, VTA identity with a Messaging row, version vs `pins.json`, session,
 capabilities, wallet, optional VTC) with a Refresh button and optional 15/30 s auto-refresh. Pure helpers
 (`parseDidDocServices`, `compareVersions`, `groupTasks`, `compatHints`) are exported and unit-tested:
 `npm test -w @buildathon/status-panel`. Web template: `npm run dev -w @buildathon/web-vta-app -- --port 3000` for

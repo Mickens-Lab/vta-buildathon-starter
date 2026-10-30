@@ -47,7 +47,7 @@ Only A is demonstrated, and only with a software stand-in.
 - [ ] `MODE=tunnel npm run up` is green, and the VTA's DID resolves from the phone's browser over mobile data.
 - [ ] The wallet can add the VTA (by DID or enrolment link) and shows it.
 - [ ] An admin grants it, and its DID is added to the approver set (needs a VTA restart with a fresh volume to re-seed; the stored rules win after first boot).
-- [ ] `npm run approvals:demo` (adapt it to `MODE=tunnel`, which it refuses today) raises a prompt on the phone with the same code.
+- [ ] `MODE=tunnel npm run approvals:demo` (it works in tunnel mode, with the software approver) is run, and a prompt is raised on the phone with the same code.
 - [ ] Deny once and approve once; note whether a biometric prompt appeared.
 - [ ] `MODE=tunnel npm run down`; remove the VTA from the wallet.
 

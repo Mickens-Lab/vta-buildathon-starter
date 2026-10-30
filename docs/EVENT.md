@@ -38,7 +38,9 @@ Tie-break: the round-trip score.
 
 ## Organiser checklist
 
-**Local mode is the plan; the Farm is an optional shortcut behind a go/no-go gate.**
+**Local mode is the plan; the Farm is an optional shortcut behind a go/no-go gate.** `MODE=tunnel` ([MODES.md](MODES.md)) is not part of the plan for a
+room of participants: it puts the stack on public, unauthenticated URLs with an open mediator and needs a heavy local mediator build. Use it for a
+single demo or a phone experiment, and take it down afterwards.
 
 ### Two weeks before
 

@@ -1,9 +1,10 @@
 # Try this
 
-Ten exercises, easy to advanced. Each was run against the local stack (`WITH_VTC=1 npm run up`) and the output below is what it printed;
-DIDs, ids and timestamps differ on your machine. This is a playground: [SECURITY.md](SECURITY.md).
+Ten exercises, easy to advanced. Exercises 1 to 7 and 8b were run against the local stack (`WITH_VTC=1 npm run up`) and the output shown is what they printed;
+exercises 8 and 9 are marked "Idea, not run". DIDs, ids and timestamps differ on your machine. This is a playground: [SECURITY.md](SECURITY.md).
 
-Start the stack once: `npm ci && WITH_VTC=1 npm run up`. Stop and wipe it with `npm run vta:reset`.
+Start the stack once: `npm ci && WITH_VTC=1 npm run up`. Stop and wipe it with `npm run vta:reset`. Each exercise names the mode it needs; `MODE=tunnel` (public
+quick-tunnel URLs, messaging on, [MODES.md](MODES.md)) replaces `up` and `vta:reset` with `MODE=tunnel npm run up` and `MODE=tunnel npm run down`.
 
 ## 1. Your first signed call
 

@@ -3,7 +3,7 @@
 A VTA can refuse a task until a *different* party agrees to *that exact task*. This kit lets you try it on one laptop with a throwaway
 software approver standing in for a second device. Back to the [docs index](README.md). Read [SECURITY.md](SECURITY.md) first.
 
-Labels: **[verified]** observed live against the pinned VTA (0.65.0), `MODE=local`, while building this; **[docs]** stated in the VTA's
+Labels: **[verified]** observed live against the pinned VTA (0.65.0), `MODE=local` and `MODE=tunnel`, while building this; **[docs]** stated in the VTA's
 documentation, not exercised here; **[unverified]** not observed.
 
 ## What it is

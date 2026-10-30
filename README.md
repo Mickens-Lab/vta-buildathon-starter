@@ -15,7 +15,7 @@ It is for developers who want to see a signed Trust Task round trip working in m
 ## Prerequisites
 
 - Node 20+ and npm 10+, Docker with Compose v2
-- The images `vta-buildathon:local` (and `vtc-buildathon:local` for the community) loaded or built
+- The images `vta-buildathon:local` (and `vtc-buildathon:local` for the community; `mediator-buildathon:local` for tunnel mode) loaded or built
   ([docs/PINS.md](docs/PINS.md); an organiser usually hands them out). Without Docker, see Farm mode below.
 
 ## Quick start
@@ -62,29 +62,21 @@ plus approving a gated task from a second key ([docs/APPROVALS.md](docs/APPROVAL
 
 Code tour with a diagram: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-## Three modes
-
-`MODE=local` (default): docker compose on your machine, the primary and supported path (`npm run up`).
-`MODE=tunnel`: the same stack plus a messaging mediator, exposed on **public, ephemeral** Cloudflare quick-tunnel URLs, with an **open**
-mediator (`MODE=tunnel npm run up`; heavy first build; demo data only; [docs/MODES.md](docs/MODES.md) lists every caveat).
-`MODE=farm`: a VTA hosted by [VTA Farm](https://vta.farm/), no Docker needed, needs a browser passkey and a pre-check
-(`MODE=farm npm run up`, then [docs/FARM.md](docs/FARM.md)). Every command works in every mode; browser apps use a Vite proxy in farm mode.
-
 ## Docs
 
 [Docs index](docs/README.md): [TRY-THIS](docs/TRY-THIS.md), [ARCHITECTURE](docs/ARCHITECTURE.md), [CHEATSHEET](docs/CHEATSHEET.md),
 [VTC](docs/VTC.md), [VTC-SURFACE](docs/VTC-SURFACE.md), [ROLES](docs/ROLES.md), [MODES](docs/MODES.md), [FARM](docs/FARM.md), [PINS](docs/PINS.md), [EVENT](docs/EVENT.md),
 [TRACKS](docs/TRACKS.md), [SECURITY](docs/SECURITY.md), [Trust Tasks guide](docs/trust-tasks/README.md).
 
-## Mode details
+## Three modes
 
-One setting, `MODE` in `.env` (or the environment), chooses where the VTA/VTC run.
-Every command below works in every mode. What each mode gives, and what each feature needs: [docs/MODES.md](docs/MODES.md).
+One setting, `MODE` in `.env` (or the environment), chooses where the VTA/VTC run. Exactly three modes, no separate messaging switch.
+Unless a row in [docs/MODES.md](docs/MODES.md) says otherwise, a command works in every mode; that page also says what each mode gives and what each feature needs.
 
 | `MODE` | Runs | Needs | Start |
 |---|---|---|---|
 | `local` (default) | docker compose on your laptop | Docker, the VTA image | `npm run up` |
-| `tunnel` | the local stack plus a mediator (messaging), on public quick-tunnel URLs | Docker, `cloudflared`, internet, a locally built mediator image | `MODE=tunnel npm run up`, see [docs/MODES.md](docs/MODES.md) |
+| `tunnel` | the local stack plus a mediator (messaging), on **public, ephemeral** quick-tunnel URLs, with an **open** mediator; demo data only | Docker, `cloudflared`, internet, a locally built mediator image (heavy first build) | `MODE=tunnel npm run up` (stop: `MODE=tunnel npm run down`), every caveat in [docs/MODES.md](docs/MODES.md) |
 | `farm` | agents hosted by [VTA Farm](https://vta.farm/) | A browser with a passkey; no Docker, no Rust build | `MODE=farm npm run up`, then [docs/FARM.md](docs/FARM.md) |
 
 **Local mode is the primary, supported path.** Farm mode is an optional shortcut for
@@ -93,7 +85,8 @@ when Docker does not cooperate, and only after a pre-event check. There are two 
 (https://vtafarm.firstperson.dev) is supported but currently cannot create agents (`acl/grant/0.2`, a confirmed
 Farm-side bug, 2026-10-29). Organisers run `npm run farm:probe` plus a canary agent (`npm run farm:canary`) the
 day before and on the day (ic3 first, then firstperson), and use local mode for everyone if both fail ([docs/EVENT.md](docs/EVENT.md), [docs/FARM.md](docs/FARM.md)).
-Browser apps work in farm mode through the Vite proxy in each template.
+Browser apps work in farm mode through the Vite proxy in each template. Tunnel mode turns DIDComm/TSP on, but this kit has no messaging client, so a
+message round trip and credential delivery are not demonstrated (transport connected, round trip unverified: [docs/MESSAGING.md](docs/MESSAGING.md)).
 A VTC (community) is described in [docs/VTC.md](docs/VTC.md): the client is ready,
 the local Docker VTC (vtc-service 0.15.0, the version the Farm VTC runs) was **verified live** (join, approve, restart, browser; a member cannot get a console session by design, but the sessionless member surface was mapped and verified: docs/VTC-SURFACE.md), the farm community path needs the portal and is unverified.
 
@@ -104,7 +97,7 @@ the local Docker VTC (vtc-service 0.15.0, the version the Farm VTC runs) was **v
 | [`templates/inbox-verifier`](templates/inbox-verifier) | `npm run demo -w @buildathon/inbox-verifier` | Servers that accept signed Trust Tasks. Works offline, no VTA needed. |
 | [`templates/web-vta-app`](templates/web-vta-app) | `npm run dev -w @buildathon/web-vta-app` | Browser apps that talk to the VTA. Optional wallet. |
 | [`templates/mcp-agent`](templates/mcp-agent) | see its README | AI agents with a scoped VTA identity. Partial: a stub. |
-| [`templates/community-dashboard`](templates/community-dashboard) | `npm run dev -w @buildathon/community-dashboard` | A React + TypeScript dashboard for the whole member journey with a VTC, no session: visit, apply (with a signed-request preview), pending (polls every 10 s, withdraw), member (card, directory, my card, renew, leave), re-apply, plus an "Under the hood" log of every Trust Task call. Needs a VTC. Driven end to end in headless Chromium against the local stack; states are marked verified/inferred in its README. |
+| [`templates/community-dashboard`](templates/community-dashboard) | `npm run dev -w @buildathon/community-dashboard` | A React + TypeScript dashboard for the whole member journey with a VTC, no session: visit, apply (with a signed-request preview), pending (polls every 10 s, withdraw), member (card, directory, my card, renew, leave), re-apply, plus an "Under the hood" log of every Trust Task call. Its membership card has a per-mode "Credential delivery" note. Needs a VTC. Driven end to end in headless Chromium against the local stack; states are marked verified/inferred in its README. |
 
 Six track ideas are in [`docs/TRACKS.md`](docs/TRACKS.md); endpoints, task names
 and env vars are in [`docs/CHEATSHEET.md`](docs/CHEATSHEET.md).
@@ -116,7 +109,8 @@ concepts, finding, using, developing and evaluating them, with a hands-on custom
 
 | Command | Does |
 |---|---|
-| `npm run up` / `down` | Mode-aware: local = keygen, compose up, provision; farm = mint admin key, print portal steps, then provision |
+| `npm run up` / `down` | Mode-aware: local = keygen, compose up, provision; tunnel (`MODE=tunnel`) = tunnels, mediator, VTA, VTC, provision, probe, and `down` deletes its volumes; farm = mint admin key, print portal steps, then provision |
+| `npm run tunnel:probe` | `MODE=tunnel`: re-run the checks (public URLs, DID bound to the tunnel host, messaging advertised and live, mediator ACL note) |
 | `npm run vta:up` | Local only: keygen, `docker compose up --wait`, provision |
 | `npm run farm:setup` / `farm:check` / `farm:probe` | Farm (`FARM=ic3` default, or `firstperson`; `FARM_AGENT=<name>` derives `VTA_URL`/`VTA_DID`): mint the Admin DID and print portal steps / read-only check of your agent / dated, read-only survey of both Farms side by side (run it the day before and the day of an event) |
 | `npm run farm:canary` | Organisers: with a throwaway agent's URL/DID in `.env.farm`, runs `farm:check` + `provision` + `hello` and prints a GO / switch-to-local verdict |
@@ -125,16 +119,16 @@ concepts, finding, using, developing and evaluating them, with a hands-on custom
 | `npm run roles:matrix` / `roles:personas -- create <name> <role>` | Who-can-call-what table / throwaway persona identities, warnings only ([docs/ROLES.md](docs/ROLES.md)) |
 | `npm run approvals:setup` / `approvals:demo` / `approver` | Approve a gated task from a second key: mint the throwaway approver / ask for the task and wait / verify and approve or deny ([docs/APPROVALS.md](docs/APPROVALS.md)); `local` or `tunnel` |
 | `npm run security:check` / `recipe:backend-signer` / `recipe:webcrypto-key` | Key-hygiene scan of the tree / first hardening rungs ([docs/SECURITY.md](docs/SECURITY.md)) |
-| `npm run images:build` / `pins:check` | Build the VTA/VTC images from the pinned VTI ref / report version drift ([docs/PINS.md](docs/PINS.md)) |
+| `npm run images:build [vta\|vtc\|mediator\|all]` / `pins:check` | Build an image from its pinned ref (the VTA with `tsp`; the mediator is for tunnel mode and is the slow one) / report version drift, including a VTA image without `tsp` ([docs/PINS.md](docs/PINS.md)) |
 | `WITH_VTC=1 npm run up` | Local VTC too (needs a VTC image, see docs/VTC.md) |
 | `npm run vta:provision -- <context>` | New context + app identity (`ENV_FILE=.env.x` to keep several) |
 | `npm run vta:logs` | Follow VTA logs |
-| `npm run vta:reset` | Delete the VTA and VTC containers, their volumes, `.vta/` and `.env` |
+| `npm run vta:reset` | Delete the VTA, VTC and mediator containers, their volumes, `.vta/` and `.env` (in tunnel mode use `MODE=tunnel npm run down`, which also stops the tunnels) |
 | `npm run hello` | The checkpoint |
 | `npm run vta:call -- <task> [json]` | Call any Trust Task as your app identity (no argument lists them) |
 | `npm run vtc:refusals` | The same signed calls as a stranger and as your app: who is refused what |
-| `npm run test:roles` | Live contract test (local stack): safe read tasks as stranger, applicant, member and admin, checked against [docs/VTC-SURFACE.md](docs/VTC-SURFACE.md). Not in `npm test`. |
-| `npm run e2e` | Live browser test (local stack, Chromium): the dashboard journey, refresh and local hints. Optional, about 3 minutes, not in `npm test`. |
+| `npm run test:roles` | Live contract test (local or tunnel stack): safe read tasks as stranger, applicant, member and admin, checked against [docs/VTC-SURFACE.md](docs/VTC-SURFACE.md). Not in `npm test`. |
+| `npm run e2e` | Live browser test (local or tunnel stack, Chromium): the dashboard journey, refresh and local hints. Optional, about 3 minutes, not in `npm test`. |
 | `npm test` / `npm run typecheck` | Unit tests (no VTA needed; includes `check:generic` and `check:docs`) / typecheck all packages |
 | `npm run check:docs` | Every relative markdown link resolves and every `npm run` script named in the docs exists |
 | `npm run check:generic` | Fails if the tree holds personal keys, agent names, accounts, emails, machine paths or a default community (`-- --history` also scans commits) |
@@ -151,12 +145,19 @@ concepts, finding, using, developing and evaluating them, with a hands-on custom
 | Browser CORS error | Your origin is not allowed. Use port 5173, 3000 or 8000, or see the cheatsheet. |
 | Port 8100 taken | `VTA_PORT=8101 npm run vta:up` on a fresh volume (`vta:reset` first) and `VTA_URL=http://localhost:8101`. Not tested here. |
 | `MODE=farm` errors | See the troubleshooting table in [docs/FARM.md](docs/FARM.md). |
+| `refusing to start ... volume was set up for` / `Found volumes from a MODE=local run` | Volumes from another mode: follow the printed reset; table in [docs/MODES.md](docs/MODES.md#switching-modes). |
+| Tunnel probe fails or shows `MESSAGING DEGRADED` | See the troubleshooting table in [docs/MODES.md](docs/MODES.md#troubleshooting). |
 | Anything else | `npm run vta:logs`; a `Setup failed:` line names the bad field. |
 
 ## Verification status
 
 See `docs/EVENT.md` for the organiser checklist. This starter was checked on
 Linux with Docker 29 and Node 22 only; Windows and macOS hosts are untested.
+
+Every doc marks claims as verified (observed while building this kit) or unverified (documentation or inference). In short:
+**verified live**: the local VTA and VTC flows, the dashboard (browser end to end), the role matrix, `MODE=tunnel` bring-up with the public URLs, the status
+panel Messaging row in a browser, and the software-approver demo in local and tunnel mode. **Not verified**: a DIDComm/TSP message round trip, credential
+delivery to a member, a phone as approver, a hosted mediator admitting an outside VTA, the Farm community path, and Windows or macOS.
 
 ## Privacy / what this repo does not contain
 

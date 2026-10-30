@@ -52,7 +52,8 @@ reason, and re-read.
 **3. Keep identity, membership, role and credential separate.** They are four different things:
 an *identity* is a key (a `did:key` here); a *membership* is the community's record that the identity belongs; a *role* is what the
 community's ACL lets it do; a *credential* is a signed statement about one of those, delivered somewhere. Local mode returns
-`credentialsDelivered: false` because delivery goes over messaging, which the local stack leaves off (live); the membership is
+`credentialsDelivered: false` because delivery goes over messaging, which the local stack leaves off (live). Tunnel mode turns messaging on but
+still reports `false`, because this kit's applicant is a plain `did:key` with no inbox ([MESSAGING.md](MESSAGING.md)); the membership is
 still real. Do not infer one from another, and do not use "I hold a key" to mean "I am a member".
 
 **4. One key per persona.** Practise with a separate key for the visitor, the applicant, the member and the admin. Mixing them hides

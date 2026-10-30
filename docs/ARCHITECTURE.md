@@ -13,8 +13,8 @@ How the pieces fit, where things live, and how to extend them. Everything here i
 | `templates/web-vta-app` | Browser app: the status panel plus an optional wallet panel. Vanilla TypeScript, Vite. |
 | `templates/community-dashboard` | React + Vite dashboard for the VTC member journey. `state.ts` maps signed-call results to a screen; `components/` renders it. |
 | `templates/mcp-agent` | Stub: provisions a scoped identity and writes an MCP host config. Not verified end to end. |
-| `scripts/` | The npm commands. `env.ts` (`.env` and admin key files), `up.ts`, `keygen.ts`, `provision.ts`, `hello.ts`, `call.ts`, `vtc-*.ts`, `farm-*.ts`, `images-build.ts`, `pins*.ts`, `banner.ts`, and the checks `check-generic.ts`, `check-docs.ts`. |
-| `docker-compose.yml`, `vta-entrypoint.sh`, `vtc-entrypoint.sh`, `docker/vtc.Dockerfile` | The local VTA (always) and VTC (compose profile `vtc`). |
+| `scripts/` | The npm commands. `env.ts` (`.env` and admin key files), `up.ts`, `keygen.ts`, `provision.ts`, `hello.ts`, `call.ts`, `vtc-*.ts`, `farm-*.ts`, `images-build.ts`, `pins*.ts`, `banner.ts`, `tunnel-probe.ts`, `approvals-*.ts`, `approver.ts`, the live tests `test-roles.ts` and `e2e.ts`, and the checks `check-generic.ts`, `check-docs.ts`, `security-check.ts`. `scripts/lib/` has the shared helpers (tunnels, compose, approvals, the CDP browser driver). |
+| `docker-compose.yml`, `vta-entrypoint.sh`, `vtc-entrypoint.sh`, `mediator-entrypoint.sh`, `docker/` | The local VTA (always), VTC (compose profile `vtc`) and, for `MODE=tunnel`, redis and the mediator (profile `messaging`); `docker/` holds the VTC and mediator Dockerfiles. |
 | `pins.json`, `PINS_LOG.md` | The versions this kit was validated against ([PINS.md](PINS.md)). |
 
 ## What talks to what
@@ -50,6 +50,7 @@ flowchart LR
 
 - **Status panel** is rendered inside `web-vta-app` and in the dashboard's "connection" drawer; it reads `/health`, the DID log and (with a credential) the session details.
 - **Vite proxy**: in farm mode the hosted agent does not allow `http://localhost:5173` in CORS, so each template's `vite.config.ts` proxies `/__vta` and `/__vtc` and the page stays same-origin. In local mode the page calls the containers directly.
+- **Tunnel mode** (`MODE=tunnel`, [MODES.md](MODES.md)) runs the same containers plus redis and a mediator, and three `cloudflared` processes on the host that give the VTA, VTC and mediator public hostnames. `up` starts the tunnels first because the DIDs and configs name those hostnames. The browser and the scripts then talk to the public URLs instead of `localhost`.
 - **The VTC shares the VTA container's network namespace** so the VTA's `localhost:8100` DID is reachable from the VTC; that is why the VTC port is published on the VTA service.
 - The `inbox-verifier` is independent: a `did:key` carries its own public key, so a document can be verified with no network.
 
@@ -63,7 +64,7 @@ flowchart LR
 
 ## Pins and image build
 
-`pins.json` records the upstream release (VTA and VTC come from different commits) and exact npm versions. `npm run images:build [vta|vtc|all]` builds each image from its own pinned ref of a local checkout of the upstream repository (`VTI_PATH`), tagging `<image>:<short-sha>` and `:local`, the default in compose. `npm run pins:check` reports drift. See [PINS.md](PINS.md). Building the VTA image from source is slow (Rust); an organiser normally supplies the images.
+`pins.json` records the upstream release (VTA and VTC come from different commits) and exact npm versions. `npm run images:build [vta|vtc|mediator|all]` builds each image from its own pinned ref of a local checkout of the upstream repository (`VTI_PATH`), tagging `<image>:<short-sha>` and `:local`, the default in compose. `npm run pins:check` reports drift. See [PINS.md](PINS.md). Building the VTA image from source is slow (Rust); an organiser normally supplies the images.
 
 ## Framework-free and React
 
@@ -76,7 +77,7 @@ flowchart LR
 
 | Where | Covers |
 |---|---|
-| `scripts/test/` | Farm host selection |
+| `scripts/test/` | Farm host selection, banner, role matrix and docs parity, personas, recipes, security check, tunnel helpers, approvals |
 | `packages/vta-client/test`, `packages/vtc-client/test` | Signing, credentials, client behaviour with a fake `fetch` |
 | `packages/status-panel/test` | Parsing of probe results |
 | `templates/inbox-verifier/test` | Accept, replay, tamper, wrong recipient, malformed |

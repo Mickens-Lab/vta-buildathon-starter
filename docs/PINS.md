@@ -29,7 +29,7 @@ Two refs, because the two releases come from different monorepo commits:
 | `vta-buildathon` | `vta-service-v0.65.0` | `fc157f76` | The Farm portal's selector offers it as image `0.65.0-fc157f76`; it is what the Farm runs. |
 | `vtc-buildathon` | `vtc-service-v0.15.0` | `93d36996` | A Farm-hosted VTC ran vtc-service 0.15.0 when observed. |
 
-For `MODE=tunnel` ([MODES.md](MODES.md)) there are three more pins, in `pins.json` under `messaging`:
+For `MODE=tunnel` ([MODES.md](MODES.md)) there are more pins, in `pins.json` under `messaging`:
 
 | What | Pin | Why |
 |---|---|---|

@@ -135,7 +135,7 @@ VTA build features. Two changes to the images you already know:
 - **The VTA image must be built with `tsp`.** The VTI Dockerfile's default feature list has none, and then the VTA refuses
   `services.tsp = true` at setup **[verified]**. `npm run images:build vta` now passes the pinned feature list for every VTA build, so one
   image serves all modes. An image built before this change has no `tsp`: rebuild it. (`didcomm` without `tsp` also works **[verified]**,
-  but this kit sets both.) `npm run pins:check` flags an unlabelled VTA image.
+  but this kit sets both.) `npm run pins:check` flags an unlabelled VTA image and confirms the label matches the pinned list **[verified: an image built by `npm run images:build vta` carries the `org.buildathon.vta-features` label, `pins:check` reports "features match", and `MODE=tunnel npm run up` passed every probe check with it]**.
 - **The mediator image** is built from `docker/mediator.Dockerfile` by `npm run images:build mediator`. As with the others, there is no
   published image: you build it locally. It is for `MODE=tunnel` only; `images:build all` does not build it.
 
