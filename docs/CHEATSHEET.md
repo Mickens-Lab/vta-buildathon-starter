@@ -170,6 +170,8 @@ a newer one was withdrawn. Poll at most every 10 s (anonymous limit: burst 10, t
 | `malformedRequest` | Payload fails the schema |
 | `permissionDenied` / 401 | Not authenticated, or the ACL scope does not cover the call |
 | 429 | Auth rate limit; retry shortly |
+| Browser: `NetworkError when attempting to fetch resource` (no status) | The stack is down (`npm run doctor`), **or** the server refused this page's origin (CORS). The browser reports both the same way. The templates call `/__vta` on their own origin and Vite forwards it, so any port works and CORS cannot be the cause: look at the stack. Your own code calling the VTA directly is limited to its CORS list (loopback 3000-3009, 3050, 4000-4009, 4173, 5173-5183, 8000-8009): use the proxy, or set `CORS_ORIGINS_TOML` (VTC: `VTC_CORS_ORIGINS_TOML`; mediator: `MEDIATOR_CORS_ALLOW_ORIGIN`) and `npm run reset && npm run up` |
+| Page shows HTTP 502 from `/__vta` | The Vite dev server is up but cannot reach `VTA_URL`: stack down, or `.env` changed (restart the dev server) |
 
 More causes and fixes: [trust-tasks/06-troubleshooting-and-glossary.md](trust-tasks/06-troubleshooting-and-glossary.md).
 

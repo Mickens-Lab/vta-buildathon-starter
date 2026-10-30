@@ -6,7 +6,7 @@
 import "./lib/cli.js";
 import { spawnSync } from "node:child_process";
 import { die } from "./env.js";
-import { parseNewArgs, scaffold, STARTERS, validName } from "./lib/scaffold.js";
+import { nextSteps, parseNewArgs, scaffold, STARTERS, validName } from "./lib/scaffold.js";
 
 const { name, from } = parseNewArgs(process.argv.slice(2));
 if (!name && !from) {
@@ -27,4 +27,4 @@ try {
 console.log(`created apps/${name} from templates/${from} (package ${pkg}); installing...`);
 const r = spawnSync("npm", ["install", "--no-package-lock", "--no-audit", "--no-fund", "--prefer-offline"], { stdio: "inherit", timeout: 300_000 });
 if (r.status !== 0) die(`npm install failed. Try it by hand: npm install --no-package-lock (the copy is in apps/${name}).`);
-console.log(`\nnext:\n  npm run up                 # if the stack is not running yet\n  ${starter.run(pkg)}\nthen edit apps/${name}/src. Reset everything with npm run reset (apps/ is left alone).`);
+console.log(nextSteps(from, name!, pkg));
