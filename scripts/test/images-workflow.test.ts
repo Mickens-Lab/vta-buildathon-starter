@@ -238,3 +238,19 @@ test("the build job adds swap before it builds (Rust builds were OOM-killed on t
   const swap = names.indexOf("Add swap");
   assert.ok(swap >= 0 && swap < names.indexOf("Build"), "Add swap must come before Build");
 });
+
+test("the summary step runs: it prints one copy-paste jq line per image (a quoting bug here failed the first publish run)", () => {
+  const step = wf.jobs.digests!.steps.find((s) => s.name === "Summarise");
+  assert.ok(step?.run, "digests job has a Summarise step");
+  const dir = mkdtempSync(join(tmpdir(), "digests-"));
+  try {
+    spawnSync("mkdir", ["-p", join(dir, "results")]);
+    writeFileSync(join(dir, "results", "vta.json"), JSON.stringify({ kind: "vta", digest: "sha256:abc", image: "ghcr.io/x/vta", tag: "fc157f76" }));
+    const summary = join(dir, "summary.md");
+    const r = spawnSync("bash", ["-e", "-c", step.run!], { cwd: dir, env: { ...process.env, GITHUB_STEP_SUMMARY: summary }, encoding: "utf8" });
+    assert.equal(r.status, 0, r.stderr);
+    assert.match(r.stdout, /jq --arg d "sha256:abc" '\.images\.vta\.digest = \$d' pins\.json > pins\.tmp && mv pins\.tmp pins\.json/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
