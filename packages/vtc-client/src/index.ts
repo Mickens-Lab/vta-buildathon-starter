@@ -11,7 +11,7 @@
 //  - An applicant is not a member yet, so it cannot `authenticate`. It reads
 //    the manifest (public), submits, and polls status, all as signed documents.
 import { signTrustTask } from "@openvtc/trust-tasks-proof";
-import { TASK as VTA_TASK, TT, TrustTaskError, fetchVtaDid, siopIdToken, type Identity } from "@buildathon/vta-client";
+import { TASK as VTA_TASK, TT, TrustTaskError, emitTrace, fetchVtaDid, siopIdToken, type Identity } from "@buildathon/vta-client";
 
 export { TrustTaskError };
 
@@ -192,6 +192,8 @@ export class VtcClient {
 
   private report(e: CallEvent) {
     try { this.onCall?.(e); } catch { /* an observer must never break a call */ }
+    const req = e.request as { id?: string; recipient?: string } | undefined;
+    emitTrace({ ts: e.startedAt, source: "vtc", transport: "rest", type: e.type, id: req?.id, from: e.issuer, to: req?.recipient ?? this.vtcDid, status: e.status, ok: e.ok, code: e.code, ms: e.durationMs });
   }
 
   /** Build, sign and POST one Trust Task document; returns the response payload. */

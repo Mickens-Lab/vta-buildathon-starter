@@ -41,6 +41,7 @@
     "hello": "tsx scripts/hello.ts",
     "vta:call": "tsx scripts/call.ts",
     "repl": "tsx scripts/repl.ts",
+    "trace": "tsx scripts/trace.ts",
     "typecheck": "tsc --noEmit && npm run typecheck --workspaces --if-present",
     "test": "tsx scripts/check-generic.ts && tsx scripts/check-docs.ts && tsx --test scripts/test/*.test.ts && npm test --workspaces --if-present",
     "pins:check": "tsx scripts/pins-check.ts",

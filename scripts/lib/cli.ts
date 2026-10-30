@@ -1,5 +1,6 @@
 // Shared command-line behaviour for every runnable script. Import it FIRST (`import "./lib/cli.js";`):
 //   --help / -h  prints the script's own header comment and exits, so `npm run hello -- --help` never runs hello
+//   TRACE=1      appends every client call to .vta/trace.jsonl
 //   EPIPE        `npm run vta:call | head` ends quietly instead of crashing
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -25,6 +26,12 @@ export function parseJsonArg(raw: string, what = "the JSON argument"): { ok: tru
       message: `${what} is not valid JSON (${(e as Error).message}). Put it in single quotes and use double quotes inside: '{"key":"value"}'. Received: ${raw.length > 60 ? raw.slice(0, 60) + "..." : raw}`,
     };
   }
+}
+
+// TRACE=1: log every call any client makes to .vta/trace.jsonl (read it with `npm run trace`).
+if (process.env.TRACE === "1") {
+  const { installTrace } = await import("./trace.js");
+  installTrace();
 }
 
 process.stdout.on("error", (e: NodeJS.ErrnoException) => {

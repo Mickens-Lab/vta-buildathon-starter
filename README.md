@@ -116,6 +116,7 @@ The ones you need in the first hour (all of them, grouped: [docs/COMMANDS.md](do
 | `npm run hello` | The checkpoint |
 | `npm run new -- my-app --from hello-web\|hello-node` | Copy a minimal template to `apps/my-app` and install it |
 | `npm run vta:call -- <task> [json]` | Call any Trust Task as your app identity (no argument lists them; `--search <word>` filters, `--schema <task>` shows its fields offline) |
+| `TRACE=1 npm run hello` then `npm run trace` | See every signed call the clients made, one line each (task, outcome, ms, who to whom) |
 | `npm run repl` | A REPL with `vta` and `vtc` already signed in and top-level await: `await vta.whoami()` |
 | `npm run vtc:hello` / `vtc:join` / `vtc:approve` / `vtc:status` | Community: read the join manifest / apply / admin approves / where do I stand |
 | `npm run tsp:ping` / `tsp:listen` | `MODE=tunnel`: send a signed TSP ping and print the pong / receive the credential frames the VTC pushes ([docs/MESSAGING.md](docs/MESSAGING.md)) |

@@ -16,6 +16,7 @@ muscle memory keep working; a test fails if a script is missing from this page.
 | `npm run new -- my-app --from hello-web\|hello-node` | Copy a minimal template to `apps/my-app` (git-ignored) and install it; prints the command that runs it. `npm run new` lists the starting points |
 | `npm run vta:call -- <task> [json]` | Call any Trust Task as your app identity (no argument lists them; invalid JSON is reported, not a stack trace) |
 | `npm run vta:call -- --search memory` / `--schema vta/memory/put/0.1` | Only the tasks whose name contains a word / a task's request and response fields (offline, from the bindings in `node_modules`) |
+| `TRACE=1 <command>` then `npm run trace` | Record every client call (VTA and VTC REST, TSP ping) to `.vta/trace.jsonl`, then show them one per line: time, client, task, outcome, ms, who to whom, id. `-- --follow` keeps printing, `--json` for raw, `--clear` deletes. Payloads and keys are never logged |
 | `npm run repl` | A Node REPL with `vta` (authenticated), `vtc`, `call(slug, payload)`, `tasks(words)` and top-level await |
 | `npm run vtc:hello` / `vtc:join` / `vtc:approve` / `vtc:status` | Community: read the join manifest / apply / admin approves / where do I stand |
 | `npm run tsp:ping` / `tsp:listen` | `MODE=tunnel`: TSP ping and pong / receive the credential frames the VTC pushes |

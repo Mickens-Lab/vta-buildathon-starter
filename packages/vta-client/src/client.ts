@@ -7,6 +7,7 @@ import {
   type CredentialBundle,
   type Identity,
 } from "./identity.js";
+import { emitTrace } from "./trace.js";
 
 export const TT = "https://trusttasks.org/spec";
 export const TASK = {
@@ -39,6 +40,25 @@ export async function fetchVtaDid(baseUrl: string, fetchImpl: typeof fetch = fet
   const did = JSON.parse(lines[lines.length - 1])?.state?.id;
   if (typeof did !== "string") throw new Error("did.jsonl has no state.id");
   return did;
+}
+
+/** One call the client made, reported to {@link VtaClient.onCall} after it settles. */
+export interface CallEvent {
+  /** Trust Task type URI. */
+  type: string;
+  /** Who signed (the client's own DID). */
+  issuer: string;
+  startedAt: string;
+  durationMs: number;
+  /** HTTP status; absent when the request never got a response (network error). */
+  status?: number;
+  ok: boolean;
+  /** The refusal code from the error document, or `network` when nothing answered. */
+  code?: string;
+  /** The payload that was signed. */
+  payload: Record<string, unknown>;
+  /** The full signed document as POSTed. */
+  request?: unknown;
 }
 
 export interface Whoami {
@@ -92,6 +112,9 @@ export class VtaClient {
     return client;
   }
 
+  /** Optional observer, called once per call after it settles (success or failure). Errors in it are swallowed. */
+  onCall?: (e: CallEvent) => void;
+
   /** Build, sign and POST one Trust Task; returns the response payload. */
   async call<R = any>(
     type: string,
@@ -109,23 +132,36 @@ export class VtaClient {
       } as any,
       this.me.signer,
     );
+    const startedAt = new Date().toISOString();
+    const t0 = Date.now();
+    const done: CallEvent = { type, issuer: this.me.did, startedAt, durationMs: 0, ok: false, payload, request: doc };
+    const report = (e: Partial<CallEvent>) => {
+      const ev = { ...done, durationMs: Date.now() - t0, ...e };
+      try { this.onCall?.(ev); } catch { /* an observer must never break a call */ }
+      emitTrace({ ts: startedAt, source: "vta", transport: "rest", type, id: (doc as any).id, from: this.me.did, to: this.vtaDid, status: ev.status, ok: ev.ok, code: ev.code, ms: ev.durationMs });
+    };
     const headers: Record<string, string> = { "content-type": "application/json" };
     if (opts.bearer !== false && this.token) headers.authorization = `Bearer ${this.token}`;
-    const res = await this.fetchImpl(`${this.baseUrl}/trust-tasks`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(doc),
-    });
+    let res: Response;
+    try {
+      res = await this.fetchImpl(`${this.baseUrl}/trust-tasks`, { method: "POST", headers, body: JSON.stringify(doc) });
+    } catch (e) {
+      report({ ok: false, code: "network" });
+      throw e;
+    }
     const text = await res.text();
     let body: any;
     try {
       body = JSON.parse(text);
     } catch {
+      report({ status: res.status, ok: false, code: "unreadable" });
       throw new TrustTaskError(res.status, text);
     }
     if (!res.ok || String(body?.type ?? "").includes("trust-task-error")) {
+      report({ status: res.status, ok: false, code: body?.payload?.code });
       throw new TrustTaskError(res.status, body);
     }
+    report({ status: res.status, ok: true });
     return body.payload as R;
   }
 

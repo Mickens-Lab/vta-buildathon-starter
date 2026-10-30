@@ -1,6 +1,7 @@
 // TSP ping: a throwaway did:key logs in to the mediator, resolves the VTA's DID, and sends a signed
 // messaging/ping/0.1 Trust Task to the VTA over TSP; the VTA's sealed answer is the "pong".
 // Built on @openvtc/pnm-core (mediator login, DID -> TSP keys, TspChannel) and @openvtc/vti-tsp-js (the wire format).
+import { emitTspTrace } from "./trace.js";
 import {
   Identity, asTaskSigner, buildTrustTask, connectMediatorSession, didcommKeyAgreementFromSigning, generateSigningIdentity, resolveVtaTspEndpoint, signingIdentityFromSecret, signOutboundTask,
   type MediatorConnection, type WebSocketCtor,
@@ -100,13 +101,29 @@ export async function connectTsp(opts: Pick<PingOptions, "vtaDid" | "mediatorDid
 export async function tspPing(opts: PingOptions): Promise<PingResult> {
   const log = opts.log ?? (() => {});
   const t0 = Date.now();
-  const c = await connectTsp(opts);
+  const ts = new Date().toISOString();
+  let id: string | undefined;
+  let from: string | undefined;
+  let err: unknown;
+  try {
+    const c = await connectTsp(opts);
+    from = c.did;
+    return await ping(c);
+  } catch (e) {
+    err = e;
+    throw e;
+  } finally {
+    emitTspTrace({ ts, source: "tsp", transport: "tsp", type: PING_TYPE, id, from, to: opts.vtaDid, ok: err === undefined, code: err === undefined ? undefined : /timed out|timeout/i.test(String((err as Error).message)) ? "timeout" : "failed", ms: Date.now() - t0 });
+  }
+
+  async function ping(c: TspClient): Promise<PingResult> {
   try {
     const timeoutMs = opts.timeoutMs ?? 20_000;
     log("TSP relationship invite (waiting for the accept)");
     await c.session.relate(4000).catch((e) => log(`no accept seen, continuing: ${(e as Error).message}`));
     const nonce = crypto.randomUUID();
     const envelope = buildTrustTask(PING_TYPE, { nonce }, { issuer: c.did, recipient: opts.vtaDid });
+    id = envelope.id;
     await signOutboundTask(envelope, asTaskSigner(c.signing)); // the VTA refuses an unproven document (ProofRequired)
     log("sending messaging/ping/0.1 over TSP");
     const reply = await c.session.request(envelope, timeoutMs, (d) => d.threadId === envelope.id);
@@ -115,5 +132,6 @@ export async function tspPing(opts: PingOptions): Promise<PingResult> {
     return { clientDid: c.did, nonce, pong, elapsedMs: Date.now() - t0 };
   } finally {
     c.close();
+  }
   }
 }

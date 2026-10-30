@@ -171,3 +171,11 @@ a newer one was withdrawn. Poll at most every 10 s (anonymous limit: burst 10, t
 | 429 | Auth rate limit; retry shortly |
 
 More causes and fixes: [trust-tasks/06-troubleshooting-and-glossary.md](trust-tasks/06-troubleshooting-and-glossary.md).
+
+## Trace: what did my code just send?
+
+`TRACE=1` before any `npm run` script (or the REPL) appends one JSON line per client call to `.vta/trace.jsonl`; `npm run trace` prints them
+(`-- --follow` to watch, `--json`, `-n <count>`, `--clear`). It covers `vta-client` (every Trust Task, including the sign-in), `vtc-client` and the `tsp-client` ping,
+all with the same fields (`ts, source, transport, type, id, from, to, status, ok, code, ms`). In your own code, `vta.onCall = (e) => ...` (and `vtc.onCall`) gives you
+the full event including the signed request; `setTraceSink` from `@buildathon/vta-client` installs your own sink for all clients (browser pages included).
+Not yet merged in: the VTA, VTC and mediator log lines for the same task id (`docker compose logs`).
