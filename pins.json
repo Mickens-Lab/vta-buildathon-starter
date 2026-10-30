@@ -82,10 +82,9 @@
     "@types/node": "22.20.5",
     "@noble/hashes": "2.4.0",
     "@openvtc/pnm-core": "0.9.1",
-    "packages/tsp-client/node_modules/@openvtc/vti-tsp-js": "0.4.0",
-    "vti-tsp-js-rev3": "0.3.0"
+    "packages/tsp-client/node_modules/@openvtc/vti-tsp-js": "0.4.0"
   },
   "npmNote": {
-    "tsp": "The TSP client (packages/tsp-client) needs TWO wire revisions at once, so two vti-tsp-js versions are pinned: 0.4.0 speaks TSP 1.0 (what the pinned VTA 0.65.0 reads) and 0.3.0, installed under the alias vti-tsp-js-rev3, packs Rev 3 (what the pinned mediator 0.33.1 reads). @openvtc/pnm-core 0.9.1 brings its own nested vti-tsp-js 0.2.0 (Rev 2), used only for its mediator login and DID resolution. Keys that start with packages/ are lockfile paths. See docs/MESSAGING.md."
+    "tsp": "The TSP client (packages/tsp-client) uses @openvtc/vti-tsp-js 0.4.0, which speaks TSP 1.0, for both the end-to-end message to the VTA and the routing layer to the mediator (mediator 0.45.0 reads 1.0; the earlier mediator 0.33.1 needed a second package, vti-tsp-js 0.3.0 for Rev 3, no longer used). @openvtc/pnm-core 0.9.1 brings its own nested vti-tsp-js 0.2.0 (Rev 2), used only for its mediator login and DID resolution. Keys that start with packages/ are lockfile paths. See docs/MESSAGING.md."
   }
 }

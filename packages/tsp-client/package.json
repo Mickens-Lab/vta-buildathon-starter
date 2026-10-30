@@ -14,7 +14,6 @@
   "dependencies": {
     "@noble/curves": "2.4.0",
     "@openvtc/pnm-core": "0.9.1",
-    "@openvtc/vti-tsp-js": "0.4.0",
-    "vti-tsp-js-rev3": "npm:@openvtc/vti-tsp-js@0.3.0"
+    "@openvtc/vti-tsp-js": "0.4.0"
   }
 }

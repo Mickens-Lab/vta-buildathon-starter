@@ -1,7 +1,6 @@
 // A minimal TSP client session over the mediator socket: relationship invite, then routed Trust Task documents
 // in the TSP binding envelope. Wire format: @openvtc/vti-tsp-js. Login, DID resolution and the socket: @openvtc/pnm-core.
-import { pack, packInvite, unpack, type PackKeys } from "@openvtc/vti-tsp-js";
-import { packRouted as packRoutedRev3 } from "vti-tsp-js-rev3";
+import { pack, packInvite, packRouted, unpack, type PackKeys } from "@openvtc/vti-tsp-js";
 import type { MediatorConnection, TspRemoteEndpoint } from "@openvtc/pnm-core";
 
 /** The envelope type the VTA's TSP binding expects; a bare Trust Task document is refused. */
@@ -14,7 +13,7 @@ export interface TspKeys {
   vid: string;
   /** Ed25519 private key (signs the outer frame). */
   signingKey: Uint8Array;
-  /** X25519 private key (opens frames sealed to us; also authenticates the outer Rev 3 layer). */
+  /** X25519 private key (opens frames sealed to us). */
   decryptionKey: Uint8Array;
 }
 
@@ -44,8 +43,8 @@ export class TspSession {
 
   /** Seal `inner` (already sealed to the peer) to the mediator with the peer as the remaining hop. */
   private async viaMediator(inner: Uint8Array): Promise<Uint8Array> {
-    const keys = { senderSigningKey: this.me.signingKey, senderEncryptionKey: this.me.decryptionKey, receiverEncryptionKey: this.mediator.encryptionPublicKey };
-    return (await packRoutedRev3(inner, [this.peer.vid], this.me.vid, this.mediator.vid, keys)).bytes;
+    const keys = this.packKeys(this.mediator);
+    return (await packRouted(inner, [this.peer.vid], this.me.vid, this.mediator.vid, keys)).bytes;
   }
 
   /** Open an inbound frame: it must be sealed to us and proven to come from the peer. */

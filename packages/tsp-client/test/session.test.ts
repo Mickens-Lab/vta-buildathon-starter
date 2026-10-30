@@ -1,8 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { ed25519, x25519 } from "@noble/curves/ed25519.js";
-import { pack, packAccept, unpack } from "@openvtc/vti-tsp-js";
-import { nextHop, unpack as unpackRev3 } from "vti-tsp-js-rev3";
+import { nextHop, pack, packAccept, unpack } from "@openvtc/vti-tsp-js";
 import { isPong, openEnvelope, TSP_BINDING_TYPE, TspSession, wrapEnvelope, type PongPayload } from "../src/index.js";
 
 const party = (vid: string) => {
@@ -11,7 +10,7 @@ const party = (vid: string) => {
   return { vid, signingKey, decryptionKey, signingPublicKey: ed25519.getPublicKey(signingKey), encryptionPublicKey: x25519.getPublicKey(decryptionKey) };
 };
 
-/** A fake mediator socket in front of a fake VTA: the mediator reads the Rev 3 outer layer, the VTA reads the 1.0 inner message. */
+/** A fake mediator socket in front of a fake VTA: the mediator reads the outer routed layer, the VTA reads the inner message (both TSP 1.0). */
 function harness(opts: { vtaReplies?: boolean } = {}) {
   const me = party("did:key:me"), med = party("did:peer:mediator"), vta = party("did:webvh:vta");
   const seen: string[] = [];
@@ -23,8 +22,8 @@ function harness(opts: { vtaReplies?: boolean } = {}) {
     awaitTspFrame: (_t: number, claims: (b: Uint8Array) => Promise<boolean>) => new Promise<Uint8Array>((resolve) => { waiters.push({ claims, resolve }); }),
     sendBinary: (bytes: Uint8Array) => {
       void (async () => {
-        // mediator: Rev 3 outer layer, HPKE-Auth from the client
-        const outer = await unpackRev3(bytes, { receiverDecryptionKey: med.decryptionKey, senderEncryptionKey: me.encryptionPublicKey, senderSigningKey: me.signingPublicKey });
+        // mediator: outer routed layer, HPKE-Auth from the client
+        const outer = await unpack(bytes, { receiverDecryptionKey: med.decryptionKey, senderSigningKey: me.signingPublicKey });
         const step = nextHop(outer.hops, outer.payload);
         assert.equal(step.kind, "forward");
         assert.equal(step.next, vta.vid);
@@ -66,7 +65,7 @@ test("isPong demands the echoed nonce and a status", () => {
   assert.equal(isPong(null, "n1"), false);
 });
 
-test("relationship invite then a routed ping: Rev 3 to the mediator, TSP 1.0 to the VTA, correlated reply", async () => {
+test("relationship invite then a routed ping: TSP 1.0 to the mediator and to the VTA, correlated reply", async () => {
   const { session, seen } = harness();
   await session.relate(1000);
   const doc = { id: "urn:uuid:a", type: "https://trusttasks.org/spec/messaging/ping/0.1", payload: { nonce: "n-1" } };
