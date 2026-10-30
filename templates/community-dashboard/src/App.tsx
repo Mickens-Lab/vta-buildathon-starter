@@ -61,7 +61,7 @@ export function App() {
   let main: React.ReactNode;
   if (!s) main = <p className="muted" role="status">Checking with the community...</p>;
   else if (s.kind === "error") main = <ErrorScreen dash={s} retry={() => void reread(false)} />;
-  else if (s.kind === "member") main = <MemberScreen actions={actions} communityName={name} />;
+  else if (s.kind === "member") main = <MemberScreen actions={actions} communityName={name} delivered={s.credentialsDelivered} />;
   else if (s.kind === "pending" || s.kind === "needs-info" || s.kind === "other") main = <PendingScreen dash={s} checkedAt={d.checkedAt} paused={d.paused} setPaused={d.setPaused} actions={actions} />;
   else if ((s.kind === "withdrawn" || s.kind === "rejected" || s.kind === "left") && !reapply) main = <EndedScreen dash={s} onReapply={() => setReapply(true)} />;
   else main = <VisitorScreen manifest={d.manifest} actions={actions} banner={reapply ? <p className="note info">Applying again as the same identity. Choose how to apply below.</p> : undefined} />;

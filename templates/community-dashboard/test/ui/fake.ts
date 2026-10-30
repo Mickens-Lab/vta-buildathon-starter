@@ -59,7 +59,7 @@ export class FakeClient {
   joinStatus = vi.fn((_id?: string) => this.run("joinStatus", this.task("join-requests/status/0.1"), () => {
     const r = this.db.request;
     if (!r) throw notFound();
-    return { requestId: r.id, status: r.status };
+    return { requestId: r.id, status: r.status, credentialsDelivered: false };
   }));
   communityProfile = vi.fn(() => this.run("communityProfile", this.task("community/profile/show/0.1"), () => { this.requireMember(); return { profile: { name: "Test Community" } }; }));
   memberProof = vi.fn(() => this.run("memberProof", "GET /v1/member/me", () => { this.requireMember(); return { did: "x", sessionId: "s", accessExpiresAt: 0, amr: [], joinedAt: "2026-01-02T03:04:05Z", role: "member", personhood: false, canManagePasskeys: false, community: { name: "Test Community", logoUrl: null, did: null } }; }));

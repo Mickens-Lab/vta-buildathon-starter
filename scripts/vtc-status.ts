@@ -15,6 +15,8 @@ console.log(`identity  ${me.did}\ncommunity ${vtc.vtcDid}`);
 try {
   const s = await vtc.joinStatus();
   console.log(`join      request ${s.requestId} is ${s.status}`);
+  const d = (s as { credentialsDelivered?: unknown }).credentialsDelivered;
+  if (typeof d === "boolean") console.log(`delivery  credentialsDelivered=${d}${d ? "" : " (expected: this identity is a plain did:key with no inbox; docs/MESSAGING.md)"}`);
 } catch (e) {
   if (!(e instanceof TrustTaskError)) throw e;
   console.log(`join      ${refusal(e.body)}`);

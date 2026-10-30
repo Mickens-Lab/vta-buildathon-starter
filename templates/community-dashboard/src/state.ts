@@ -35,7 +35,7 @@ export type DashState =
   | { kind: "visitor" }
   | { kind: "pending"; requestId?: string; status: string; deferred: boolean }
   | { kind: "needs-info"; requestId?: string; status: string }
-  | { kind: "member"; requestId?: string }
+  | { kind: "member"; requestId?: string; /** The status call's `credentialsDelivered`, when the VTC reported it. */ credentialsDelivered?: boolean }
   | { kind: "withdrawn"; requestId?: string }
   | { kind: "rejected"; requestId?: string }
   | { kind: "left"; inferredFrom: "approved-but-not-member" | "request-gone" }
@@ -78,7 +78,7 @@ export function deriveState(ev: Evidence): DashState {
   if (k === "approved" || k === "admitted" || k === "accepted") {
     const m = ev.memberRead;
     if (!m) return { kind: "error", message: "Your request is approved but the member check was not run." };
-    if (m.ok) return { kind: "member", requestId };
+    if (m.ok) return { kind: "member", requestId, credentialsDelivered: typeof s.value?.credentialsDelivered === "boolean" ? s.value.credentialsDelivered : undefined };
     if (isNotMember(m)) return { kind: "left", inferredFrom: "approved-but-not-member" }; // inferred
     return { kind: "error", message: !m.network && m.status === 429 ? RATE_LIMITED : m.message ?? "Could not confirm membership.", code: m.network ? "network" : m.code, httpStatus: m.network ? undefined : m.status };
   }

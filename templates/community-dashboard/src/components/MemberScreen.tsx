@@ -1,6 +1,7 @@
 import { useRef, useState, type KeyboardEvent } from "react";
 import type { PortalMe } from "@buildathon/vtc-client";
 import { describeError } from "../client.ts";
+import { deliveryNote, runMode } from "../delivery.ts";
 import { formatDate, formatDateTime, stripDids } from "../format.ts";
 import { useLoad } from "../hooks.ts";
 import { ANON_COOLDOWN_MS } from "../refresh.ts";
@@ -10,7 +11,7 @@ import { CodeBlock, Confirm, ErrorNote, Fresh, KV, Loading, Tag, toast } from ".
 const TABS = ["Community", "Directory", "My card", "Account"] as const;
 type Tab = (typeof TABS)[number];
 
-export function MemberScreen({ actions, communityName }: { actions: Actions; communityName: string }) {
+export function MemberScreen({ actions, communityName, delivered }: { actions: Actions; communityName: string; delivered?: boolean }) {
   const [tab, setTab] = useState<Tab>("Community");
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
   const onKey = (e: KeyboardEvent, i: number) => {
@@ -19,7 +20,7 @@ export function MemberScreen({ actions, communityName }: { actions: Actions; com
   };
   return (
     <div className="stack">
-      <MembershipCard actions={actions} communityName={communityName} />
+      <MembershipCard actions={actions} communityName={communityName} delivered={delivered} />
       <div role="tablist" aria-label="Member area" className="tabs">
         {TABS.map((t, i) => (
           <button key={t} ref={(el) => { refs.current[i] = el; }} type="button" role="tab" id={`tab-${i}`} aria-selected={tab === t} aria-controls="tabpanel" tabIndex={tab === t ? 0 : -1} onClick={() => setTab(t)} onKeyDown={(e) => onKey(e, i)}>{t}</button>
@@ -35,7 +36,8 @@ export function MemberScreen({ actions, communityName }: { actions: Actions; com
   );
 }
 
-function MembershipCard({ actions, communityName }: { actions: Actions; communityName: string }) {
+function MembershipCard({ actions, communityName, delivered }: { actions: Actions; communityName: string; delivered?: boolean }) {
+  const note = deliveryNote(runMode(), delivered);
   // The portal sign-in is plain REST (challenge, auth, me): the VTC rate-limits it like an anonymous caller (burst 10, then one
   // per 5 s per address), so it costs three of those tokens. Global refreshes therefore skip it; this card has its own Refresh.
   const me = useLoad<PortalMe>("proof", (c) => c.memberProof(), true, "member/me", false);
@@ -51,6 +53,7 @@ function MembershipCard({ actions, communityName }: { actions: Actions; communit
           <div><dt>Joined</dt><dd>{formatDate(d?.joinedAt)}</dd></div>
         </dl>
       )}
+      <dl className="kv"><div><dt>Credential delivery</dt><dd data-testid="delivery"><span className={`tag ${note.pill === "ok" ? "verified" : note.pill === "warn" ? "inferred" : ""}`}>{note.label}</span> <span className="muted small-text">{note.detail}</span></dd></div></dl>
       <Fresh info={me.asOf} busy={me.refreshing} onRefresh={me.reload} cooldownMs={ANON_COOLDOWN_MS} />
       <p className="muted small-text">Reading this card uses the member portal, which the community rate-limits more tightly, so Refresh all leaves it alone.</p>
       <button type="button" disabled={actions.busy} onClick={async () => {

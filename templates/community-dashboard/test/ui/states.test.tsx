@@ -149,6 +149,14 @@ describe("rate limit", () => {
 describe("member", () => {
   beforeEach(() => { const db = freshDb(); db.request = { id: "r1", status: "approved" }; db.member = true; resetWorld(db); });
 
+  it("says why the credential was not delivered, for the mode this page was built for (local here)", async () => {
+    await mountApp();
+    const row = await screen.findByTestId("delivery");
+    expect(row.textContent).toContain("not applicable here");
+    expect(row.textContent).toContain("MODE=tunnel");
+    expect(row.textContent).not.toMatch(/false/);
+  });
+
   it("shows the card, the journey at Member, and the four tabs", async () => {
     await mountApp();
     expect(badge()).toBe("Member");
