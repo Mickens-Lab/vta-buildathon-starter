@@ -54,3 +54,19 @@ test("the signer signs a Trust Task as the did:peer, naming the authentication k
   const proof = (doc as { proof: { verificationMethod: string } }).proof;
   assert.equal(proof.verificationMethod, p.authKid);
 });
+
+test("clientKeys: a did:peer logs in to the mediator as itself, with the keys its DID publishes", async () => {
+  const { clientKeys } = await import("../src/index.js");
+  const p = didPeerFromSeed(seed, MEDIATOR);
+  const k = clientKeys({ identity: p });
+  assert.equal(k.method, "did:peer");
+  assert.equal(k.keys.vid, p.did);
+  assert.equal(k.login.did, p.did);
+  assert.equal(k.login.kid, p.keyAgreementKid);
+  assert.deepEqual(k.keys.decryptionKey, p.decryptionKey);
+  assert.equal(k.signing.kid, p.authKid);
+  const d = clientKeys({ seed });
+  assert.equal(d.method, "did:key");
+  assert.match(d.keys.vid, /^did:key:z6Mk/);
+  assert.deepEqual(d.keys.decryptionKey, p.decryptionKey, "same seed, same X25519 key under both DIDs");
+});
