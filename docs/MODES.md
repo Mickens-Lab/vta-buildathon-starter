@@ -67,8 +67,12 @@ A web page that talks to the mediator directly (the TSP browser client) needs tw
   `https://*.suffix` pattern, or `*`. **Unset (the default) means off**: responses carry no `Access-Control-Allow-Origin`, and the mediator also
   refuses a WebSocket upgrade that carries a browser `Origin` header (403). Prefer an exact origin; `*` is tolerable only because the mediator
   authenticates with a bearer token, not cookies. Anything outside letters, digits and `: / . * -` is refused at boot.
-- **VTA and VTC:** their REST endpoints already allow `http://localhost:5173`, `:3000` and `:8000` by default. For another origin use
-  `CORS_ORIGINS_TOML` (VTA) and `VTC_CORS_ORIGINS_TOML` (VTC), first boot only (see the cheatsheet).
+- **VTA and VTC:** their REST endpoints allow, by default, `http://localhost` and `http://127.0.0.1` on ports 3000-3009, 3050, 4000-4009,
+  4173, 5173-5183 and 8000-8009 (exact origins, loopback only: the servers take no wildcard, and nothing outside this machine is admitted).
+  For another origin use `CORS_ORIGINS_TOML` (VTA) and `VTC_CORS_ORIGINS_TOML` (VTC), **first boot only** (a stack made before this list
+  grew keeps its old one until `npm run reset`; see the cheatsheet). Setting the variable *replaces* the default list, so include the
+  defaults you still want. The browser templates do not depend on any of this: their Vite dev server proxies `/__vta` and `/__vtc`, so the page
+  stays same-origin on whatever port it lands on.
 
 _Verified live:_ with `MEDIATOR_CORS_ALLOW_ORIGIN=http://localhost:3000` the mediator answers that origin with a matching `Access-Control-Allow-Origin` and no other, and a headless Chromium page on that origin logs in and opens the TSP socket **[verified]**.
 

@@ -13,8 +13,23 @@ set -eu
 : "${ADMIN_DID:?ADMIN_DID is not set. Run \`npm run keygen\` first.}"
 PORT="${VTA_PORT:-8100}"
 CONFIG=/var/lib/vta/config.toml
-# TOML array body, quoted strings. Override with CORS_ORIGINS_TOML.
-DEFAULT_CORS='"http://localhost:3000", "http://localhost:5173", "http://localhost:8000"'
+# TOML array body, quoted strings. Override with CORS_ORIGINS_TOML (first boot only).
+# BEGIN default-cors (kept equal to packages/vta-client/src/cors.ts by scripts/test/cors.test.ts)
+# DEV ONLY, loopback only: http://localhost and http://127.0.0.1 on common dev-server ports.
+default_cors() {
+  out=""
+  for range in "3000 3009" "3050 3050" "4000 4009" "4173 4173" "5173 5183" "8000 8009"; do
+    set -- $range
+    p=$1
+    while [ "$p" -le "$2" ]; do
+      for h in localhost 127.0.0.1; do out="$out${out:+, }\"http://$h:$p\""; done
+      p=$((p+1))
+    done
+  done
+  printf '%s' "$out"
+}
+# END default-cors
+DEFAULT_CORS="$(default_cors)"
 CORS="${CORS_ORIGINS_TOML:-$DEFAULT_CORS}"
 PUBLIC_HOST="${PUBLIC_HOST:-}"
 MARKER=/var/lib/vta/.starter-public-url
@@ -49,7 +64,7 @@ admin_label = "buildathon-admin"
 [server]
 host = "0.0.0.0"
 port = $PORT
-# Exact-match origins; the VTA accepts no wildcard. Edit and re-create the
+# Exact-match origins; the VTA accepts no wildcard (default: loopback dev ports only). Edit and re-create the
 # volume (docker compose down -v) to change.
 cors_origins = [$CORS]
 # Dev loop: refill auth tokens quickly instead of 1 per 5 s.
