@@ -11,7 +11,7 @@ export interface StaleRule {
 export const STALE_RULES: StaleRule[] = [
   { why: "the TSP pong comes back since the mediator 0.45.0 pin (Stage H)", re: /pong does not come back|no pong (?:ever )?comes back|the mediator pin refuses TSP 1\.0/i },
   { why: "the TSP round trip is verified (Stage H); only DIDComm is not", re: /not verified:[^\n]*(?:TSP round trip|the pong is refused)/i },
-  { why: "images are not supplied by the organiser by default: no images are published, everyone builds locally (docs/PINS.md#where-the-images-come-from)", re: /an organiser (?:usually|normally) (?:hands|supplies)|nobody should build/i },
+  { why: "prebuilt images from ghcr.io/mickens-lab are the default and a local build is the fallback (docs/PINS.md#where-the-images-come-from)", re: /no images are published|there is no\s+published image|everyone builds (?:them )?locally|an organiser (?:usually|normally) (?:hands|supplies)|nobody should build/i },
   { why: "the agenda commands are npm ci and npm run up, not docker load / npm i / vta:up", re: /`docker load`, `npm i`/ },
 ];
 

@@ -2,6 +2,9 @@
 // The decisions they act on are pure and tested in ./tunnel.ts.
 import { spawn, spawnSync, type SpawnSyncReturns } from "node:child_process";
 import { existsSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { pins } from "../pins.js";
+import { env } from "../env.js";
+import { IMAGE_KINDS, useImages } from "./images.js";
 import { composeEnv, composeProject, existingVolumes, hostFromLog, MODE_FILE, profileArgs, TUNNEL_FILE, type StackMode, type TunnelState } from "./tunnel.js";
 
 export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -25,8 +28,14 @@ export function writeStackMode(mode: StackMode): void {
 }
 export const clearStackFiles = () => { for (const f of [TUNNEL_FILE, MODE_FILE]) rmSync(f, { force: true }); };
 
+let imagesResolved = false;
 /** Environment for `docker compose`: the tunnel hosts, if a tunnel stack is recorded. */
 export const composeEnvNow = (): NodeJS.ProcessEnv => {
+  // Standalone commands (vtc:up, ...) pick the same images `up` did: no pulling here, failures fall through to compose's own error.
+  if (!imagesResolved) {
+    imagesResolved = true;
+    try { useImages(pins(), IMAGE_KINDS, { pull: false, quiet: true, get: env }); } catch { /* bad IMAGES value: `up` reports it */ }
+  }
   const t = readTunnel();
   return { ...process.env, ...(t ? composeEnv(t) : {}) };
 };

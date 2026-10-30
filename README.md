@@ -15,9 +15,11 @@ It is for developers who want to see a signed Trust Task round trip working in m
 ## Prerequisites
 
 - Node 20+ and npm 10+, Docker with Compose v2
-- The images `vta-buildathon:local` (plus `vtc-buildathon:local` for the community, and `mediator-buildathon:local` for tunnel mode). **No images are published: you build
-  them locally from the pinned upstream source**, which needs a checkout of the upstream VTI repository next to this one and a Rust build of 10 to 25 minutes per image
-  (exact steps and times: [docs/PINS.md](docs/PINS.md#where-the-images-come-from)). Without Docker, see the Farm mode in [docs/MODES.md](docs/MODES.md).
+- The VTA image (plus the VTC image for the community, and the mediator image for tunnel mode). **By default `npm run up` uses prebuilt images from
+  `ghcr.io/mickens-lab`** and pulls them for you ([docs/IMAGES.md](docs/IMAGES.md)): internet and no build. Per the organiser, amd64 images are already pushed as a
+  stopgap and the packages are private until made public (unverified here; until then a pull may be refused), and CI will publish multi-arch. **Fallback: build locally**
+  (`npm run images:build all`, then `IMAGES=local npm run up`): it needs a checkout of the upstream VTI repository next to this one and 10 to 25 minutes of Rust per image
+  (exact steps: [docs/PINS.md](docs/PINS.md#where-the-images-come-from)). Without Docker, see the Farm mode in [docs/MODES.md](docs/MODES.md).
 
 ## Quick start
 
@@ -110,9 +112,10 @@ The ones you need in the first hour (all of them, grouped: [docs/COMMANDS.md](do
 
 | Command | Does |
 |---|---|
-| `npm run doctor` | Is this machine ready: Node, Docker, memory, ports, images (exact build command for a missing one), VTI checkout, mode. `up` runs the blocking checks first |
+| `npm run doctor` | Is this machine ready: Node, Docker, memory, ports, images (a missing one: `images:pull` first, the local build second), VTI checkout, mode. `up` runs the blocking checks first |
 | `npm run up` | Start the stack (local by default; `-- --tunnel` for messaging, this run only). The community (VTC) is on in every mode, `WITH_VTC=0` leaves it out |
 | `npm run down` / `npm run reset` | Stop and keep data / stop everything, delete volumes, `.vta/` and the keys the kit wrote to `.env` (your own `.env` lines stay). Both work in every mode |
+| `npm run images:pull [vta\|vtc\|mediator\|all]` | Pull the prebuilt images pinned in `pins.json` (`--check` shows what is present; `IMAGES=local` forces local builds; [docs/IMAGES.md](docs/IMAGES.md)) |
 | `npm run hello` | The checkpoint |
 | `npm run new -- my-app --from hello-web\|hello-node` | Copy a minimal template to `apps/my-app` and install it |
 | `npm run vta:call -- <task> [json]` | Call any Trust Task as your app identity (no argument lists them; `--search <word>` filters, `--schema <task>` shows its fields offline) |
@@ -121,7 +124,7 @@ The ones you need in the first hour (all of them, grouped: [docs/COMMANDS.md](do
 | `npm run vtc:hello` / `vtc:join` / `vtc:approve` / `vtc:status` | Community: read the join manifest / apply / admin approves / where do I stand |
 | `npm run tsp:ping` / `tsp:listen` | `MODE=tunnel`: send a signed TSP ping and print the pong / receive the credential frames the VTC pushes ([docs/MESSAGING.md](docs/MESSAGING.md)) |
 | `npm run roles:matrix` / `approvals:demo` / `security:check` | Who can call what / approve a gated task from a second key / key-hygiene scan ([ROLES](docs/ROLES.md), [APPROVALS](docs/APPROVALS.md), [SECURITY](docs/SECURITY.md)) |
-| `npm run images:build [vta\|vtc\|mediator\|all]` / `pins:check` | Organiser/first run: build an image from its pinned ref / report version drift ([docs/PINS.md](docs/PINS.md)) |
+| `npm run images:build [vta\|vtc\|mediator\|all]` / `pins:check` | Fallback or organiser: build an image from its pinned ref / report version drift ([docs/PINS.md](docs/PINS.md)) |
 | `npm test` / `npm run typecheck` / `npm run check:docs` / `npm run check:generic` | Unit tests (no VTA needed) / typecheck / links and script names in the docs / no personal specifics in the tree |
 
 Old names `vta:up`, `vta:down` and `vta:reset` still work. Farm, tunnel, VTC, live-test and maintainer commands are in [docs/COMMANDS.md](docs/COMMANDS.md).
@@ -130,8 +133,8 @@ Old names `vta:up`, `vta:down` and `vta:reset` still work. Farm, tunnel, VTC, li
 
 | Symptom | Fix |
 |---|---|
-| Port busy, or `pull access denied` | `npm run doctor` names the busy port with a free alternative, or the missing image with its build command. |
-| `pull access denied for vta-buildathon` | The image is not built here. Build it ([docs/PINS.md](docs/PINS.md#where-the-images-come-from)) or set `VTA_IMAGE` to one you were given. |
+| Port busy, or `pull access denied` | `npm run doctor` names the busy port with a free alternative, or the missing image with `npm run images:pull` and then the local build. |
+| `pull access denied` for a registry image | The prebuilt package is private or not published yet, or you are offline. Build locally: `npm run images:build vta` and `IMAGES=local npm run up` ([docs/IMAGES.md](docs/IMAGES.md)). |
 | `.vta/admin.env` not found | `npm run vta:keygen` before `docker compose up`. |
 | `provision` fails with 401 or `permissionDenied` | `.vta/admin.json` is not the key this volume was seeded with. `npm run reset`, then `npm run up`. |
 | `VTA DID changed` | The VTA was recreated. `npm run vta:provision`. |

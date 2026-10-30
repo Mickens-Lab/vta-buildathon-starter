@@ -46,6 +46,7 @@
     "test": "tsx scripts/check-generic.ts && tsx scripts/check-docs.ts && tsx --test scripts/test/*.test.ts && npm test --workspaces --if-present",
     "pins:check": "tsx scripts/pins-check.ts",
     "images:build": "tsx scripts/images-build.ts",
+    "images:pull": "tsx scripts/images-pull.ts",
     "check:generic": "tsx scripts/check-generic.ts",
     "check:docs": "tsx scripts/check-docs.ts",
     "test:roles": "tsx scripts/test-roles.ts",
@@ -66,6 +67,7 @@
   "devDependencies": {
     "@types/node": "22.20.5",
     "tsx": "4.23.15",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "yaml": "2.9.1"
   }
 }

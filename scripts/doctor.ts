@@ -8,13 +8,14 @@ import { existsSync, readFileSync } from "node:fs";
 import net from "node:net";
 import { resolve } from "node:path";
 import { devBanner } from "./banner.js";
-import { type Mode, modeInfo, vtcChoice } from "./env.js";
+import { env, type Mode, modeInfo, vtcChoice } from "./env.js";
 import { modeLine, parseModeFlags } from "./lib/modes.js";
 import {
   blocking, cloudflaredCheck, type Check, dockerCheck, DEV_PORTS, devPortCheck, formatChecks, imageChecks, imagesNeeded, CORS_PORTS, MEDIATOR_PORT, mediatorPortCheck,
   memoryCheck, nodeCheck, STACK_PORTS, stackPortCheck, summary, vtiCheckout,
 } from "./lib/doctor.js";
 import { have } from "./lib/compose.js";
+import { currentMode, imageSpecs, imageStatus, realDocker } from "./lib/images.js";
 import { pins } from "./pins.js";
 
 /** Busy = something accepts a connection on loopback (IPv4 or IPv6). */
@@ -35,8 +36,6 @@ const ownStackRunning = (): boolean => {
   return r.status === 0 && r.stdout.trim() !== "";
 };
 
-export const imagePresent = (image: string): boolean => spawnSync("docker", ["image", "inspect", image], { stdio: "ignore", timeout: 20_000 }).status === 0;
-
 function availKb(): number | undefined {
   try { return Number(/MemAvailable:\s+(\d+)/.exec(readFileSync("/proc/meminfo", "utf8"))?.[1]) || undefined; } catch { return undefined; }
 }
@@ -54,10 +53,17 @@ export async function runChecks(o: DoctorOptions): Promise<Check[]> {
   const compose = cli && spawnSync("docker", ["compose", "version"], { stdio: "ignore", timeout: 20_000 }).status === 0;
   const docker = dockerCheck({ cli, daemon, compose });
   out.push(docker);
-  const needs = imagesNeeded(o.mode, o.withVtc, process.env, o.vtcOptional);
+  const needs = imagesNeeded(o.mode, o.withVtc);
   out.push(memoryCheck(availKb(), o.mode === "tunnel" ? 8 : 4, o.mode === "tunnel" ? "building the mediator" : "building an image"));
   if (docker.level === "ok") {
-    const images = imageChecks(needs, imagePresent);
+    let images: Check[];
+    try {
+      const specs = imageSpecs(pins(), env("IMAGE_REGISTRY"));
+      const over = { vta: env("VTA_IMAGE"), vtc: env("VTC_IMAGE"), mediator: env("MEDIATOR_IMAGE") };
+      images = imageChecks(imageStatus(specs, realDocker, currentMode(env), needs, over), specs, o.vtcOptional);
+    } catch (e) {
+      images = [{ level: "fail", name: "Images", detail: (e as Error).message, fix: "see docs/IMAGES.md" }];
+    }
     out.push(...images);
     const buildsVti = images.some((c) => c.level === "fail" && /vta|vtc/.test(c.name));
     if (buildsVti) {

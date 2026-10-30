@@ -14,7 +14,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { readFileSync } from "node:fs";
 import { die } from "./env.js";
-import { missingCheckoutMessage, missingRefMessage, parseBuildArgs } from "./lib/images.js";
+import { missingCheckoutMessage, missingRefMessage, parseBuildArgs } from "./lib/build-help.js";
 import { confirm } from "./lib/prompt.js";
 import { MEDIATOR_BUILD_NOTICE, memoryWarning } from "./lib/tunnel.js";
 import { pins } from "./pins.js";

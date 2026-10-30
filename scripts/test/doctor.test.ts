@@ -4,6 +4,8 @@ import {
   blocking, cloudflaredCheck, devPortCheck, dockerCheck, formatChecks, imageChecks, imagesNeeded, mediatorPortCheck, memoryCheck, nodeCheck,
   stackPortCheck, summary, vtiCheckout,
 } from "../lib/doctor.js";
+import { imageSpecs, imageStatus, type Docker, type ImageKind } from "../lib/images.js";
+import { pins } from "../pins.js";
 
 test("node: old versions fail with a fix, new ones pass", () => {
   assert.equal(nodeCheck("v22.3.0").level, "ok");
@@ -49,20 +51,48 @@ test("mediator port and cloudflared", () => {
   assert.equal(cloudflaredCheck(false).level, "fail");
 });
 
-test("images needed per mode, honouring overrides", () => {
+const specs = imageSpecs(pins());
+/** A fake Docker holding `present`; pulls are never needed (imageStatus does not pull). */
+const dockerWith = (present: string[]): Docker => ({ has: (r) => present.includes(r), pull: () => ({ ok: false, stderr: "" }) });
+const rowsFor = (mode: "auto" | "local" | "registry", present: string[], kinds: ImageKind[] = ["vta", "vtc"]) => imageStatus(specs, dockerWith(present), mode, kinds);
+
+test("images needed per mode", () => {
   assert.deepEqual(imagesNeeded("farm", true), []);
-  assert.deepEqual(imagesNeeded("local", false).map((n) => n.image), ["vta-buildathon:local"]);
-  assert.deepEqual(imagesNeeded("local", true, { VTC_IMAGE: "mine/vtc:1" }).map((n) => n.image), ["vta-buildathon:local", "mine/vtc:1"]);
-  assert.equal(imagesNeeded("tunnel", true).length, 3);
+  assert.deepEqual(imagesNeeded("local", false), ["vta"]);
+  assert.deepEqual(imagesNeeded("local", true), ["vta", "vtc"]);
+  assert.deepEqual(imagesNeeded("tunnel", true), ["vta", "vtc", "mediator"]);
 });
 
-test("a missing image says no images are published and gives the exact build command", () => {
-  const cs = imageChecks(imagesNeeded("local", true), (i) => i.startsWith("vta"));
+test("a missing prebuilt image warns: images:pull first, the local build second; up will pull it", () => {
+  const cs = imageChecks(rowsFor("auto", [specs.vta.pinned]), specs);
   assert.equal(cs[0].level, "ok");
-  assert.equal(cs[1].level, "fail");
-  assert.match(cs[1].detail, /no images are published/);
-  assert.match(cs[1].fix!, /^npm run images:build vtc/);
+  assert.equal(cs[1].level, "warn");
+  assert.match(cs[1].detail, /up\` will pull/);
+  assert.match(cs[1].fix!, /^npm run images:pull vtc/);
+  assert.ok(cs[1].fix!.indexOf("images:pull") < cs[1].fix!.indexOf("images:build vtc"));
+  assert.equal(blocking(cs).length, 0);
   assert.doesNotMatch(formatChecks(cs), /pull access denied/);
+});
+
+test("a local build counts as present in auto mode", () => {
+  const cs = imageChecks(rowsFor("auto", [specs.vta.local, specs.vtc.local]), specs);
+  assert.deepEqual(cs.map((c) => c.level), ["ok", "ok"]);
+  assert.match(cs[0].detail, /local build/);
+});
+
+test("IMAGES=local with no local build blocks, and says to build or unset IMAGES", () => {
+  const cs = imageChecks(rowsFor("local", [specs.vta.local]), specs);
+  assert.equal(cs[1].level, "fail");
+  assert.match(cs[1].fix!, /images:build vtc/);
+  assert.match(cs[1].fix!, /unset IMAGES/);
+});
+
+test("the default-on VTC image is optional: a warning, not a failure", () => {
+  const cs = imageChecks(rowsFor("local", [specs.vta.local]), specs, true);
+  assert.equal(cs[1].level, "warn");
+  assert.match(cs[1].detail, /left out/);
+  assert.match(cs[1].fix!, /WITH_VTC=0/);
+  assert.equal(blocking(cs).length, 0);
 });
 
 test("VTI checkout missing is a warning with the clone command", () => {
@@ -86,12 +116,4 @@ test("a server port (inbox-verifier) gets its own command and no CORS note", () 
   const c = devPortCheck({ port: 4000, what: "inbox-verifier", busy: true, ownStack: false, server: true, use: (p) => `INBOX_PORT=${p} npm start -w @buildathon/inbox-verifier` }, 4001);
   assert.match(c.fix!, /INBOX_PORT=4001/);
   assert.doesNotMatch(c.fix!, /CORS/);
-});
-
-test("the default-on VTC image is optional: a warning, not a failure", () => {
-  const cs = imageChecks(imagesNeeded("local", true, {}, true), (i) => i.startsWith("vta"));
-  assert.equal(cs[1].level, "warn");
-  assert.match(cs[1].detail, /left out/);
-  assert.match(cs[1].fix!, /WITH_VTC=0/);
-  assert.equal(blocking(cs).length, 0);
 });

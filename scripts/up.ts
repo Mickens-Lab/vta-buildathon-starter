@@ -18,14 +18,30 @@ import {
   clearStackFiles, dc, existingStackVolumes, have, imageLabel, readStackMode, readTunnel, sleep, startTunnel, stopTunnels, waitFor200,
   writeStackMode, writeTunnel,
 } from "./lib/compose.js";
+import { currentMode, imageSpecs, imageStatus, realDocker, useImages, type ImageKind } from "./lib/images.js";
 import { composeEnv, tunnelUrls, TUNNEL_FILE, volumeGuard, type TunnelState } from "./lib/tunnel.js";
-import { imagePresent, runPreflight } from "./doctor.js";
+import { runPreflight } from "./doctor.js";
 import { pins } from "./pins.js";
 
 const run = (cmd: string, args: string[], extraEnv: Record<string, string> = {}) => {
   const r = spawnSync(cmd, args, { stdio: "inherit", env: { ...process.env, DEV_BANNER_SHOWN: "1", ...extraEnv } });
   if (r.status !== 0) die(`\`${cmd} ${args.join(" ")}\` failed (exit ${r.status}).`);
 };
+/** Set by the VTC block below: did the user ask for the VTC (WITH_VTC or --vtc)? An unrequested VTC is dropped, not fatal, when no image can be had. */
+let vtcRequested = false;
+/** Pick (and, if needed, pull) the images, exporting VTA_IMAGE etc. for compose. Fatal if one cannot be had (except an unrequested VTC). */
+function prepareImages(kinds: ImageKind[]): void {
+  let rs;
+  try { rs = useImages(pins(), kinds, { pull: true, get: env }); } catch (e) { return die((e as Error).message); }
+  const failed = rs.flatMap((r) => (r.ok ? [] : [r]));
+  const vtc = failed.find((r) => r.kind === "vtc");
+  if (vtc && !vtcRequested) {
+    process.env.WITH_VTC = "0";
+    console.log(`note: no community (VTC) image could be had, so this run starts without it:\n  ${vtc.message}\nSet WITH_VTC=0 to stop seeing this.`);
+  }
+  const bad = failed.filter((r) => r !== vtc || vtcRequested).map((r) => r.message);
+  if (bad.length) die(`no usable image:\n  ${bad.join("\n  ")}\n(IMAGES=local forces a local build; see docs/IMAGES.md.)`);
+}
 const npm = (s: string, extraEnv: Record<string, string> = {}) => run("npm", ["run", "--silent", s], extraEnv);
 /** Refuse to reuse volumes across modes. In a terminal, offer the reset instead of just refusing. */
 const guard = async (want: "local" | "tunnel") => {
@@ -42,10 +58,11 @@ const TUNNEL_ENV_KEYS = ["VTA_URL", "VTA_DID", "VTA_CONTEXT", "APP_DID", "VTA_CR
 
 async function tunnelUp(): Promise<void> {
   tunnelBanner();
-  const wantVtc = withVtc();
-  await runPreflight({ mode: "tunnel", withVtc: wantVtc });
+  await runPreflight({ mode: "tunnel", withVtc: withVtc() });
   const p = pins();
   if (!have("cloudflared")) die("MODE=tunnel needs the `cloudflared` binary on PATH (quick tunnels, no account). Install it from https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/ . Validated with " + p.messaging.cloudflared.validated + ".");
+  prepareImages(["vta", ...(withVtc() ? ["vtc" as const] : []), "mediator"]);
+  const wantVtc = withVtc();
   const features = imageLabel(process.env.VTA_IMAGE ?? "vta-buildathon:local", "org.buildathon.vta-features");
   if (features !== undefined && features !== "" && !features.split(",").includes("tsp")) {
     die(`the VTA image was built without \`tsp\` (features: ${features}); MODE=tunnel needs it. Rebuild: npm run images:build vta.`);
@@ -141,13 +158,17 @@ if (flags.mode) process.env.MODE = flags.mode;
 if (flags.vtc !== undefined) process.env.WITH_VTC = flags.vtc ? "1" : "0";
 const m = info.mode;
 if (m !== "farm" && sub === "up") {
-  // The VTC is on by default in every mode. If its image is missing and nobody asked for it, start without it and say so.
+  // The VTC is on by default in every mode. If its image can be neither found nor pulled and nobody asked for it, start without it and say so.
   const choice = vtcChoice();
-  const vtcImage = process.env.VTC_IMAGE ?? "vtc-buildathon:local";
+  vtcRequested = choice.explicit;
   let vtc = choice.on;
-  if (vtc && !choice.explicit && !imagePresent(vtcImage)) {
-    vtc = false;
-    console.log(`note: the community (VTC) image ${vtcImage} is not built, so this run starts without it. Build it (npm run images:build vtc) and run up again, or set WITH_VTC=0 to stop seeing this.`);
+  if (vtc && !choice.explicit) {
+    const specs = imageSpecs(pins(), env("IMAGE_REGISTRY"));
+    const [row] = imageStatus(specs, realDocker, currentMode(env), ["vtc"], { vtc: env("VTC_IMAGE") });
+    if (row.state === "missing") {
+      vtc = false;
+      console.log(`note: the community (VTC) image is not available (${row.fix}), so this run starts without it. Set WITH_VTC=0 to stop seeing this.`);
+    }
   }
   process.env.WITH_VTC = vtc ? "1" : "0";
 }
@@ -164,6 +185,7 @@ if (sub === "reset") {
 } else if (m === "local") {
   await runPreflight({ mode: "local", withVtc: withVtc() });
   await guard("local");
+  prepareImages(withVtc() ? ["vta", "vtc"] : ["vta"]);
   npm("vta:keygen");
   run("docker", ["compose", ...(withVtc() ? ["--profile", "vtc"] : []), "up", "-d", "--wait"]);
   writeStackMode("local");

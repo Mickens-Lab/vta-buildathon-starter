@@ -8,7 +8,7 @@ muscle memory keep working; a test fails if a script is missing from this page.
 
 | Command | Does |
 |---|---|
-| `npm run doctor` | Is this machine ready: Node, Docker, memory, ports, images (with the exact build command), VTI checkout, mode. `up` runs the blocking checks first |
+| `npm run doctor` | Is this machine ready: Node, Docker, memory, ports, images (a missing one: `images:pull` first, the local build second), VTI checkout, mode. `up` runs the blocking checks first |
 | `npm run up` | Start the stack for the current mode (keys, VTA, optional VTC, an app context and credential in `.env`) |
 | `npm run down` | Stop it and keep the data (tunnel mode: also deletes its volumes, which cannot be reused) |
 | `npm run reset` | Stop everything (tunnels too), delete volumes and `.vta/`, remove the keys the kit wrote to `.env`. Works in every mode; lines you added to `.env` stay |
@@ -37,7 +37,7 @@ muscle memory keep working; a test fails if a script is missing from this page.
 
 ## Organiser
 
-`images:build [vta|vtc|mediator|all]`, `pins:check` ([PINS.md](PINS.md)); `farm:setup`, `farm:check`, `farm:probe`, `farm:canary` ([FARM.md](FARM.md), [EVENT.md](EVENT.md)).
+`images:pull [vta|vtc|mediator|all]` (prebuilt, [IMAGES.md](IMAGES.md)), `images:build [vta|vtc|mediator|all]`, `pins:check` ([PINS.md](PINS.md)); `farm:setup`, `farm:check`, `farm:probe`, `farm:canary` ([FARM.md](FARM.md), [EVENT.md](EVENT.md)).
 
 ## Maintainer
 

@@ -9,8 +9,9 @@
 # without them every service behaves exactly as in local mode. See docs/MODES.md.
 #
 # MODE=farm skips all of this: see docs/FARM.md.
-# The image is built from source (Rust, ~15 min) and no published image exists.
-# The organiser builds or loads it once; see docs/EVENT.md.
+# Images: `npm run up` picks them (a prebuilt registry image, else a local build; docs/IMAGES.md) and exports
+# VTA_IMAGE / VTC_IMAGE / MEDIATOR_IMAGE. Run by hand, compose uses the local tags below
+# (`npm run images:build`), or set the variables yourself.
 services:
   vta:
     image: ${VTA_IMAGE:-vta-buildathon:local}

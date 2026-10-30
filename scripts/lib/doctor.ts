@@ -1,6 +1,7 @@
 // `npm run doctor`: the checks, as pure functions over probe results, so the messages are tested without Docker.
 // scripts/doctor.ts gathers the real probes; `up` runs the blocking subset first.
-import { cloneCommand, DEFAULT_VTI_DIR } from "./images.js";
+import { cloneCommand, DEFAULT_VTI_DIR } from "./build-help.js";
+import type { ImageKind, ImageSpec, StatusRow } from "./images.js";
 
 export type Level = "ok" | "warn" | "fail";
 export interface Check { level: Level; name: string; detail: string; fix?: string }
@@ -69,25 +70,36 @@ export function mediatorPortCheck(busy: boolean): Check {
     : { level: "ok", name: `Port ${MEDIATOR_PORT} (mediator)`, detail: "free" };
 }
 
-export interface ImageNeed { image: string; build: string; why: string; /** Missing = a warning, the run goes on without it (the default-on VTC). */ optional?: boolean }
-
-/** The images a mode needs, with the command that builds each. */
-export function imagesNeeded(mode: "local" | "tunnel" | "farm", withVtc: boolean, env: Record<string, string | undefined> = {}, vtcOptional = false): ImageNeed[] {
+/** Which images a mode needs. */
+export function imagesNeeded(mode: "local" | "tunnel" | "farm", withVtc: boolean): ImageKind[] {
   if (mode === "farm") return [];
-  const out: ImageNeed[] = [{ image: env.VTA_IMAGE ?? "vta-buildathon:local", build: "npm run images:build vta", why: "the VTA (about 12 min cold)" }];
-  if (withVtc) out.push({ image: env.VTC_IMAGE ?? "vtc-buildathon:local", build: "npm run images:build vtc", why: "the community, VTC (about 8 to 23 min)", optional: vtcOptional });
-  if (mode === "tunnel") out.push({ image: env.MEDIATOR_IMAGE ?? "mediator-buildathon:local", build: "npm run images:build mediator", why: "the mediator (about 12 min cold, 8 GB RAM advised)" });
-  return out;
+  return ["vta", ...(withVtc ? ["vtc" as const] : []), ...(mode === "tunnel" ? ["mediator" as const] : [])];
 }
 
-export function imageChecks(needs: ImageNeed[], present: (image: string) => boolean): Check[] {
-  return needs.map((n) =>
-    present(n.image)
-      ? { level: "ok" as const, name: `Image ${n.image}`, detail: "present" }
-      : n.optional
-        ? { level: "warn" as const, name: `Image ${n.image}`, detail: `not built, so the community (VTC) is left out of \`up\` (${n.why})`, fix: `${n.build}   (or WITH_VTC=0 to stop seeing this; docs/PINS.md#where-the-images-come-from)` }
-        : { level: "fail" as const, name: `Image ${n.image}`, detail: `not built on this machine (${n.why}); no images are published`, fix: `${n.build}   (docs/PINS.md#where-the-images-come-from)` },
-  );
+const WHY: Record<ImageKind, string> = {
+  vta: "the VTA (build: about 12 min cold)",
+  vtc: "the community, VTC (build: about 8 to 23 min)",
+  mediator: "the mediator (build: about 12 min cold, 8 GB RAM advised)",
+};
+
+/**
+ * Judge the rows of imageStatus() (lib/images.ts). A prebuilt image that is only missing locally is a warning, since `up`
+ * pulls it; the pull command comes first and the local build second. Nothing obtainable (IMAGES=local, or an override that
+ * is absent) blocks, except an unrequested VTC, which `up` leaves out.
+ */
+export function imageChecks(rows: StatusRow[], specs: Record<ImageKind, ImageSpec>, vtcOptional = false): Check[] {
+  return rows.map((r): Check => {
+    const name = `Image ${r.ref}`;
+    const spec = specs[r.kind];
+    if (r.state === "ready") return { level: "ok", name, detail: r.source === "local-build" ? "present (local build)" : r.source === "env" ? "present (your override)" : "present (prebuilt)" };
+    if (r.state === "pullable") {
+      return { level: "warn", name, detail: `not on this machine yet; \`up\` will pull it (${WHY[r.kind]})`, fix: `${r.fix}   (or build locally: ${spec.buildCmd}; docs/PINS.md#where-the-images-come-from)` };
+    }
+    const optional = r.kind === "vtc" && vtcOptional;
+    return optional
+      ? { level: "warn", name, detail: `not available, so the community (VTC) is left out of \`up\` (${WHY[r.kind]})`, fix: `${r.fix}   (or WITH_VTC=0 to stop seeing this)` }
+      : { level: "fail", name, detail: `not available (${WHY[r.kind]})`, fix: `${r.fix}   (docs/PINS.md#where-the-images-come-from)` };
+  });
 }
 
 export function vtiCheckout(p: { exists: boolean; dir: string; repoUrl: string }): Check {
