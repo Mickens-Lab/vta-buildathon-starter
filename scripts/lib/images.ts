@@ -3,9 +3,11 @@
 // `realDocker` and `useImages` are the thin side-effecting parts.
 //
 // Environment:
-//   IMAGES=auto|local|registry   auto (default): the pinned registry image if present locally, else a local build if
-//                                present, else pull. local: only `<image>:local` (never touches the network).
-//                                registry: only the pinned registry image (pull if absent, no fallback).
+//   IMAGES=auto|local|registry   auto (default): while pins.json images.available is false this is `local`. When true: the pinned
+//                                registry image if present locally, else a local build if present, else pull.
+//                                local: only `<image>:local` (never touches the network).
+//                                registry: only the pinned registry image (pull if absent, no fallback); works while
+//                                `available` is false for people who have access (docker login first).
 //   IMAGE_REGISTRY=host/org      replaces pins.json images.registry (a mirror, or your own fork's packages).
 //   VTA_IMAGE / VTC_IMAGE / MEDIATOR_IMAGE   an exact image to use; beats everything above.
 import { spawnSync } from "node:child_process";
@@ -14,6 +16,12 @@ import type { Pins } from "../pins.js";
 export type ImageKind = "vta" | "vtc" | "mediator";
 export const IMAGE_KINDS: readonly ImageKind[] = ["vta", "vtc", "mediator"];
 export type ImagesMode = "auto" | "local" | "registry";
+
+/** pins.json images.available: can participants pull the prebuilt images? (docs/IMAGES.md) */
+export const imagesAvailable = (p: Pins): boolean => p.images.available === true;
+
+/** Said wherever a prebuilt image is asked for while `available` is false. */
+export const UNAVAILABLE_NOTE = "Prebuilt images are not generally available yet (the organisation does not allow public packages), so the kit builds them locally. IMAGES=registry is for people whose account can pull the packages (docker login ghcr.io first); docs/IMAGES.md.";
 
 export interface ImageSpec {
   kind: ImageKind;
@@ -129,6 +137,8 @@ export interface ResolveOpts {
   override?: string;
   /** Allow `docker pull`. False = decide from what is present locally only. */
   pull: boolean;
+  /** pins.json images.available (default true). False turns `auto` into `local`: no pull, no registry tag. */
+  available?: boolean;
 }
 
 /**
@@ -137,29 +147,36 @@ export interface ResolveOpts {
  */
 export function resolveImage(spec: ImageSpec, docker: Docker, o: ResolveOpts): Resolution {
   const { kind } = spec;
+  const implicitLocal = o.available === false && o.mode === "auto";
+  const mode: ImagesMode = implicitLocal ? "local" : o.mode;
   const build = `build it: ${spec.buildCmd}`;
   const tryPull = (ref: string, fallback: string): Resolution => {
     const r = docker.pull(ref);
     if (r.ok && docker.has(ref)) return { ok: true, kind, ref, source: "pulled" };
-    return { ok: false, kind, message: `${friendlyPullError(r.stderr, ref)}\n  ${fallback}`, detail: r.stderr.trim() || undefined };
+    const note = o.available === false ? `\n  ${UNAVAILABLE_NOTE}` : "";
+    return { ok: false, kind, message: `${friendlyPullError(r.stderr, ref)}\n  ${fallback}${note}`, detail: r.stderr.trim() || undefined };
   };
 
   if (o.override) {
     if (docker.has(o.override)) return { ok: true, kind, ref: o.override, source: "env" };
-    if (o.pull && o.mode !== "local") return tryPull(o.override, `${spec.envVar} is set, so nothing else is tried. Unset it to use the pinned image.`);
+    if (o.pull && mode !== "local") return tryPull(o.override, `${spec.envVar} is set, so nothing else is tried. Unset it to use the pinned image.`);
     return { ok: false, kind, message: `${spec.envVar}=${o.override} is not present locally (docker load it, docker pull it, or unset ${spec.envVar}).` };
   }
-  if (o.mode === "local") {
-    return docker.has(spec.local)
-      ? { ok: true, kind, ref: spec.local, source: "local-build" }
-      : { ok: false, kind, message: `${spec.local} is not present (IMAGES=local): ${build}, or unset IMAGES to use the prebuilt image.` };
+  if (mode === "local") {
+    if (docker.has(spec.local)) return { ok: true, kind, ref: spec.local, source: "local-build" };
+    return {
+      ok: false, kind,
+      message: implicitLocal
+        ? `${spec.local} is not built yet: ${build}. ${UNAVAILABLE_NOTE}`
+        : `${spec.local} is not present (IMAGES=local): ${build}, or unset IMAGES to use the prebuilt image.`,
+    };
   }
   if (docker.has(spec.pinned)) return { ok: true, kind, ref: spec.pinned, source: "registry" };
-  if (o.mode === "auto" && docker.has(spec.local)) return { ok: true, kind, ref: spec.local, source: "local-build" };
+  if (mode === "auto" && docker.has(spec.local)) return { ok: true, kind, ref: spec.local, source: "local-build" };
   if (!o.pull) {
-    return { ok: false, kind, needsPull: true, message: `${spec.pinned} is not present locally: npm run images:pull ${kind}${o.mode === "auto" ? `, or ${build}` : ""}.` };
+    return { ok: false, kind, needsPull: true, message: `${spec.pinned} is not present locally: npm run images:pull ${kind}${mode === "auto" ? `, or ${build}` : ""}.` };
   }
-  return tryPull(spec.pinned, o.mode === "auto" ? `Fallback: ${build} (or IMAGES=local to skip the registry).` : "IMAGES=registry allows no fallback; unset it to build locally.");
+  return tryPull(spec.pinned, mode === "auto" ? `Fallback: ${build} (or IMAGES=local to skip the registry).` : "IMAGES=registry allows no fallback; unset it to build locally.");
 }
 
 export interface StatusRow { kind: ImageKind; ref: string; state: "ready" | "pullable" | "missing"; source?: Source; fix?: string }
@@ -168,10 +185,10 @@ export interface StatusRow { kind: ImageKind; ref: string; state: "ready" | "pul
  * For `doctor`-style reports: what each image is, without pulling anything.
  * ready = usable now; pullable = would be pulled by `up`; missing = IMAGES=local (or an override) with nothing present.
  */
-export function imageStatus(specs: Record<ImageKind, ImageSpec>, docker: Docker, mode: ImagesMode, kinds: readonly ImageKind[] = IMAGE_KINDS, overrides: Partial<Record<ImageKind, string>> = {}): StatusRow[] {
+export function imageStatus(specs: Record<ImageKind, ImageSpec>, docker: Docker, mode: ImagesMode, kinds: readonly ImageKind[] = IMAGE_KINDS, overrides: Partial<Record<ImageKind, string>> = {}, available = true): StatusRow[] {
   return kinds.map((kind) => {
     const spec = specs[kind];
-    const r = resolveImage(spec, docker, { mode, override: overrides[kind], pull: false });
+    const r = resolveImage(spec, docker, { mode, override: overrides[kind], pull: false, available });
     if (r.ok) return { kind, ref: r.ref, state: "ready", source: r.source };
     if (r.needsPull) return { kind, ref: spec.pinned, state: "pullable", fix: `npm run images:pull ${kind}` };
     return { kind, ref: overrides[kind] ?? spec.local, state: "missing", fix: r.message };
@@ -196,9 +213,10 @@ export function useImages(p: Pins, kinds: readonly ImageKind[], opts: { pull: bo
   const docker = opts.docker ?? realDocker;
   const specs = imageSpecs(p, get("IMAGE_REGISTRY"));
   const mode = currentMode(get);
+  if (mode === "registry" && !imagesAvailable(p) && !opts.quiet) console.log(`note: IMAGES=registry while prebuilt images are not generally available. ${UNAVAILABLE_NOTE}`);
   return kinds.map((kind) => {
     const spec = specs[kind];
-    const r = resolveImage(spec, docker, { mode, override: overrideOf(spec, get), pull: opts.pull });
+    const r = resolveImage(spec, docker, { mode, override: overrideOf(spec, get), pull: opts.pull, available: imagesAvailable(p) });
     if (r.ok) {
       process.env[spec.envVar] = r.ref;
       if (!opts.quiet && r.source !== "env") console.log(`image ${kind}: ${r.ref} (${r.source === "local-build" ? "local build" : r.source === "pulled" ? "pulled just now" : "prebuilt, already here"})`);

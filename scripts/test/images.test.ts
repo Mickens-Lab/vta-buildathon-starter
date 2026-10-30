@@ -5,6 +5,7 @@ import {
 } from "../lib/images.js";
 import { buildLabels, labelArgs, DOCKERFILE_LABEL, NO_DIGEST_WARNING, pullTarget, undigested } from "../lib/images.js";
 import { pins, type Pins } from "../pins.js";
+import { imagesAvailable, UNAVAILABLE_NOTE } from "../lib/images.js";
 
 const withDigest = (digests: Partial<Record<ImageKind, string | null>>): Pins => {
   const p = pins();
@@ -171,6 +172,7 @@ test("imageStatus: ready, pullable, missing (doctor hook)", () => {
 
 test("useImages exports the choice for compose and honours an override", () => {
   const p = pins();
+  p.images.available = true;
   const s = imageSpecs(p);
   const saved = { ...process.env };
   try {
@@ -261,4 +263,76 @@ test("pullTarget: a recorded digest is always pulled by digest; --by-digest refu
   assert.deepEqual(undigested(none), ["vta", "vtc", "mediator"]);
   assert.deepEqual(undigested(s), ["vta", "mediator"]);
   assert.match(NO_DIGEST_WARNING, /TAG.*moved/);
+});
+
+// --- images.available (pins.json): the single switch --------------------------------------------------------
+
+test("pins.json: images.available is a boolean, currently false, with a one-line why", () => {
+  const i = pins().images;
+  assert.equal(typeof i.available, "boolean");
+  assert.equal(i.available, false, "the organisation does not allow public packages; flip only when that changes");
+  assert.ok(i.why.length > 20 && !i.why.includes("\n"));
+  assert.equal(imagesAvailable(pins()), false);
+});
+
+test("available=false: auto behaves like local, never pulls, never names a registry tag", () => {
+  const s = imageSpecs(pins()).vta;
+  const f = fake([s.pinned]); // even a registry image sitting here is not chosen
+  const none = resolveImage(s, fake([]).d, { mode: "auto", pull: true, available: false });
+  assert.equal(none.ok, false);
+  assert.equal(none.ok === false && none.needsPull, undefined);
+  assert.match(none.ok === false ? none.message : "", /npm run images:build vta/);
+  assert.match(none.ok === false ? none.message : "", /not generally available/);
+  assert.ok(!(none.ok === false ? none.message : "").includes("ghcr.io/"), "no registry tag in the advice");
+  const pulls = fake([]);
+  resolveImage(s, pulls.d, { mode: "auto", pull: true, available: false });
+  assert.deepEqual(pulls.pulled, []);
+  const r = resolveImage(s, f.d, { mode: "auto", pull: true, available: false });
+  assert.equal(r.ok, false, "a pulled-earlier registry image is ignored in auto while unavailable");
+  const local = resolveImage(s, fake([s.local]).d, { mode: "auto", pull: true, available: false });
+  assert.deepEqual(local.ok && [local.ref, local.source], [s.local, "local-build"]);
+  // an override that is absent is not pulled either
+  const o = fake([]);
+  assert.equal(resolveImage(s, o.d, { mode: "auto", pull: true, available: false, override: "x:1" }).ok, false);
+  assert.deepEqual(o.pulled, []);
+});
+
+test("available=false: IMAGES=registry still works explicitly, and its failure says it is not generally available", () => {
+  const s = imageSpecs(pins()).vta;
+  const ok = fake([]);
+  const r = resolveImage(s, ok.d, { mode: "registry", pull: true, available: false });
+  assert.deepEqual([r.ok, ok.pulled], [true, [s.pinned]]);
+  const bad = resolveImage(s, fake([], "denied: requested access").d, { mode: "registry", pull: true, available: false });
+  assert.match(bad.ok === false ? bad.message : "", /not generally available/);
+  assert.equal(resolveImage(s, fake([s.pinned]).d, { mode: "registry", pull: false, available: false }).ok, true);
+});
+
+test("available=true restores today's behaviour exactly", () => {
+  const s = imageSpecs(pins()).vta;
+  for (const available of [true, undefined]) {
+    const have = fake([s.pinned, s.local]);
+    assert.equal(resolveImage(s, have.d, { mode: "auto", pull: true, available }).ok && (resolveImage(s, have.d, { mode: "auto", pull: true, available }) as { ref: string }).ref, s.pinned);
+    const np = resolveImage(s, fake([]).d, { mode: "auto", pull: false, available });
+    assert.equal(np.ok === false && np.needsPull, true);
+    const pulled = fake([]);
+    const r = resolveImage(s, pulled.d, { mode: "auto", pull: true, available });
+    assert.deepEqual([r.ok, pulled.pulled], [true, [s.pinned]]);
+  }
+});
+
+test("imageStatus and useImages follow pins.json images.available", () => {
+  const p = pins();
+  const s = imageSpecs(p);
+  const rows = imageStatus(s, fake([s.vta.pinned]).d, "auto", ["vta", "vtc"], {}, false);
+  assert.deepEqual(rows.map((r) => r.state), ["missing", "missing"], "never 'pullable' while unavailable");
+  assert.match(rows[0]!.fix!, /images:build/);
+  const env: Record<string, string> = {};
+  const f = fake([]);
+  const off = useImages(p, ["vta"], { pull: true, quiet: true, docker: f.d, get: (k) => env[k] });
+  assert.deepEqual([off[0]!.ok, f.pulled], [false, []]);
+  p.images.available = true;
+  const on = useImages(p, ["vta"], { pull: true, quiet: true, docker: f.d, get: (k) => env[k] });
+  assert.deepEqual([on[0]!.ok, f.pulled], [true, [s.vta.pinned]]);
+  delete process.env.VTA_IMAGE;
+  assert.ok(UNAVAILABLE_NOTE.includes("IMAGES=registry"));
 });
