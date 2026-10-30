@@ -192,6 +192,17 @@ jobs:
           echo "sha256=$sum" >> "$GITHUB_OUTPUT"
 
       # org.opencontainers.image.source points at THIS repository: that is what links the package to the repository on
+      # The first real run (VTC amd64/arm64) was killed by "cannot allocate memory" while rustc compiled a large crate with LTO and
+      # one codegen unit, and the mediator runners were lost mid-build. Swap keeps the linker and rustc from being OOM-killed.
+      - name: Add swap
+        run: |
+          sudo swapoff -a || true
+          sudo fallocate -l 16G /mnt/build.swap
+          sudo chmod 600 /mnt/build.swap
+          sudo mkswap /mnt/build.swap
+          sudo swapon /mnt/build.swap
+          free -h
+
       # GHCR (inherits its access, shows on the repo page). The upstream project is in org.buildathon.upstream-source.
       # org.buildathon.vti-ref / mediator-ref and vta-features are what `npm run pins:check` reads.
       - name: Build
@@ -469,7 +480,8 @@ jobs:
             echo "Set these in pins.json (images.<kind>.digest), commit, and see docs/IMAGES.md for the rest:"
             echo
             echo '```sh'
-            jq -r '.[] | "jq --arg d \"" + .digest + "\" '.images." + .kind + ".digest = $d' pins.json > pins.tmp && mv pins.tmp pins.json   # " + .image + ":" + .tag' images-digests.json
+            q="'"
+            jq -r --arg q "$q" '.[] | "jq --arg d \"\(.digest)\" \($q).images.\(.kind).digest = $d\($q) pins.json > pins.tmp && mv pins.tmp pins.json   # \(.image):\(.tag)"' images-digests.json
             echo '```'
             echo
             echo "Then check what was published (docs/VERIFY.md): npm run images:verify all"

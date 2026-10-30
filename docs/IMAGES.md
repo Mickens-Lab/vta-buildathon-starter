@@ -112,6 +112,8 @@ open-ACL by design and the VTA stores a plaintext seed ([MODES.md](MODES.md), [S
 | Symptom | Likely cause |
 |---|---|
 | Push fails with 403 or "denied" at the first push | Package creation by members is off in the org (step 1), or an org policy caps the token's permissions (step 2). |
+| `permission_denied: read_package` when pushing a package that already exists | The package was pushed by hand, so the repository's workflow token has no access to it. Either delete that package and let the workflow create it, or open the package settings, "Manage Actions access", and add this repository with the Write role. Seen on the first real run. |
+| `cannot allocate memory` or "the runner has received a shutdown signal" during a Rust build | The runner ran out of memory. The build job adds 16 GB of swap before building; if it still happens, build fewer images per run (`images=vta`, then `vtc`, then `mediator`). |
 | arm64 jobs wait for ever | The `ubuntu-24.04-arm` runner is not available to the organisation. See the QEMU fallback in the workflow comments (hours, not minutes), or publish amd64 only. |
 | A build leg is cancelled at its timeout | The runner was slower than the estimate. Raise `timeout` in the plan step, and record the real time in this file. |
 | `fetch ... origin <sha>` fails in the VTA or VTC leg | The pinned commit is not reachable from the upstream repository (force-pushed or deleted). Re-pin ([PINS.md](PINS.md)). |
