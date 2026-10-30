@@ -8,6 +8,8 @@ export interface ImagesPin {
   registry: string;
   platforms: string[];
   note: string;
+  /** Who must have signed the published images (docs/VERIFY.md). */
+  verify: { repo: string; workflow: string; issuer: string; note: string };
   vta: { digest: string | null };
   vtc: { digest: string | null };
   mediator: { digest: string | null };

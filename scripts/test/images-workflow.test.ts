@@ -25,13 +25,17 @@ test("triggers: manual and images-* tags only, never pull requests", () => {
   assert.equal(wf.on.workflow_dispatch.inputs.push.default, true);
 });
 
-test("permissions: read-only by default; packages: write only on the two jobs that publish", () => {
+test("permissions: read-only by default; packages: write only where images or attestations are pushed; id-token only on attest and sign", () => {
   assert.deepEqual(wf.permissions, { contents: "read" });
   for (const [name, j] of jobs) {
     if (name === "build" || name === "merge") assert.deepEqual(j.permissions, { contents: "read", packages: "write" }, name);
+    else if (name === "attest" || name === "sign") assert.deepEqual(j.permissions, { contents: "read", packages: "write", "id-token": "write", attestations: "write" }, name);
     else assert.equal(j.permissions, undefined, `${name} inherits the read-only default`);
   }
-  assert.ok(!/(write-all|id-token|actions:\s*write|contents:\s*write)/.test(raw));
+  // The job that runs the upstream build never gets the OIDC token (it could otherwise mint a signing identity).
+  assert.ok(!("id-token" in (wf.jobs.build!.permissions ?? {})));
+  assert.ok(!/(write-all|actions:\s*write|contents:\s*write)/.test(raw));
+  assert.equal([...raw.replace(/^\s*#.*$/gm, "").matchAll(/id-token:\s*write/g)].length, 2);
 });
 
 test("every `uses:` is pinned to a full commit SHA and says which release", () => {
@@ -41,7 +45,8 @@ test("every `uses:` is pinned to a full commit SHA and says which release", () =
   for (const s of steps) if (s.uses) assert.match(s.uses, /@[0-9a-f]{40}$/);
   // The registry login is the official action and nothing else handles the token.
   assert.deepEqual([...new Set(steps.filter((s) => s.uses).map((s) => s.uses!.split("@")[0]))].sort(),
-    ["actions/checkout", "actions/download-artifact", "actions/upload-artifact", "docker/build-push-action", "docker/login-action", "docker/setup-buildx-action"]);
+    ["actions/attest-build-provenance", "actions/attest-sbom", "actions/checkout", "actions/download-artifact", "actions/upload-artifact", "anchore/sbom-action",
+      "docker/build-push-action", "docker/login-action", "docker/setup-buildx-action", "sigstore/cosign-installer"]);
 });
 
 test("every job has a timeout, and the build legs take theirs from the matrix", () => {
@@ -57,7 +62,7 @@ test("no expression is interpolated into a shell script (inputs go through env)"
 
 test("only the push-capable steps see the token, and it is GITHUB_TOKEN", () => {
   const logins = steps.filter((s) => s.uses?.startsWith("docker/login-action"));
-  assert.equal(logins.length, 2);
+  assert.equal(logins.length, 4);
   for (const l of logins) assert.deepEqual(l.with, { registry: "ghcr.io", username: "${{ github.actor }}", password: "${{ secrets.GITHUB_TOKEN }}" });
   assert.deepEqual([...raw.matchAll(/secrets\.([A-Z_]+)/g)].map((m) => m[1]).filter((v, i, a) => a.indexOf(v) === i), ["GITHUB_TOKEN"]);
   assert.equal(steps.filter((s) => s.uses?.startsWith("actions/checkout")).every((s) => s.with?.["persist-credentials"] === false), true);
@@ -68,7 +73,11 @@ test("build step: by-digest push, labels pins:check reads, repository link, no p
   const w = b.with as Record<string, string>;
   assert.match(w.outputs, /push-by-digest=true/);
   assert.match(w.outputs, /name-canonical=true/);
+  // BuildKit's own provenance/sbom would make the by-digest push an index; the attest job does both instead.
   assert.equal(w.provenance, false);
+  assert.equal(w.sbom, false);
+  assert.ok(w.labels.includes("org.buildathon.dockerfile-sha256=${{ steps.dockerfile.outputs.sha256 }}"));
+  assert.ok(w.labels.includes("org.buildathon.build-origin=github-actions"));
   assert.match(w.platforms, /matrix\.platform/);
   assert.match(w["build-args"], /matrix\.build_args/);
   assert.match(w.labels, /org\.opencontainers\.image\.source=https:\/\/github\.com\/\$\{\{ github\.repository \}\}/);
@@ -87,6 +96,51 @@ test("the upstream source is fetched at the exact pinned commit and verified", (
   assert.match(fetch.run!, /fetch -q --depth 1 origin "\$REF"/);
   assert.match(fetch.run!, /test "\$\(git -C src rev-parse HEAD\)" = "\$REF"/);
   assert.equal(fetch.if, "matrix.needs_src");
+});
+
+const step = (job: string, name: string) => wf.jobs[job]!.steps.find((s) => s.name === name)!;
+
+test("attest: SBOM and provenance for every platform image, subject = the pushed digest, stored in the registry", () => {
+  const j = wf.jobs.attest!;
+  assert.match(j.if!, /push == 'true'/);
+  assert.deepEqual(j.needs, ["plan", "build"]);
+  const sbom = step("attest", "Generate the SBOM").with as Record<string, unknown>;
+  assert.match(String(sbom.image), /matrix\.repo.*steps\.image\.outputs\.digest/);
+  assert.equal(sbom.format, "spdx-json");
+  for (const name of ["Attest the SBOM", "Attest the build provenance"]) {
+    const w = step("attest", name).with as Record<string, unknown>;
+    assert.equal(w["subject-name"], "${{ matrix.repo }}", name);
+    assert.equal(w["subject-digest"], "${{ steps.image.outputs.digest }}", name);
+    assert.equal(w["push-to-registry"], true, name);
+  }
+  assert.equal((step("attest", "Attest the SBOM").with as Record<string, unknown>)["sbom-path"], sbom["output-file"]);
+  // each leg reads only its own digest artifact
+  assert.equal(wf.jobs.attest!.steps[0]!.with!.name, "digest-${{ matrix.kind }}-${{ matrix.arch }}");
+});
+
+test("sign: provenance for the index digest and a keyless cosign signature by digest, checked at once", () => {
+  const j = wf.jobs.sign!;
+  assert.deepEqual(j.needs, ["plan", "merge"]);
+  assert.match(j.if!, /push == 'true'/);
+  const prov = step("sign", "Attest the build provenance of the index").with as Record<string, unknown>;
+  assert.equal(prov["subject-digest"], "${{ steps.index.outputs.digest }}");
+  assert.equal(prov["push-to-registry"], true);
+  const sign = step("sign", "Sign the index digest and check the signature");
+  assert.match(sign.run!, /cosign sign --yes "\$REPO@\$DIGEST"/);
+  assert.ok(!/cosign sign[^\n]*:\$\{?SHORT|cosign sign[^\n]*:[a-z]/.test(sign.run!), "signs a digest, never a tag");
+  assert.match(sign.run!, /cosign verify "\$REPO@\$DIGEST"/);
+  assert.match(sign.run!, /--certificate-identity "https:\/\/github\.com\/\$GITHUB_WORKFLOW_REF"/);
+  assert.match(sign.run!, /--certificate-oidc-issuer https:\/\/token\.actions\.githubusercontent\.com/);
+  assert.ok(!/--insecure|--allow-insecure|--force|--yes=false/.test(sign.run!));
+  assert.ok(!/COSIGN_(PASSWORD|PRIVATE_KEY)|--key/.test(raw), "keyless: no stored key");
+  assert.deepEqual(wf.jobs.digests!.needs, ["plan", "merge", "attest", "sign"], "a digest is reported only after it was attested and signed");
+});
+
+test("the identity that images:verify expects is the workflow this file is", () => {
+  const p = pins() as unknown as { images: { verify: { repo: string; workflow: string } } };
+  assert.equal(p.images.verify.workflow, ".github/workflows/images.yml");
+  assert.ok(raw.includes("name: images"));
+  assert.match(p.images.verify.repo, /^[\w.-]+\/[\w.-]+$/);
 });
 
 test("every run: script is syntactically valid bash", () => {
