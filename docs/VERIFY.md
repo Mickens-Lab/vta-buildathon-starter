@@ -6,17 +6,30 @@ You should not have to take our word for what is inside the images this kit runs
 free tools, that an image is the one the pins name, that it was built by this repository's published workflow, and what went into it.
 Or to skip all trust and build it yourself and compare.
 
-> **Status, stated plainly.** The signing steps are **written but have never run on GitHub**. Until the images workflow has run
-> for real, there is no signature or attestation to check, `pins.json` records no digests, and `npm run images:verify` will say
+> **What applies now.** Prebuilt images are **not available yet** (the organisation does not allow public packages; `images.available` is `false` in `pins.json`), so what you run is an image you
+> **built yourself** (or one a colleague exported with `npm run images:export`). For those, verification is `npm run images:verify -- --local` (labels: the pinned ref, the features, the
+> Dockerfile hash; labels say what the builder wrote, not what is inside) and `npm run images:compare`; the real check is that you built it from the pinned ref, which `images:build` does with `git archive`.
+> A shared tar is as trustworthy as whoever made it. **Signed prebuilt images are future**: the rest of this page describes them for when packages can be public (or for organisation members using `IMAGES=registry`).
+>
+> **Status of that future path, stated plainly.** The signing steps are **written but have never run on GitHub**. Until the images workflow has run
+> for real, there is no signature or attestation to check, `pins.json` records no digests (apart from one VTA digest recorded after a publish run), and `npm run images:verify` will say
 > `INCOMPLETE` (published image) rather than `VERIFIED`. What is tested without GitHub: the verification logic against mocked
 > `gh`/`cosign`/`docker` output, the workflow's structure and permissions, and the label format. What is **not** yet observed: that
 > the attest and sign jobs succeed, that the real `gh attestation verify` / `cosign verify` output matches what the command
 > expects (the identity pattern and the SPDX predicate type are taken from the tools' documentation), that anyone can verify
-> anonymously once the packages are public. Treat each as **unverified** until the first real run has been checked with the
-> commands below. The stopgap images that were pushed by hand were not built by the workflow and **will fail** the check
+> anonymously once the packages are public. Treat each as **unverified** until the first real run has been checked with the commands below. The stopgap images that were pushed by hand were not built by the workflow and **will fail** the check
 > (`label origin`), by design.
 
 ## The 60-second version
+
+For images you built (today):
+
+```sh
+npm run images:verify -- --local    # labels of your own build: ref, features, Dockerfile hash
+npm run images:compare              # only if you also have a published copy to compare with
+```
+
+For prebuilt images (future, or `IMAGES=registry` with access):
 
 ```sh
 npm run images:pull                 # fetch the pinned images (by digest once pins.json records it)

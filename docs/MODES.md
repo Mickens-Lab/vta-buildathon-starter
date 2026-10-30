@@ -35,7 +35,7 @@ In the dashboard the membership card's "Credential delivery" row says which of t
 ## Tunnel mode in short
 
 ```bash
-# Prebuilt images are pulled by `npm run up` (docs/IMAGES.md). Local build instead (IMAGES=local):
+# Prebuilt images are not yet available (docs/IMAGES.md): build locally, once. `npm run setup -- --tunnel` does all three:
 npm run images:build vta          # once; tsp is now in the feature list, see below
 npm run images:build vtc          # once
 npm run images:build mediator     # once, heavy: about 12 minutes cold and plenty of RAM
@@ -168,10 +168,9 @@ VTA build features. Two changes to the images you already know:
   `services.tsp = true` at setup **[verified]**. `npm run images:build vta` now passes the pinned feature list for every VTA build, so one
   image serves all modes. An image built before this change has no `tsp`: rebuild it. (`didcomm` without `tsp` also works **[verified]**,
   but this kit sets both.) `npm run pins:check` flags an unlabelled VTA image and confirms the label matches the pinned list **[verified: an image built by `npm run images:build vta` carries the `org.buildathon.vta-features` label, `pins:check` reports "features match", and `npm run up -- --tunnel` passed every probe check with it]**.
-- **The mediator image** is built from `docker/mediator.Dockerfile`. By default `npm run up` uses the prebuilt image from the registry
-  ([IMAGES.md](IMAGES.md)), which saves the heavy build; the fallback is `npm run images:build mediator` and `IMAGES=local`. It is for
-  `MODE=tunnel` only; `images:build all` does not build it (`images:pull all` does fetch it, a pull is cheap). The prebuilt images are not
-  yet public (unverified here: the organiser reports amd64 images pushed as a stopgap, with the packages private until made public; CI will publish multi-arch): if a pull is refused, build locally.
+- **The mediator image** is built from `docker/mediator.Dockerfile`, locally: `npm run images:build mediator` (or `npm run setup -- --tunnel`, which builds whatever tunnel mode is missing). Prebuilt images are not yet available
+  ([IMAGES.md](IMAGES.md)), so there is no way around the heavy build except importing an image a colleague built (`npm run images:import`). It is for
+  `MODE=tunnel` only; `images:build all` does not build it. About 12 minutes cold on a 12-core machine and about 8 GB of memory advised.
 
 `cloudflared` is a host binary (quick tunnels need no account) and is not pinned by this repo; 2024.6.1 was validated.
 
@@ -181,7 +180,7 @@ VTA build features. Two changes to the images you already know:
 |---|---|---|
 | `up` says `cloudflared` is missing | not on PATH | Install it (see the error text); no account needed |
 | "cloudflared did not print a tunnel host" | quick tunnels flaky or rate limited | wait a minute and run `npm run down` then `up` |
-| "no usable image" | not pulled and not built | `npm run images:pull`, or the `images:build` commands in the message with `IMAGES=local`; the mediator build is the long one |
+| "no usable image" | not built (prebuilt images are not available) | `npm run setup` (add `-- --tunnel` for the mediator), or the `images:build` commands in the message; `npm run doctor` lists them with times |
 | "refusing to start ... volume was set up for" | stale volume for another host | `npm run down`, then `up` |
 | probe: "DID names a different host" | a tunnel restarted under a live VTA | the DID is bound to the old host: `down`, then `up` |
 | probe: MESSAGING DEGRADED / VTA reports REST only | mediator refused or unreachable (a closed ACL answers 403 to a `did:webvh` VTA), or `tsp` not built in | `docker compose --profile messaging logs vta mediator`; confirm the mediator ACL is open and the VTA image has `tsp` |

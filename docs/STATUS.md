@@ -10,7 +10,7 @@ Unless a row in [docs/MODES.md](MODES.md) says otherwise, a command works in eve
 
 | `MODE` | Runs | Needs | Start |
 |---|---|---|---|
-| `local` (default) | docker compose on your laptop | Docker, the VTA image | `npm run up` |
+| `local` (default) | docker compose on your laptop | Docker, the VTA image (built locally: `npm run setup`; prebuilt images are not yet available) | `npm run up` |
 | `tunnel` | the local stack plus a mediator (messaging), on **public, ephemeral** quick-tunnel URLs, with an **open** mediator; demo data only | Docker, `cloudflared`, internet, a locally built mediator image (heavy first build) | `npm run up -- --tunnel` (stop: `npm run down`), every caveat in [docs/MODES.md](MODES.md) |
 | `farm` | agents hosted by [VTA Farm](https://vta.farm/) | A browser with a passkey; no Docker, no Rust build | `MODE=farm npm run up`, then [docs/FARM.md](FARM.md) |
 
