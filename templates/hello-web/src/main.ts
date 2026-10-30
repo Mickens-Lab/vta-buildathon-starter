@@ -1,4 +1,4 @@
-import { VtaClient } from "@buildathon/vta-client";
+import { explainFetchFailure, VtaClient } from "@buildathon/vta-client";
 
 declare const __CRED__: { credential: string; url: string; target: string; context: string };
 const out = document.getElementById("out")!;
@@ -12,10 +12,8 @@ document.getElementById("go")!.addEventListener("click", async () => {
     out.textContent = JSON.stringify({ me: vta.me.did, whoami: await vta.whoami() }, null, 2);
   } catch (e) {
     const msg = (e as Error).message;
-    // A browser reports a blocked cross-origin call (this page's origin is not in the VTA's CORS list) or an unreachable VTA as the same bare fetch error.
-    const hint = e instanceof TypeError
-      ? `\n\nThe page could not reach ${__CRED__.target} through this dev server (${location.origin}${__CRED__.url}). Is the stack up (\`npm run doctor\`)?`
-      : "";
-    out.textContent = `failed: ${msg}${hint}`;
+    // A blocked cross-origin call and an unreachable server look alike in a browser; this says which things to check.
+    const hint = explainFetchFailure(e, { url: location.origin + __CRED__.url, origin: location.origin, proxied: true, target: __CRED__.target });
+    out.textContent = `failed: ${msg}${hint ? `\n\n${hint}` : ""}`;
   }
 });

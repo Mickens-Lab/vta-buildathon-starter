@@ -1,6 +1,6 @@
 // The one VtcClient for this page, its call log, and error wording. The identity is the user's own
 // generated credential (VTA_CREDENTIAL, as in web-vta-app); the community is VTC_URL / VTC_DID.
-import { decodeCredential, identityFromCredential, type Identity } from "@buildathon/vta-client";
+import { decodeCredential, explainFetchFailure, identityFromCredential, type Identity } from "@buildathon/vta-client";
 import { TrustTaskError, VtcClient, refusalCode, type CallEvent } from "@buildathon/vtc-client";
 import { explainRefusal } from "./format.ts";
 import { createStore } from "./store.ts";
@@ -47,7 +47,9 @@ export function refusalOf(e: unknown): Refusal {
 
 /** Plain-words text for any thrown value, for toasts and inline errors. */
 export function describeError(e: unknown): string {
+  const net = explainFetchFailure(e, { url: vtcBrowserUrl(), origin: location.origin, proxied: __VTC_BROWSER_URL__.startsWith("/"), target: __VTC_URL__, server: "vtc" });
   const r = refusalOf(e);
+  if (net) return `${explainRefusal(undefined, "network")}\n${net}`;
   if (r.network && e instanceof Error && !(e instanceof TypeError)) return e.message; // configuration errors are already plain
   return explainRefusal(r.status, r.code, r.message);
 }
