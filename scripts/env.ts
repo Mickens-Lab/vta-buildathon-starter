@@ -29,13 +29,25 @@ export function loadAdmin(): Identity {
   return identityFromSeed(seedFromMultibase(JSON.parse(readFileSync(ADMIN_FILE, "utf8")).privateKeyMultibase));
 }
 
-export type Mode = "local" | "farm";
+export type Mode = "local" | "tunnel" | "farm";
 
-/** `MODE=local|farm` from the environment or `.env`. Default: local. */
-export function mode(): Mode {
-  const m = (env("MODE") ?? "local").trim();
-  if (m !== "local" && m !== "farm") throw new Error(`MODE must be "local" or "farm", got "${m}". Edit ${ENV_FILE}.`);
+/** Validate a MODE value (pure; tested). */
+export function parseMode(raw: string | undefined, where = ENV_FILE): Mode {
+  const m = (raw ?? "local").trim();
+  if (m !== "local" && m !== "tunnel" && m !== "farm") throw new Error(`MODE must be "local", "tunnel" or "farm", got "${m}". Edit ${where}.`);
   return m;
+}
+
+/** `MODE=local|tunnel|farm` from the environment or `.env`. Default: local. */
+export function mode(): Mode {
+  return parseMode(env("MODE"));
+}
+
+/** Drop KEY=value lines from the env file (used when a tunnel stack is torn down and its URLs and credential are dead). */
+export function removeEnv(keys: string[]): void {
+  if (!existsSync(ENV_FILE)) return;
+  const kept = readFileSync(ENV_FILE, "utf8").split("\n").filter((l) => l !== "" && !keys.some((k) => l.startsWith(`${k}=`)));
+  writeFileSync(ENV_FILE, kept.length ? kept.join("\n") + "\n" : "", { mode: 0o600 });
 }
 
 /** Merge KEY=value pairs into the env file, keeping every other line (MODE, VTC_URL, ...). */
@@ -68,7 +80,9 @@ export async function reachable<T>(what: string, url: string, fn: () => Promise<
     const hint =
       mode() === "farm"
         ? `MODE=farm: check ${what === "VTA" ? "VTA_URL" : "VTC_URL"} in ${ENV_FILE} against the URL shown in the VTA Farm portal (FARM=ic3: https://vtafarm.ic3.dev, FARM=firstperson: https://vtafarm.firstperson.dev), or set FARM_AGENT=<name>, and that the agent shows "online". See docs/FARM.md.`
-        : `MODE=local: is the stack up? Run \`npm run up\` (docker compose ps / npm run vta:logs).`;
+        : mode() === "tunnel"
+          ? `MODE=tunnel: is the stack up and are the tunnels alive? Quick-tunnel URLs die when cloudflared stops, and every run gets new ones. Run \`npm run tunnel:probe\`, or \`MODE=tunnel npm run down\` then \`MODE=tunnel npm run up\`. See docs/MODES.md.`
+          : `MODE=local: is the stack up? Run \`npm run up\` (docker compose ps / npm run vta:logs).`;
     die(`could not reach the ${what} at ${url} (${cause}).\n${hint}`);
   }
 }

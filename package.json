@@ -18,8 +18,8 @@
     "vta:keygen": "tsx scripts/keygen.ts",
     "vta:provision": "tsx scripts/provision.ts",
     "vta:up": "npm run vta:keygen && docker compose up -d --wait && npm run vta:provision",
-    "vta:down": "docker compose --profile vtc down",
-    "vta:reset": "docker compose --profile vtc down -v && rm -rf .vta .env",
+    "vta:down": "docker compose --profile vtc --profile messaging down",
+    "vta:reset": "docker compose --profile vtc --profile messaging down -v && rm -rf .vta .env",
     "vta:logs": "docker compose logs -f vta",
     "vtc:up": "tsx scripts/vtc-up.ts",
     "vtc:hello": "tsx scripts/vtc-hello.ts",
@@ -48,7 +48,8 @@
     "roles:personas": "tsx scripts/personas.ts",
     "security:check": "tsx scripts/security-check.ts",
     "recipe:backend-signer": "tsx scripts/recipes/backend-signer.ts",
-    "recipe:webcrypto-key": "tsx scripts/recipes/webcrypto-key.ts"
+    "recipe:webcrypto-key": "tsx scripts/recipes/webcrypto-key.ts",
+    "tunnel:probe": "tsx scripts/tunnel-probe.ts"
   },
   "devDependencies": {
     "@types/node": "22.20.5",

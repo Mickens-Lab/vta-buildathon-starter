@@ -2,6 +2,7 @@
 // ACL entry, write the app's `.env` (merging, so MODE/VTC_* survive). Idempotent.
 //
 // MODE=local: the admin key from `npm run vta:keygen` is seeded by the compose VTA.
+// MODE=tunnel: like local, but the VTA is reached at its public quick-tunnel URL (VTA_URL, set by `npm run up`).
 // MODE=farm:  the same key must have been pasted into the VTA Farm portal as the
 //             agent's "Admin DID" (see docs/FARM.md). Needs VTA_URL (+ VTA_DID).
 import { existsSync } from "node:fs";
@@ -21,7 +22,7 @@ import { ADMIN_FILE, ENV_FILE, LOCAL_VTA_URL, die, env, loadAdmin, mode, reachab
 devBanner();
 const m = mode();
 if (m === "farm") for (const n of (await resolveFarmAgent()).notes) console.log(n);
-const baseUrl = (process.env.VTA_URL ?? (m === "farm" ? env("VTA_URL") : undefined) ?? LOCAL_VTA_URL).replace(/\/+$/, "");
+const baseUrl = (process.env.VTA_URL ?? (m !== "local" ? env("VTA_URL") : undefined) ?? LOCAL_VTA_URL).replace(/\/+$/, "");
 if (m === "farm" && !/^https:\/\//.test(baseUrl)) {
   die(`MODE=farm needs VTA_URL=https://vta-<name>.<domain> in ${ENV_FILE} (copy it from the VTA Farm portal), or set FARM=ic3|firstperson and FARM_AGENT=<name>. See docs/FARM.md.`);
 }
