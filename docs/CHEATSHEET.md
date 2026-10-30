@@ -105,6 +105,7 @@ Tunnel URLs and DIDs die with the run; what each mode gives and every caveat: [M
 | `MEDIATOR_IMAGE`, `REDIS_IMAGE` | compose | `MODE=tunnel` only: default `mediator-buildathon:local` and `redis:7.4.6-alpine` |
 | `APPROVER_DID` | `.env` | Set by `npm run approvals:setup`; makes a fresh VTA require a second key's approval for a gated task ([APPROVALS.md](APPROVALS.md)) |
 | `VTA_PORT` | compose | Port, default 8100; baked into the VTA DID on first boot |
+| `MEDIATOR_CORS_ALLOW_ORIGIN` | compose | Tunnel mode: one origin, `*.suffix` or `*` for browser access to the mediator; unset = off; applied every boot |
 | `CORS_ORIGINS_TOML` | compose | TOML array body of allowed origins, e.g. `'"http://localhost:4200"'`; first boot only |
 | `ENV_FILE` | provision/hello | Alternate env file, e.g. `.env.agent` |
 | `APP_ROLE` | provision | ACL role for the app, default `application` |

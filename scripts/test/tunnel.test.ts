@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { test } from "node:test";
 import { parseMode } from "../env.js";
 import {
@@ -144,4 +146,52 @@ test("entrypoints are valid sh and say what tunnel mode is", () => {
   assert.match(read("vta-entrypoint.sh"), /refusing to start: this volume was set up for/);
   // local mode must still render the old config
   assert.match(read("vta-entrypoint.sh"), /MESSAGING_TOML='kind = "skip"'/);
+});
+
+// The CORS block of mediator-entrypoint.sh, run against a throwaway config (the rest of the script needs the image).
+function runCorsBlock(origin: string | undefined, config: string): { status: number | null; stderr: string; out: string } {
+  const sh = read("mediator-entrypoint.sh");
+  const start = sh.indexOf('if [ -n "${MEDIATOR_CORS_ALLOW_ORIGIN:-}" ]');
+  const end = sh.indexOf("echo \"DEV ONLY");
+  assert.ok(start > 0 && end > start, "CORS block present");
+  const dir = mkdtempSync(join(tmpdir(), "med-cors-"));
+  try {
+    const cfg = join(dir, "mediator.toml");
+    writeFileSync(cfg, config);
+    const env: NodeJS.ProcessEnv = { PATH: process.env.PATH, CONFIG: cfg };
+    if (origin !== undefined) env.MEDIATOR_CORS_ALLOW_ORIGIN = origin;
+    const r = spawnSync("sh", ["-c", `set -eu\n${sh.slice(start, end)}`], { encoding: "utf8", env });
+    return { status: r.status, stderr: r.stderr, out: readFileSync(cfg, "utf8") };
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+const medConfig = '[security]\n# cors_allow_origin = "https://affinidi.com"\njwt_mode = "generate"\n';
+
+test("mediator CORS: unset leaves the config alone (cross-origin access stays off)", () => {
+  const r = runCorsBlock(undefined, medConfig);
+  assert.equal(r.status, 0);
+  assert.equal(r.out, medConfig);
+  assert.match(read("docker-compose.yml"), /MEDIATOR_CORS_ALLOW_ORIGIN: "\$\{MEDIATOR_CORS_ALLOW_ORIGIN:-\}"/, "compose default is empty");
+});
+
+test("mediator CORS: an origin replaces the commented key, and a later change replaces the active one", () => {
+  const a = runCorsBlock("http://localhost:5173", medConfig);
+  assert.equal(a.status, 0, a.stderr);
+  assert.match(a.out, /^cors_allow_origin = "http:\/\/localhost:5173"$/m);
+  assert.equal(a.out.match(/cors_allow_origin/g)?.length, 1);
+  const b = runCorsBlock("https://*.example.org", a.out);
+  assert.match(b.out, /^cors_allow_origin = "https:\/\/\*\.example\.org"$/m);
+  assert.equal(b.out.match(/cors_allow_origin/g)?.length, 1);
+});
+
+test("mediator CORS: values that could break the TOML are refused, and a config without the key fails loudly", () => {
+  for (const bad of ['http://a"b', "a b", "x\ny", "a|b", "$(id)"]) {
+    const r = runCorsBlock(bad, medConfig);
+    assert.notEqual(r.status, 0, JSON.stringify(bad));
+    assert.equal(r.out, medConfig);
+  }
+  const r = runCorsBlock("http://localhost:5173", "[security]\n");
+  assert.notEqual(r.status, 0);
+  assert.match(r.stderr, /could not set cors_allow_origin/);
 });

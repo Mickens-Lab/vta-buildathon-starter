@@ -68,5 +68,18 @@ TOML
   chmod 600 "$CONF"/mediator-secrets.json "$CONFIG"
 fi
 
+# Browser access (optional, default off). MEDIATOR_CORS_ALLOW_ORIGIN becomes `[security] cors_allow_origin`:
+# one exact origin (https://app.example), a "*.suffix" pattern, or "*". Unset = no cross-origin access, and the
+# mediator also refuses a /ws upgrade that carries a browser Origin header. Applied on every boot, so it can change
+# without resetting the volume. The token travels in a header, not a cookie; still prefer an exact origin.
+if [ -n "${MEDIATOR_CORS_ALLOW_ORIGIN:-}" ]; then
+  case "$MEDIATOR_CORS_ALLOW_ORIGIN" in
+    *[!A-Za-z0-9:/.*-]*) echo "MEDIATOR_CORS_ALLOW_ORIGIN may only hold letters, digits and : / . * - (one origin)" >&2; exit 1 ;;
+  esac
+  sed -i "s|^#* *cors_allow_origin = .*|cors_allow_origin = \"$MEDIATOR_CORS_ALLOW_ORIGIN\"|" "$CONFIG"
+  grep -q "^cors_allow_origin = \"$MEDIATOR_CORS_ALLOW_ORIGIN\"\$" "$CONFIG" || { echo "could not set cors_allow_origin in $CONFIG" >&2; exit 1; }
+  echo "mediator CORS allows origin: $MEDIATOR_CORS_ALLOW_ORIGIN" >&2
+fi
+
 echo "DEV ONLY: mediator ACL is OPEN (any DID may register and relay) while this tunnel is up." >&2
 exec setpriv --reuid=10002 --regid=10002 --clear-groups mediator -c "$CONFIG"

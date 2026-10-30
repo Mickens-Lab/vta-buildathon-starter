@@ -56,6 +56,18 @@ Everything the scripts need (`npm run hello`, `vtc:join`, `vtc:approve`, ...) wo
 tunnel hostnames are kept only in `.vta/tunnel.json` and `.env`, which are git-ignored; nothing about a run is written to tracked files.
 Compose files, entrypoints and recipes contain placeholders only.
 
+## Browser access (CORS)
+
+A web page that talks to the mediator directly (the TSP browser client) needs two things the defaults do not give:
+
+- **Mediator:** set `MEDIATOR_CORS_ALLOW_ORIGIN` before `npm run up` (or `docker compose --profile messaging up -d mediator` again; it is applied on
+  every boot, no volume reset). It becomes `[security] cors_allow_origin` and takes one exact origin such as `http://localhost:5173`, a
+  `https://*.suffix` pattern, or `*`. **Unset (the default) means off**: responses carry no `Access-Control-Allow-Origin`, and the mediator also
+  refuses a WebSocket upgrade that carries a browser `Origin` header (403). Prefer an exact origin; `*` is tolerable only because the mediator
+  authenticates with a bearer token, not cookies. Anything outside letters, digits and `: / . * -` is refused at boot.
+- **VTA and VTC:** their REST endpoints already allow `http://localhost:5173`, `:3000` and `:8000` by default. For another origin use
+  `CORS_ORIGINS_TOML` (VTA) and `VTC_CORS_ORIGINS_TOML` (VTC), first boot only (see the cheatsheet).
+
 ## Caveats, stated plainly
 
 - **The URLs are public and unauthenticated.** Anyone who has a quick-tunnel URL can reach the VTA, VTC and mediator endpoints. The VTA's
@@ -90,8 +102,8 @@ Compose files, entrypoints and recipes contain placeholders only.
   is **unknown**; it depends on that mediator's ACL mode. The Farm provisions its own VTAs, which says nothing about external ones. Ask the
   operator which mode it runs. This kit supports only a self-run, open mediator for now.
 - **The phone leg is not tested.** Neither a mobile wallet reaching these URLs nor `did:webvh` resolution from a device was exercised.
-  If a phone connects to the mediator directly, set `[security] cors_allow_origin` in the mediator config as its upstream docs describe
-  **[unverified; a "403 without cors_allow_origin" case was neither reproduced nor refuted]**.
+  If a phone connects to the mediator directly, set `MEDIATOR_CORS_ALLOW_ORIGIN` (see Browser access above); a React Native WebSocket sends an Origin
+  header too **[unverified for a phone; the browser-Origin refusal itself was reproduced in the TSP spike]**.
 - **The trigger-link sign-in (auth/oob) was not tested.** No path with that name exists in the VTA or VTC OpenAPI documents we read
   **[verified absent]**; whether it is a Trust Task or a wallet-side concept is **unknown**.
 

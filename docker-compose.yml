@@ -101,6 +101,8 @@ services:
     environment:
       MEDIATOR_HOST: "${MEDIATOR_PUBLIC_HOST:-}"
       REDIS_URL: "redis://redis:6379/"
+      # Optional browser access (default unset = off), e.g. http://localhost:5173. See docs/MODES.md.
+      MEDIATOR_CORS_ALLOW_ORIGIN: "${MEDIATOR_CORS_ALLOW_ORIGIN:-}"
     ports:
       - "127.0.0.1:${MEDIATOR_PORT:-7037}:7037"
     volumes:
