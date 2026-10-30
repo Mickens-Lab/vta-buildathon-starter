@@ -11,7 +11,7 @@ import { devBanner } from "./banner.js";
 import { env, type Mode, modeInfo, vtcChoice } from "./env.js";
 import { modeLine, parseModeFlags } from "./lib/modes.js";
 import {
-  blocking, cloudflaredCheck, type Check, dockerCheck, DEV_PORTS, devPortCheck, formatChecks, imageChecks, imagesNeeded, CORS_PORTS, MEDIATOR_PORT, mediatorPortCheck,
+  blocking, cloudflaredCheck, type Check, dockerCheck, DEV_PORTS, devPortCheck, formatChecks, imageChecks, imagesNeeded, CORS_PORTS, DEV_SCAN_RANGES, MEDIATOR_PORT, mediatorPortCheck, viteOriginCheck,
   memoryCheck, nodeCheck, STACK_PORTS, stackPortCheck, summary, vtiCheckout,
 } from "./lib/doctor.js";
 import { have } from "./lib/compose.js";
@@ -30,6 +30,25 @@ const portBusy = (port: number): Promise<boolean> =>
     };
     tryHost("127.0.0.1", () => tryHost("::1"));
   });
+
+/** Ask the running VTA whether it would answer a browser page on `origin` (a CORS preflight). undefined = the VTA did not answer. */
+async function vtaAllowsOrigin(origin: string, vtaUrl: string): Promise<boolean | undefined> {
+  try {
+    const r = await fetch(`${vtaUrl.replace(/\/+$/, "")}/trust-tasks`, {
+      method: "OPTIONS", signal: AbortSignal.timeout(2000),
+      headers: { origin, "access-control-request-method": "POST", "access-control-request-headers": "content-type" },
+    });
+    return r.headers.get("access-control-allow-origin") === origin;
+  } catch { return undefined; }
+}
+
+/** Is a Vite dev server answering on this port? Vite serves its client script at /@vite/client. */
+async function isViteServer(port: number): Promise<boolean> {
+  try {
+    const r = await fetch(`http://localhost:${port}/@vite/client`, { signal: AbortSignal.timeout(800) });
+    return r.ok && /javascript/.test(r.headers.get("content-type") ?? "");
+  } catch { return false; }
+}
 
 const ownStackRunning = (): boolean => {
   const r = spawnSync("docker", ["compose", "--profile", "vtc", "--profile", "messaging", "ps", "--status", "running", "-q"], { encoding: "utf8", timeout: 20_000 });
@@ -88,6 +107,16 @@ export async function runChecks(o: DoctorOptions): Promise<Check[]> {
   if (o.scope === "full") {
     const allowed = new Map<number, boolean>();
     for (const p of CORS_PORTS) allowed.set(p, await busy(p));
+    const scan: number[] = [];
+    for (const [lo, hi] of DEV_SCAN_RANGES) for (let p = lo; p <= hi; p++) scan.push(p);
+    const stackPorts: number[] = STACK_PORTS.map((s) => s.port);
+    const listening = (await Promise.all(scan.filter((p) => !stackPorts.includes(p)).map(async (p) => ((await busy(p)) ? p : 0)))).filter(Boolean);
+    const vtaUrl = process.env.VTA_URL ?? "http://localhost:8100";
+    for (const p of listening) {
+      if (!(await isViteServer(p))) continue;
+      const c = viteOriginCheck(p, await vtaAllowsOrigin(`http://localhost:${p}`, vtaUrl));
+      if (c) out.push(c);
+    }
     const freeAllowed = CORS_PORTS.find((p) => !allowed.get(p));
     for (const p of DEV_PORTS) {
       const isBusy = await busy(p.port);

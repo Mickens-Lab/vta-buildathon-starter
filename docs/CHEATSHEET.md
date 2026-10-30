@@ -76,7 +76,7 @@ An applicant is not a member, so it cannot `authenticate`; it submits and polls 
 | `VTA_DID` / `VTC_DID` | read from `/.well-known/did.jsonl` | read from it (a `did:webvh` bound to the tunnel host) | copy from the portal (trusted as given) |
 | Admin key | seeded into the VTA by compose | same | pasted into the portal as "Admin DID" (`npm run farm:setup`) |
 | Messaging (DIDComm, TSP) | off | on, through the kit's open mediator | the Farm's (unverified for this kit) |
-| Browser CORS | allowed: 3000, 5173, 8000 | same origins | blocked; templates proxy `/__vta`, `/__vtc` via Vite |
+| Browser CORS | allowed: loopback ports 3000-3009, 3050, 4000-4009, 4173, 5173-5183, 8000-8009 | same origins | blocked; templates proxy `/__vta`, `/__vtc` via Vite (all modes) |
 | Start / stop | `npm run up` / `down` | `npm run up -- --tunnel` / `down` (deletes volumes) | `MODE=farm npm run up` |
 
 Tunnel URLs and DIDs die with the run; what each mode gives and every caveat: [MODES.md](MODES.md). Re-run the tunnel checks with `npm run tunnel:probe`.
@@ -107,7 +107,7 @@ Tunnel URLs and DIDs die with the run; what each mode gives and every caveat: [M
 | `APPROVER_DID` | `.env` | Set by `npm run approvals:setup`; makes a fresh VTA require a second key's approval for a gated task ([APPROVALS.md](APPROVALS.md)) |
 | `VTA_PORT` | compose | Port, default 8100; baked into the VTA DID on first boot |
 | `MEDIATOR_CORS_ALLOW_ORIGIN` | compose | Tunnel mode: one origin, `*.suffix` or `*` for browser access to the mediator; unset = off; applied every boot |
-| `CORS_ORIGINS_TOML` | compose | TOML array body of allowed origins, e.g. `'"http://localhost:4200"'`; first boot only |
+| `CORS_ORIGINS_TOML` | compose | TOML array body of allowed origins, e.g. `'"http://localhost:4200"'`; first boot only; replaces the default loopback list |
 | `ENV_FILE` | provision/hello | Alternate env file, e.g. `.env.agent` |
 | `APP_ROLE` | provision | ACL role for the app, default `application` |
 | `INBOX_PORT`, `INBOX_DID`, `INBOX_URL` | inbox-verifier | Server port, its DID, and where `send` posts |
@@ -170,6 +170,8 @@ a newer one was withdrawn. Poll at most every 10 s (anonymous limit: burst 10, t
 | `malformedRequest` | Payload fails the schema |
 | `permissionDenied` / 401 | Not authenticated, or the ACL scope does not cover the call |
 | 429 | Auth rate limit; retry shortly |
+| Browser: `NetworkError when attempting to fetch resource` (no status) | The stack is down (`npm run doctor`), **or** the server refused this page's origin (CORS). The browser reports both the same way. The templates call `/__vta` on their own origin and Vite forwards it, so any port works and CORS cannot be the cause: look at the stack. Your own code calling the VTA directly is limited to its CORS list (loopback 3000-3009, 3050, 4000-4009, 4173, 5173-5183, 8000-8009): use the proxy, or set `CORS_ORIGINS_TOML` (VTC: `VTC_CORS_ORIGINS_TOML`; mediator: `MEDIATOR_CORS_ALLOW_ORIGIN`) and `npm run reset && npm run up` |
+| Page shows HTTP 502 from `/__vta` | The Vite dev server is up but cannot reach `VTA_URL`: stack down, or `.env` changed (restart the dev server) |
 
 More causes and fixes: [trust-tasks/06-troubleshooting-and-glossary.md](trust-tasks/06-troubleshooting-and-glossary.md).
 

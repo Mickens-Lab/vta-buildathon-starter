@@ -14,8 +14,10 @@ export const DEV_PORTS = [
   { port: 4000, what: "inbox-verifier", server: true, use: (p: number) => `INBOX_PORT=${p} npm start -w @buildathon/inbox-verifier` },
 ] as const;
 export const MEDIATOR_PORT = 7037;
-/** Origins the local VTA allows for browser pages: other ports need a CORS change (docs/CHEATSHEET.md). */
+/** Preferred origins to suggest when a template port is busy. The full default list is in packages/vta-client/src/cors.ts. */
 export const CORS_PORTS = [3000, 5173, 8000];
+/** Where a Vite dev server may land (3000s, vite preview, 5173+, 8000s); `detectViteServers` looks only here. */
+export const DEV_SCAN_RANGES: ReadonlyArray<readonly [number, number]> = [[3000, 3099], [4173, 4173], [5173, 5199], [8000, 8099]];
 
 export function nodeCheck(version: string, minMajor = 20): Check {
   const major = Number(/^v?(\d+)/.exec(version)?.[1]);
@@ -54,13 +56,26 @@ export function stackPortCheck(p: PortProbe & { what: string; env: string }, fre
   };
 }
 
-/** A busy template port is only a warning: the page can use another allowed origin. */
+/** A busy template port is only a warning: the templates proxy the VTA, so Vite's next free port (or `--port <n>`) works. */
 export function devPortCheck(p: PortProbe & { what: string; server?: boolean; use?: (port: number) => string }, free: number | undefined): Check {
   const name = `Port ${p.port} (${p.what})`;
   if (!p.busy) return { level: "ok", name, detail: "free" };
   return {
     level: "warn", name, detail: "in use",
-    fix: free ? `use port ${free}: ${(p.use ?? ((n: number) => `npm run dev -w <template> -- --port ${n}`))(free)}${p.server || CORS_PORTS.includes(free) ? "" : " (a port other than 3000, 5173 or 8000 needs a CORS change, docs/CHEATSHEET.md)"}` : "use another port with -- --port <n>",
+    fix: free ? `use port ${free}: ${(p.use ?? ((n: number) => `npm run dev -w <template> -- --port ${n}`))(free)}${p.server ? "" : " (the browser templates proxy the VTA through Vite, so any port works; Vite also moves on by itself)"}` : "use another port with -- --port <n>",
+  };
+}
+
+/**
+ * A running Vite dev server whose origin the VTA's CORS list refuses. The browser templates are not affected (they proxy /__vta);
+ * code that calls the VTA directly from that page is. `allowed` is undefined when the VTA could not be asked.
+ */
+export function viteOriginCheck(port: number, allowed: boolean | undefined): Check | undefined {
+  if (allowed !== false) return undefined;
+  const origin = `http://localhost:${port}`;
+  return {
+    level: "warn", name: `Dev server on port ${port}`, detail: `a Vite server at ${origin} is outside the VTA's CORS list`,
+    fix: `the templates still work (they proxy /__vta). Your own code calling the VTA directly from this page gets "NetworkError": serve it on a port in the list (3000-3009, 5173-5183, ...; docs/MODES.md), or set CORS_ORIGINS_TOML to include ${origin} and run npm run reset && npm run up`,
   };
 }
 

@@ -13,7 +13,22 @@ DIR=/var/lib/vtc
 CONFIG=$DIR/config.toml
 KEY=$DIR/setup-key.json
 CTX="${VTC_CONTEXT:-vtc}"
-DEFAULT_CORS='"http://localhost:3000", "http://localhost:5173", "http://localhost:8000"'
+# BEGIN default-cors (kept equal to packages/vta-client/src/cors.ts by scripts/test/cors.test.ts)
+# DEV ONLY, loopback only: http://localhost and http://127.0.0.1 on common dev-server ports.
+default_cors() {
+  out=""
+  for range in "3000 3009" "3050 3050" "4000 4009" "4173 4173" "5173 5183" "8000 8009"; do
+    set -- $range
+    p=$1
+    while [ "$p" -le "$2" ]; do
+      for h in localhost 127.0.0.1; do out="$out${out:+, }\"http://$h:$p\""; done
+      p=$((p+1))
+    done
+  done
+  printf '%s' "$out"
+}
+# END default-cors
+DEFAULT_CORS="$(default_cors)"
 CORS="${VTC_CORS_ORIGINS_TOML:-$DEFAULT_CORS}"
 PUBLIC_HOST="${PUBLIC_HOST:-}"
 if [ -n "$PUBLIC_HOST" ]; then

@@ -11,7 +11,7 @@ const credential = import.meta.env.VTA_CREDENTIAL as string | undefined;
 const abs = (u: string) => (u.startsWith("/") ? location.origin + u : u);
 const vtaUrl = abs(__VTA_BROWSER_URL__);
 
-// Plain fetch + CORS: the local VTA allows http://localhost:5173, :3000 and :8000.
+// Plain fetch to /__vta on this page's own origin: Vite forwards it to the VTA (vite.config.ts), so CORS never applies.
 // Farm mode trusts the DID in the credential (a hosted VTA may not serve did.jsonl at its root).
 const connect = async () => {
   if (!credential) throw new Error("No VTA_CREDENTIAL");

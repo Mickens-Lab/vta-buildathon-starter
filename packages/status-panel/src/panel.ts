@@ -134,9 +134,9 @@ const join = (base: string, path: string) => base.replace(/\/+$/, "") + path;
 
 function reachRow(name: string, p: Probe, url: string, origin: string, mode: string): Row {
   if (p.ok) return { pill: "ok", label: "Reachable", value: `yes, round trip ${p.ms} ms`, note: `${name} answered GET /health (HTTP ${p.status}).` };
-  if (p.status && mode === "farm" && p.status >= 500) {
+  if (p.status && (mode === "farm" || p.status === 502) && p.status >= 500) {
     return { pill: "bad", label: "Reachable", value: `no: the dev-server proxy got HTTP ${p.status} from ${url}`, note: `The proxy (/__vta) could not reach the VTA at ${url}, or the host answered with a server error.`,
-      fix: "Check VTA_URL in the repo-root .env against the URL in the VTA Farm portal, that the agent shows \"online\", then restart `npm run dev`." };
+      fix: mode === "farm" ? "Check VTA_URL in the repo-root .env against the URL in the VTA Farm portal, that the agent shows \"online\", then restart `npm run dev`." : "Is the stack up? Run `npm run doctor`, then `npm run up`; if VTA_URL in the repo-root .env changed, restart `npm run dev`." };
   }
   if (p.status) {
     return { pill: "bad", label: "Reachable", value: `answered HTTP ${p.status} on /health`, note: `Something is listening at ${url} but it is not healthy (or not a ${name}).`,
@@ -144,7 +144,7 @@ function reachRow(name: string, p: Probe, url: string, origin: string, mode: str
   }
   if (p.corsBlocked) {
     return { pill: "bad", label: "Reachable", value: "blocked by the browser (CORS)", note: `${name} is up, but it does not allow this page's origin (${origin}).`,
-      fix: mode === "farm" ? "Use MODE=farm so Vite proxies the hosted VTA (the page stays same-origin), and restart `npm run dev`." : "Serve this page from an allowed origin (http://localhost:5173, :3000 or :8000), or add yours via CORS_ORIGINS_TOML and re-provision the VTA." };
+      fix: mode === "farm" ? "Use MODE=farm so Vite proxies the hosted VTA (the page stays same-origin), and restart `npm run dev`." : `This page calls the VTA directly, so the VTA's CORS list applies. Call it through the dev proxy (/__vta, as the templates do), or allow ${origin}: set CORS_ORIGINS_TOML to a list that includes it (it replaces the default), then \`npm run reset && npm run up\`.` };
   }
   return { pill: "bad", label: "Reachable", value: `no (${p.error ?? "no answer"})`, note: `Nothing answered at ${url}.`,
     fix: mode === "farm" ? "Check VTA_URL in the repo-root .env against the Farm portal, and that the agent shows \"online\"." : "Start the stack with `npm run up` (or `npm run up`), then refresh." };

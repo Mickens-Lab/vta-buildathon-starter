@@ -28,7 +28,7 @@ npm run dev -w @buildathon/web-vta-app      # then open http://localhost:5173
 
 You should see "VTA connection status", an amber banner saying the app key is embedded in the page, and numbered cards (Connection, VTA identity,
 Version, Auth and session, ...) with mostly OK pills. "DIDComm / TSP / Mediator: not advertised" are normal for a local VTA. Stop it with Ctrl-C.
-If it fails: a CORS error means you are not on port 5173, 3000 or 8000; a blank "no credential" means `.env` is missing (`npm run up`).
+If it fails: a "NetworkError" or fetch failure means the stack is down (`npm run doctor`; the page talks to the VTA through the dev server, so its port does not matter); a blank "no credential" means `.env` is missing (`npm run up`).
 
 ## 3. Join a community and see the member screens (React)
 

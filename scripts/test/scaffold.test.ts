@@ -46,3 +46,21 @@ test("scaffold copies without node_modules, renames, and refuses an existing fol
   assert.throws(() => scaffold(root, "t", "demo"), /already exists/);
   assert.throws(() => scaffold(root, "nope", "other"), /no template/);
 });
+
+test("nextSteps: a browser starter states the origin rule and the override; a Node one does not", async () => {
+  const { nextSteps } = await import("../lib/scaffold.js");
+  const web = nextSteps("hello-web", "my-app", "@apps/my-app");
+  assert.match(web, /npm run dev -w @apps\/my-app/);
+  assert.match(web, /any port works/);
+  assert.match(web, /3000-3009, 3050, 4000-4009, 4173, 5173-5183 and 8000-8009/);
+  assert.match(web, /CORS_ORIGINS_TOML='"http:\/\/localhost:4200"' npm run reset && npm run up/);
+  assert.match(web, /dev-proxy\.ts/);
+  const node = nextSteps("hello-node", "my-app", "@apps/my-app");
+  assert.match(node, /npm start -w @apps\/my-app/);
+  assert.doesNotMatch(node, /CORS/);
+});
+
+test("every browser starter's vite.config.ts uses the shared proxy", async () => {
+  const { BROWSER_STARTERS } = await import("../lib/scaffold.js");
+  for (const t of BROWSER_STARTERS) assert.match(readFileSync(join("templates", t, "vite.config.ts"), "utf8"), /scripts\/lib\/dev-proxy\.ts/, t);
+});

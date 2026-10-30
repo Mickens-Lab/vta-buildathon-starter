@@ -8,7 +8,7 @@ There is **no session**: a plain member cannot `auth/authenticate`, so every fac
 
 ```sh
 npm run up                                       # repo root; WITH_VTC=1 for a local VTC (or MODE=farm)
-npm run dev -w @buildathon/community-dashboard    # http://localhost:5173 (3000 and 8000 are also CORS-allowed: add --port)
+npm run dev -w @buildathon/community-dashboard    # http://localhost:5173, or the port Vite reports (any port works: /__vta and /__vtc are proxied)
 npm run vtc:approve                              # local: approve the pending request; the page notices within 10 s
 npm test -w @buildathon/community-dashboard      # pure modules, polling helper, and component tests (jsdom, fake community)
 npm run e2e                                      # repo root, optional: real headless Chromium against the local stack

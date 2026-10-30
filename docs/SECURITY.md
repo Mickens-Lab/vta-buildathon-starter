@@ -13,7 +13,7 @@ Treat every key, DID and community it creates as disposable.
 | The app key in the browser | `web-vta-app` and `community-dashboard` read `VTA_CREDENTIAL` at dev time and embed it in the page; a `vite build` bundles it into `dist/` | Anyone who can load the page, or read the bundle, can act as the app. Both pages say so in a banner. |
 | Transport and DIDs | Plain `http`, `localhost` DIDs, `VTA_ALLOW_PRIVATE_ENDPOINTS=1` | No TLS, and the DID is only meaningful on your machine. |
 | Access control | One admin, one app role, a context | No real access policy, no key rotation, no backup, no audit review. |
-| CORS | Exact origins `localhost:3000`, `:5173`, `:8000` | Dev only; do not widen it for a deployed page. |
+| CORS | Exact loopback origins (`http://localhost` and `http://127.0.0.1`, ports 3000-3009, 3050, 4000-4009, 4173, 5173-5183, 8000-8009) | Dev only. Loopback means only a page served from this machine can read VTA answers; the list is a convenience so a bumped dev-server port still works. Do not copy it to a deployed page: use exact `https` origins there. |
 
 ## Tunnel mode widens the exposure
 

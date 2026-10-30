@@ -28,7 +28,7 @@ status varies.
 | Success but nothing happened / something unexpected happened | **Empty payload** `{}` is valid for several member tasks and they act: an empty `members/self-remove` removed the member, an empty `join-requests/withdraw` withdrew a request | Read the spec before sending `{}`; wrap destructive calls behind a confirmation |
 | Joined, approved, but no credential arrives | The VMC is pushed over DIDComm/TSP, which the local stack leaves off; `status` returns `credentialsDelivered: false` | Admin `decide` response contains it, or enable messaging |
 | Bearer works once then 401 | The session expired (about 15 min) | `authenticate()` again; `whoami` shows `session.expiresAt` |
-| Browser call blocked | CORS: the VTA/VTC allow only configured origins | Local: ports 3000, 5173, 8000, or set `CORS_ORIGINS_TOML` on first boot; farm: use the Vite proxy in the templates |
+| Browser call blocked | CORS: the VTA/VTC allow only configured origins | The templates avoid it: they call `/__vta` through the Vite dev server in every mode, on any port. Calling the VTA directly: loopback ports 3000-3009, 3050, 4000-4009, 4173, 5173-5183, 8000-8009, or set `CORS_ORIGINS_TOML` on first boot |
 
 For your **own consumer**: `suppressed` from `consumeInbound` is silence on purpose (answering would leak an oracle); log
 it. A `rejected` outcome already carries a prepared, addressed error document to send back.

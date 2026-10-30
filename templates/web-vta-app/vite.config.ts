@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
-import { defineConfig, loadEnv, type Plugin, type ProxyOptions } from "vite";
+import { defineConfig, loadEnv, type Plugin } from "vite";
+import { devProxy, VTA_PROXY, VTC_PROXY } from "../../scripts/lib/dev-proxy.ts";
 import { agentUrl, farmId, type FarmTable } from "../../scripts/farm-select.ts";
 
 // Reads the repo-root .env written by `npm run vta:provision`.
@@ -7,8 +8,8 @@ import { agentUrl, farmId, type FarmTable } from "../../scripts/farm-select.ts";
 // the demo can act as the provisioned app. For anything real, keep the key on
 // a backend, or let the user's wallet sign (see src/main.ts).
 //
-// MODE=farm: a hosted VTA does not allow http://localhost:5173 in its CORS list,
-// so Vite proxies /__vta (and /__vtc) to VTA_URL (VTC_URL) and the page stays same-origin.
+// Every mode: the page calls /__vta (and /__vtc) on its own origin and Vite forwards to VTA_URL (VTC_URL), so CORS never applies and
+// any dev-server port works. Farm mode needs it anyway (a hosted VTA does not allow http://localhost:5173 in its CORS list).
 export default defineConfig(({ mode }) => {
   const e = loadEnv(mode, "../..", ["VTA_", "VTC_", "MODE", "FARM"]);
   const farm = (process.env.MODE ?? e.MODE) === "farm";
@@ -35,10 +36,7 @@ export default defineConfig(({ mode }) => {
   const fentry = table.farms[fid];
   const farmInfo = { id: fid, name: fentry.name, portalUrl: fentry.portalUrl, issues: fentry.issues };
 
-  const proxy: Record<string, ProxyOptions> = {};
-  const via = (prefix: string, target: string) => ({ target, changeOrigin: true, rewrite: (p: string) => p.replace(new RegExp(`^${prefix}`), "") });
-  if (farm && e.VTA_URL) proxy["/__vta"] = via("/__vta", e.VTA_URL);
-  if (farm && vtcUrl) proxy["/__vtc"] = via("/__vtc", vtcUrl);
+  const proxy = devProxy({ vtaUrl: e.VTA_URL, vtcUrl });
 
   // Serve this template's README at /README.md (dev): the "dev-only key" badge links to it.
   const readme: Plugin = {
@@ -58,15 +56,14 @@ export default defineConfig(({ mode }) => {
     define: {
       __FARM__: JSON.stringify(farm),
       __TUNNEL__: JSON.stringify(tunnel),
-      __VTA_BROWSER_URL__: JSON.stringify(farm ? "/__vta" : e.VTA_URL ?? "http://localhost:8100"),
+      __VTA_BROWSER_URL__: JSON.stringify(VTA_PROXY),
       __VTA_URL__: JSON.stringify(e.VTA_URL ?? "http://localhost:8100"),
       __FARM_INFO__: JSON.stringify(farm ? farmInfo : null),
       __PIN__: JSON.stringify(pin),
-      __VTC__: JSON.stringify(vtcUrl ? { url: vtcUrl, browserUrl: farm ? "/__vtc" : vtcUrl, did: vtcDid } : null),
+      __VTC__: JSON.stringify(vtcUrl ? { url: vtcUrl, browserUrl: VTC_PROXY, did: vtcDid } : null),
     },
-    // Port 5173 is in the local VTA's CORS allow-list (so are 3000 and 8000: pass `--port 3000`).
-    // Fail rather than pick another.
-    server: { port: 5173, strictPort: true, proxy },
+    // 5173 is only the preferred port: the proxy keeps the page same-origin, so Vite may move to 5174 or you can pass `--port 3050`.
+    server: { port: 5173, proxy },
     build: { target: "es2022" },
   };
 });

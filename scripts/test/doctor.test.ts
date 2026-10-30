@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  blocking, cloudflaredCheck, devPortCheck, dockerCheck, formatChecks, imageChecks, imagesNeeded, mediatorPortCheck, memoryCheck, nodeCheck,
+  blocking, cloudflaredCheck, viteOriginCheck, devPortCheck, dockerCheck, formatChecks, imageChecks, imagesNeeded, mediatorPortCheck, memoryCheck, nodeCheck,
   stackPortCheck, summary, vtiCheckout,
 } from "../lib/doctor.js";
 import { imageSpecs, imageStatus, type Docker, type ImageKind } from "../lib/images.js";
@@ -42,7 +42,9 @@ test("a busy template port only warns and suggests an allowed origin", () => {
   assert.equal(c.level, "warn");
   assert.match(c.fix!, /--port 3000/);
   assert.doesNotMatch(c.fix!, /CORS change/);
-  assert.match(devPortCheck({ port: 5173, what: "x", busy: true, ownStack: false }, 8200).fix!, /CORS change/);
+  assert.match(c.fix!, /proxy the VTA through Vite, so any port works/);
+  assert.doesNotMatch(devPortCheck({ port: 5173, what: "x", busy: true, ownStack: false }, 8200).fix!, /CORS change/, "the proxy removed the port rule");
+  assert.doesNotMatch(devPortCheck({ port: 4000, what: "inbox", busy: true, ownStack: false, server: true }, 4001).fix!, /proxy/, "a server has no Vite proxy");
 });
 
 test("mediator port and cloudflared", () => {
@@ -116,4 +118,16 @@ test("a server port (inbox-verifier) gets its own command and no CORS note", () 
   const c = devPortCheck({ port: 4000, what: "inbox-verifier", busy: true, ownStack: false, server: true, use: (p) => `INBOX_PORT=${p} npm start -w @buildathon/inbox-verifier` }, 4001);
   assert.match(c.fix!, /INBOX_PORT=4001/);
   assert.doesNotMatch(c.fix!, /CORS/);
+});
+
+test("a Vite server outside the VTA's CORS list warns and says what still works; inside, or unknown, stays quiet", () => {
+  const c = viteOriginCheck(3050, false)!;
+  assert.equal(c.level, "warn");
+  assert.match(c.name, /port 3050/);
+  assert.match(c.detail, /http:\/\/localhost:3050 is outside/);
+  assert.match(c.fix!, /templates still work/);
+  assert.match(c.fix!, /CORS_ORIGINS_TOML to include http:\/\/localhost:3050/);
+  assert.match(c.fix!, /npm run reset && npm run up/);
+  assert.equal(viteOriginCheck(3050, true), undefined);
+  assert.equal(viteOriginCheck(3050, undefined), undefined, "VTA not running: nothing to compare with");
 });

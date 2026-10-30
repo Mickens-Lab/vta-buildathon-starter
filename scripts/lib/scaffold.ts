@@ -10,6 +10,27 @@ export const STARTERS: Record<string, { run: (pkg: string) => string; what: stri
   "web-vta-app": { run: (pkg) => `npm run dev -w ${pkg}`, what: "browser app with the status panel and an optional wallet" },
 };
 
+/** Starters whose page runs in a browser (Vite) and so talks to the VTA through the dev proxy. */
+export const BROWSER_STARTERS = ["hello-web", "web-vta-app"];
+
+/** What `npm run new` prints when it is done: the run command, and for a browser app the origin rule and its one-line override. */
+export function nextSteps(from: string, name: string, pkg: string): string {
+  const starter = STARTERS[from];
+  const lines = [`\nnext:`, `  npm run up                 # if the stack is not running yet`, `  ${starter.run(pkg)}`];
+  if (BROWSER_STARTERS.includes(from)) {
+    lines.push(
+      ``,
+      `The page talks to the VTA through the dev server (/__vta, set up in apps/${name}/vite.config.ts), so any port works: 5173, 5174 after a bump, --port 3050.`,
+      `If you replace that and call the VTA from the browser directly, it only answers loopback ports 3000-3009, 3050, 4000-4009, 4173, 5173-5183 and 8000-8009.`,
+      `Another origin: CORS_ORIGINS_TOML='"http://localhost:4200"' npm run reset && npm run up   (this replaces the list; docs/MODES.md)`,
+      `A NetworkError in the page means the stack is down or the origin is refused: npm run doctor.`,
+      `Keep the "../../scripts/lib/dev-proxy.ts" import in vite.config.ts: apps/${name} sits next to templates/, so it resolves.`,
+    );
+  }
+  lines.push(``, `then edit apps/${name}/src. Reset everything with npm run reset (apps/ is left alone).`);
+  return lines.join("\n");
+}
+
 export const APPS_DIR = "apps";
 export const SCOPE = "@apps";
 

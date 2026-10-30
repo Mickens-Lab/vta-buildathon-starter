@@ -42,8 +42,8 @@ flowchart LR
   end
   CLI -->|"signed Trust Tasks (HTTP)"| VTA
   CLI -->|"signed Trust Tasks"| VTC
-  BROWSER -->|"local: direct, CORS allows :5173"| VTA
-  BROWSER -->|"local: direct"| VTC
+  BROWSER -->|"same origin /__vta, proxied by Vite"| VTA
+  BROWSER -->|"same origin /__vtc, proxied by Vite"| VTC
   BROWSER -. "farm: /__vta and /__vtc, Vite proxy" .-> FVTA
   BROWSER -. "farm proxy" .-> FVTC
   CLI -. "MODE=farm" .-> FVTA
@@ -57,7 +57,7 @@ flowchart LR
 ```
 
 - **Status panel** is rendered inside `web-vta-app` and in the dashboard's "connection" drawer; it reads `/health`, the DID log and (with a credential) the session details.
-- **Vite proxy**: in farm mode the hosted agent does not allow `http://localhost:5173` in CORS, so each template's `vite.config.ts` proxies `/__vta` and `/__vtc` and the page stays same-origin. In local mode the page calls the containers directly.
+- **Vite proxy**: in every mode each browser template's `vite.config.ts` proxies `/__vta` and `/__vtc` (helper: `scripts/lib/dev-proxy.ts`) to the URLs in `.env`, so the page stays same-origin and CORS never applies, whatever port Vite lands on. Farm agents need this anyway (they do not allow `http://localhost:5173`). The VTA/VTC loopback CORS list ([MODES.md](MODES.md#browser-access-cors)) is the fallback for code that calls them directly. The TSP page (`tsp-ping`) cannot be proxied: the mediator URL comes from its DID document, so it needs `MEDIATOR_CORS_ALLOW_ORIGIN` for its exact origin.
 - **Tunnel mode** (`MODE=tunnel`, [MODES.md](MODES.md)) runs the same containers plus redis and a mediator, and three `cloudflared` processes on the host that give the VTA, VTC and mediator public hostnames. `up` starts the tunnels first because the DIDs and configs name those hostnames. The browser and the scripts then talk to the public URLs instead of `localhost`.
 - **The VTC shares the VTA container's network namespace** so the VTA's `localhost:8100` DID is reachable from the VTC; that is why the VTC port is published on the VTA service.
 - The `inbox-verifier` is independent: a `did:key` carries its own public key, so a document can be verified with no network.

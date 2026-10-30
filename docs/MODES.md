@@ -60,6 +60,12 @@ Compose files, entrypoints and recipes contain placeholders only.
 
 ## Browser access (CORS)
 
+**The browser templates need none of this for the VTA and VTC.** Their Vite dev server proxies `/__vta` and `/__vtc` to the URLs in `.env`
+(`scripts/lib/dev-proxy.ts`), so the page and the call share one origin and no CORS check happens, on any port. The proxy also drops the
+browser `Origin` header, so the server sees an ordinary client. The credential sign-in is unaffected: a Trust Task is signed for the VTA's
+**DID** (`recipient`), not for a URL, and the DID is read from `/.well-known/did.jsonl` through the same proxy **[client code read; farm mode already signs in this way; a live local run is pending]**. The rest of this section is for code that
+calls the VTA/VTC directly, and for the mediator, which cannot be proxied (its URL comes from its DID document).
+
 A web page that talks to the mediator directly (the TSP browser client) needs two things the defaults do not give:
 
 - **Mediator:** set `MEDIATOR_CORS_ALLOW_ORIGIN` before `npm run up` (or `docker compose --profile messaging up -d mediator` again; it is applied on
@@ -67,8 +73,12 @@ A web page that talks to the mediator directly (the TSP browser client) needs tw
   `https://*.suffix` pattern, or `*`. **Unset (the default) means off**: responses carry no `Access-Control-Allow-Origin`, and the mediator also
   refuses a WebSocket upgrade that carries a browser `Origin` header (403). Prefer an exact origin; `*` is tolerable only because the mediator
   authenticates with a bearer token, not cookies. Anything outside letters, digits and `: / . * -` is refused at boot.
-- **VTA and VTC:** their REST endpoints already allow `http://localhost:5173`, `:3000` and `:8000` by default. For another origin use
-  `CORS_ORIGINS_TOML` (VTA) and `VTC_CORS_ORIGINS_TOML` (VTC), first boot only (see the cheatsheet).
+- **VTA and VTC:** their REST endpoints allow, by default, `http://localhost` and `http://127.0.0.1` on ports 3000-3009, 3050, 4000-4009,
+  4173, 5173-5183 and 8000-8009 (exact origins, loopback only: the servers take no wildcard, and nothing outside this machine is admitted).
+  For another origin use `CORS_ORIGINS_TOML` (VTA) and `VTC_CORS_ORIGINS_TOML` (VTC), **first boot only** (a stack made before this list
+  grew keeps its old one until `npm run reset`; see the cheatsheet). Setting the variable *replaces* the default list, so include the
+  defaults you still want. The browser templates do not depend on any of this: their Vite dev server proxies `/__vta` and `/__vtc`, so the page
+  stays same-origin on whatever port it lands on.
 
 _Verified live:_ with `MEDIATOR_CORS_ALLOW_ORIGIN=http://localhost:3000` the mediator answers that origin with a matching `Access-Control-Allow-Origin` and no other, and a headless Chromium page on that origin logs in and opens the TSP socket **[verified]**.
 
