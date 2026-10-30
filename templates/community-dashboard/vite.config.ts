@@ -1,16 +1,15 @@
 import { readFileSync } from "node:fs";
 import react from "@vitejs/plugin-react";
-import { defineConfig, loadEnv, type ProxyOptions } from "vite";
+import { defineConfig, loadEnv } from "vite";
+import { DEFAULT_VTC_URL, devProxy, VTA_PROXY, VTC_PROXY } from "../../scripts/lib/dev-proxy.ts";
 import { agentUrl, farmId, type FarmTable } from "../../scripts/farm-select.ts";
 
 // Reads the repo-root .env. DEV ONLY: VTA_CREDENTIAL holds a private key and is
 // exposed to the page so the demo can act as the provisioned app.
 //
-// MODE=local and MODE=tunnel: the page calls the VTA/VTC directly (CORS allows 5173, 3000 and 8000; in tunnel mode the
-//             URLs are the public quick-tunnel hosts from the repo-root .env).
-// MODE=farm:  hosted VTAs/VTCs do not allow http://localhost:5173 (the farm's
-//             default VTA CORS list holds only the wallet extension), so Vite
-//             proxies /__vta and /__vtc to them and the page stays same-origin.
+// Every mode (local, tunnel, farm): the page calls /__vta and /__vtc on its own origin and Vite forwards to the URLs in the repo-root
+// .env (public quick-tunnel hosts in tunnel mode, hosted agents in farm mode), so CORS never applies and any dev-server port works.
+// Farm VTAs would refuse http://localhost:5173 anyway (their CORS list holds only the wallet extension).
 export default defineConfig(({ mode }) => {
   const e = loadEnv(mode, "../..", ["VTA_", "VTC_", "MODE", "FARM"]);
   const farm = (process.env.MODE ?? e.MODE) === "farm";
@@ -36,10 +35,7 @@ export default defineConfig(({ mode }) => {
   const fentry = table.farms[fid];
   const farmInfo = { id: fid, name: fentry.name, portalUrl: fentry.portalUrl, issues: fentry.issues };
 
-  const proxy: Record<string, ProxyOptions> = {};
-  const via = (prefix: string, target: string) => ({ target, changeOrigin: true, rewrite: (p: string) => p.replace(new RegExp(`^${prefix}`), "") });
-  if (farm && e.VTA_URL) proxy["/__vta"] = via("/__vta", e.VTA_URL);
-  if (farm && vtcUrl) proxy["/__vtc"] = via("/__vtc", vtcUrl);
+  const proxy = devProxy({ vtaUrl: e.VTA_URL, vtcUrl: vtcUrl ?? DEFAULT_VTC_URL });
 
   return {
     envDir: "../..",
@@ -48,15 +44,15 @@ export default defineConfig(({ mode }) => {
     define: {
       __FARM__: JSON.stringify(farm),
       __TUNNEL__: JSON.stringify(tunnel),
-      __VTA_BROWSER_URL__: JSON.stringify(farm ? "/__vta" : e.VTA_URL ?? "http://localhost:8100"),
+      __VTA_BROWSER_URL__: JSON.stringify(VTA_PROXY),
       __VTA_URL__: JSON.stringify(e.VTA_URL ?? "http://localhost:8100"),
-      __VTC_BROWSER_URL__: JSON.stringify(farm ? "/__vtc" : vtcUrl ?? "http://localhost:8200"),
+      __VTC_BROWSER_URL__: JSON.stringify(VTC_PROXY),
       __VTC_URL__: JSON.stringify(vtcUrl ?? "http://localhost:8200"),
       __FARM_INFO__: JSON.stringify(farm ? farmInfo : null),
       __PIN__: JSON.stringify(pin),
     },
-    // Port 5173 is in the local VTA/VTC CORS allow-list (so are 3000 and 8000: pass `--port 3000`).
-    server: { port: 5173, strictPort: true, proxy },
+    // 5173 is only the preferred port: the proxy keeps the page same-origin, so Vite may move to 5174 or you can pass `--port 3050`.
+    server: { port: 5173, proxy },
     build: { target: "es2022" },
   };
 });

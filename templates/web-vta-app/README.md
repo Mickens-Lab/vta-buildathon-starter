@@ -21,8 +21,9 @@ npm run dev -w @buildathon/web-vta-app      # http://localhost:5173
 npm run build -w @buildathon/web-vta-app
 ```
 
-The dev server defaults to 5173 (3000 and 8000 are also allowed by the VTA: `-- --port 3000`;
-`strictPort` is set so a clash fails loudly instead of causing CORS errors).
+The dev server prefers 5173 but runs on any port (Vite moves to 5174 when 5173 is busy; `-- --port 3050` works too). The page calls
+`/__vta` (and `/__vtc`) on its own origin and Vite forwards to `VTA_URL` / `VTC_URL`, so the browser never makes a cross-origin call and the
+VTA's CORS list does not matter. The proxy lives in `../../scripts/lib/dev-proxy.ts`, shared by the templates.
 
 ## Notes
 
@@ -30,9 +31,9 @@ The dev server defaults to 5173 (3000 and 8000 are also allowed by the VTA: `-- 
   exposes `VTA_URL` and `VTA_CREDENTIAL` to the page. That puts a private key in
   the browser: fine for a throwaway local VTA, wrong for anything else. Move
   calls behind a small backend, or sign with the wallet.
-- **Other origin.** Set `CORS_ORIGINS_TOML='"http://localhost:4200"'` and run
-  `npm run reset && npm run up`. Alternatively proxy `/trust-tasks`
-  through Vite's `server.proxy`. Neither was tested.
+- **Calling the VTA directly.** Only needed if you leave the dev proxy (a built page, another dev server). The VTA then answers only the
+  origins in its CORS list (loopback ports 3000-3009, 3050, 4000-4009, 4173, 5173-5183, 8000-8009). For another one set
+  `CORS_ORIGINS_TOML='"http://localhost:4200"'` (this replaces the list) and run `npm run reset && npm run up`.
 - **Wallet API.** The local `window.vtaWallet` typing in `src/main.ts` covers
   only `walletProfile` and `signTrustTask`; the full surface is in
   `vta-browser-plugin/packages/extension/src/bridge-protocol.ts` (login,

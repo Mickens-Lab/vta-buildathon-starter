@@ -140,7 +140,7 @@ Old names `vta:up`, `vta:down` and `vta:reset` still work. Farm, tunnel, VTC, li
 | `provision` fails with 401 or `permissionDenied` | `.vta/admin.json` is not the key this volume was seeded with. `npm run reset`, then `npm run up`. |
 | `VTA DID changed` | The VTA was recreated. `npm run vta:provision`. |
 | `429` | Auth is rate limited per IP; the kit allows burst 60. Wait a few seconds. |
-| Browser CORS error | Your origin is not allowed. Use port 5173, 3000 or 8000, or see the cheatsheet. |
+| Browser "NetworkError" / fetch failed | The stack is down (`npm run doctor`), or your own code calls the VTA directly from an origin outside its CORS list. The templates proxy `/__vta` through Vite, so any port works for them; see the cheatsheet. |
 | Port 8100 taken | `VTA_PORT=8101 npm run up` on a fresh volume (`reset` first) and `VTA_URL=http://localhost:8101`. Not tested here. |
 | `MODE=farm` errors | See the troubleshooting table in [docs/FARM.md](docs/FARM.md). |
 | `refusing to start ... volume was set up for` / `Found volumes from a MODE=local run` | Volumes from another mode: follow the printed reset; table in [docs/MODES.md](docs/MODES.md#switching-modes). |

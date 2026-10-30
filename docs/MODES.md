@@ -60,6 +60,12 @@ Compose files, entrypoints and recipes contain placeholders only.
 
 ## Browser access (CORS)
 
+**The browser templates need none of this for the VTA and VTC.** Their Vite dev server proxies `/__vta` and `/__vtc` to the URLs in `.env`
+(`scripts/lib/dev-proxy.ts`), so the page and the call share one origin and no CORS check happens, on any port. The proxy also drops the
+browser `Origin` header, so the server sees an ordinary client. The credential sign-in is unaffected: a Trust Task is signed for the VTA's
+**DID** (`recipient`), not for a URL, and the DID is read from `/.well-known/did.jsonl` through the same proxy **[client code read; farm mode already signs in this way; a live local run is pending]**. The rest of this section is for code that
+calls the VTA/VTC directly, and for the mediator, which cannot be proxied (its URL comes from its DID document).
+
 A web page that talks to the mediator directly (the TSP browser client) needs two things the defaults do not give:
 
 - **Mediator:** set `MEDIATOR_CORS_ALLOW_ORIGIN` before `npm run up` (or `docker compose --profile messaging up -d mediator` again; it is applied on
