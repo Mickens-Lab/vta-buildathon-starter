@@ -188,6 +188,16 @@ It proves the frames arrive, not that a wallet could use them. A `did:key` liste
 With no ping first (the tunnel default): `npm run tsp:peer-push` listens and applies as a `did:peer:2` whose `TSPTransport` service names the mediator, approves, and ends with `PASS: the credential reached the did:peer over TSP with no earlier contact.` (**verified**, [MESSAGING.md](MESSAGING.md#tunnel-mode-delivers-the-credential-to-the-applicant)).
 The join status still says `credentialsDelivered: false` afterwards; that flag reports the member's own credential sent back, not frame arrival.
 
+In the browser instead of `tsp:listen` (**live check pending**; unit- and component-tested): start the dashboard
+(`npm run dev -w @buildathon/community-dashboard`, note the origin Vite prints, usually `http://localhost:5173`), and make sure the mediator
+allows exactly that origin: start the tunnel stack with `MEDIATOR_CORS_ALLOW_ORIGIN=http://localhost:5173 npm run up -- --tunnel`, or recreate
+only the mediator ([MODES.md](MODES.md#browser-access-cors)). Apply in the page, open **Credential frames** under the in-review screen and press
+*Listen for credential frames*; the status turns to `listening`. Then `npm run vtc:approve` in a terminal. The panel lists a
+`relationship invite` and `credential-exchange/issue/0.1` frames with their times, the tally counts them, and the panel keeps running when the
+page turns to "member". It still says frames arriving is not `credentialsDelivered`. Without the CORS setting, *Listen* fails with
+`Could not start listening: ...` and the exact `MEDIATOR_CORS_ALLOW_ORIGIN=<origin>` line. Do not run `npm run tsp:listen` as the same DID at
+the same time: a frame may go to either listener.
+
 ## 9. Extend it: your own task and an extension
 
 *Mode: any mode.*

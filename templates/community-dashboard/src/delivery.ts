@@ -3,7 +3,7 @@
 // What is true (docs/MESSAGING.md): `credentialsDelivered` in the join status is NOT "the frame arrived". The VTC (0.15.0) sets it
 // only once it holds the member's OWN membership credential sent back to it (vtc/members/vmc/0.1, the reciprocal half). This page
 // never sends that, so it stays false even when the credential reached a listener. Whether frames arrived is shown by
-// `npm run tsp:listen`, not by this flag.
+// `npm run tsp:listen` and the dashboard's "Credential frames" panel, not by this flag.
 //
 // Applicant: in MODE=tunnel a did:peer:2 from the app credential's seed whose TSPTransport service names the stack's mediator, so
 // the VTC pushes to it over TSP without earlier contact (verified live with `npm run tsp:peer-push`, docs/MESSAGING.md). In local and
@@ -50,10 +50,10 @@ export function deliveryNote(mode: RunMode, delivered: boolean | undefined, appl
     return { pill: "info", label: "not applicable here", detail: `Delivery is a message pushed to a wallet. The local stack has messaging off, so nothing is sent. MODE=tunnel turns messaging on (docs/MESSAGING.md). ${FLAG}` };
   }
   if (mode === "tunnel" && applicant === "did:peer") {
-    return { pill: "info", label: unknown ? "not reported" : "pushed over TSP; flag stays false", detail: `This page applies as a did:peer:2 whose TSPTransport service names the stack's mediator, so the VTC can push the credential over TSP with no earlier contact. Run \`npm run tsp:listen\` to see the frames arrive. ${FLAG}` };
+    return { pill: "info", label: unknown ? "not reported" : "pushed over TSP; flag stays false", detail: `This page applies as a did:peer:2 whose TSPTransport service names the stack's mediator, so the VTC can push the credential over TSP with no earlier contact. The "Credential frames" panel below (or \`npm run tsp:listen\`) shows the frames arrive. ${FLAG}` };
   }
   if (mode === "tunnel") {
-    return { pill: "warn", label: unknown ? "not reported" : "not delivered (expected)", detail: `This page's identity is a plain did:key: its DID names no mediator, so the VTC pushes over TSP only after this DID spoke TSP to it (\`npm run tsp:listen\` first). Without VTC_APPLICANT=did:key, tunnel mode applies as a did:peer:2 that names the mediator instead (docs/MESSAGING.md). ${FLAG}` };
+    return { pill: "warn", label: unknown ? "not reported" : "not delivered (expected)", detail: `This page's identity is a plain did:key: its DID names no mediator, so the VTC pushes over TSP only after this DID spoke TSP to it (the "Credential frames" panel below or \`npm run tsp:listen\` does that, started before approval). Without VTC_APPLICANT=did:key, tunnel mode applies as a did:peer:2 that names the mediator instead (docs/MESSAGING.md). ${FLAG}` };
   }
   return { pill: "info", label: unknown ? "not reported" : "not delivered", detail: `Whether a hosted community delivers to this identity is unverified (docs/MODES.md). ${FLAG}` };
 }

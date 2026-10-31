@@ -1,7 +1,7 @@
 // What a page is told when fetch fails: both causes, the origin, the URL, the fix.
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { explainFetchFailure, TrustTaskError } from "../src/index.js";
+import { explainFetchFailure, looksLikeFetchFailure, TrustTaskError } from "../src/index.js";
 
 const direct = { url: "http://localhost:8100", origin: "http://localhost:3050" };
 
@@ -25,6 +25,21 @@ test("the VTC and the mediator name their own override variable", () => {
   const med = explainFetchFailure(new TypeError("x"), { url: "ws://localhost:7037", origin: "http://localhost:3050", server: "mediator" })!;
   assert.match(med, /MEDIATOR_CORS_ALLOW_ORIGIN=http:\/\/localhost:3050/);
   assert.doesNotMatch(med, /default list/);
+  assert.match(med, /^MEDIATOR_CORS_ALLOW_ORIGIN=http:\/\/localhost:3050$/m, "the exact line, on its own");
+  assert.doesNotMatch(med, /docker compose/, "no recreate command without the mediator host");
+  const host = explainFetchFailure(new TypeError("x"), { url: "x", origin: "http://localhost:5173", server: "mediator", mediatorHost: "med.example.test" })!;
+  assert.match(host, /`MEDIATOR_PUBLIC_HOST=med\.example\.test MEDIATOR_CORS_ALLOW_ORIGIN=http:\/\/localhost:5173 docker compose --profile messaging up -d mediator`/);
+  assert.match(host, /MEDIATOR_CORS_ALLOW_ORIGIN=http:\/\/localhost:5173 npm run up -- --tunnel/);
+});
+
+test("a fetch failure wrapped by a library (the did:webvh resolver) is recognised by its wording", () => {
+  for (const m of ["did:webvh resolve failed: invalidDid — Failed to fetch", "NetworkError when attempting to fetch resource.", "Load failed"]) {
+    assert.equal(looksLikeFetchFailure(new Error(m)), true, m);
+  }
+  assert.equal(looksLikeFetchFailure(new TypeError("anything")), true);
+  for (const e of [new Error("did:webvh resolve failed: invalidDid"), new Error("timed out"), "Failed to fetch", undefined]) assert.equal(looksLikeFetchFailure(e), false, String(e));
+  const wrapped = explainFetchFailure(new Error("did:webvh resolve failed: invalidDid — Failed to fetch"), { url: "x", origin: "http://localhost:5173", server: "mediator" });
+  assert.match(wrapped ?? "", /MEDIATOR_CORS_ALLOW_ORIGIN=http:\/\/localhost:5173/);
 });
 
 test("through the dev proxy CORS is ruled out: a TypeError means the dev server is gone", () => {

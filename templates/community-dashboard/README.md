@@ -54,6 +54,26 @@ Things the live run taught (kept in the code comments too):
 - Status polling at 10 s stays well under the anonymous per-address limit (burst 10, then one per 5 s); a failed poll backs
   off (doubling up to 60 s) and polling pauses while the tab is hidden.
 
+## Credential frames (tunnel mode)
+
+Under the in-review and member screens (one position, so a listener started before approval keeps running when the page turns
+to "member") sits a collapsed **Credential frames** panel: the browser version of `npm run tsp:listen`. *Listen for credential
+frames* logs in to the mediator as the same applicant the page applies as (the `did:peer:2` naming the mediator, or the
+`did:key`, which first sends the VTC a relationship invite so the VTC learns its route) and lists each TSP frame from the VTC
+with its time and kind: relationship invite or accept, `credential-exchange/issue/0.1`, another document type, or unreadable /
+not from the VTC, with a running tally. It reads only the frame kind; it does not parse or verify the credential. Frames
+arriving is **not** `credentialsDelivered` (that flag means the member's own credential sent back,
+[MESSAGING.md](../../docs/MESSAGING.md#what-credentialsdelivered-means)). *Stop*, a connect timeout (20 s) and leaving the page
+close the socket. The mediator keeps one live-delivery socket per DID, so with `npm run tsp:listen` running as the same DID a frame
+may go there instead.
+
+This is the dashboard's only direct call to the mediator, and the only thing here that needs mediator CORS: the page fetches the
+mediator's `did.jsonl` from its tunnel host and opens its socket with a browser `Origin`, so start the stack with
+`MEDIATOR_CORS_ALLOW_ORIGIN=<this page's origin>` (for example `http://localhost:5173`; one exact origin,
+[MODES.md](../../docs/MODES.md#browser-access-cors)). A failed connect prints the exact line and the command that recreates only the
+mediator with it. Local mode shows why there is nothing to listen to (no mediator); farm mode says it is not available.
+Unit- and component-tested with a fake listener; the live browser check is pending.
+
 ## The community is the database
 
 The page keeps no authoritative copy of anything: the VTC (and the VTA behind it) is the source of truth, and the page is a
@@ -99,7 +119,8 @@ run unless marked):
 Pure, framework-free modules (unit-tested, no DOM, no network): `src/state.ts` (`deriveState`, journey step),
 `src/criteria.ts` (which join criteria are usable and why not), `src/format.ts` (DID, date and duration formatting,
 refusal wording, DID stripping, TypeScript snippets), `src/poll.ts` (a non-overlapping poller and an in-flight de-duplicator),
-`src/store.ts`, `src/refresh.ts` (cooldown, debounce, epoch, as-of text). Thin glue: `src/client.ts` (the single `VtcClient`, call log, error wording), `src/probe.ts`,
+`src/store.ts`, `src/refresh.ts` (cooldown, debounce, epoch, as-of text), `src/delivery.ts` (mode and applicant), `src/frames.ts` (credential-frames
+gating, wording, connect-failure hint; the tally is `@buildathon/tsp-client` `src/frames.ts`, shared with `tsp:listen`). Thin glue: `src/listener.ts` (the mediator listener), `src/client.ts` (the single `VtcClient`, call log, error wording), `src/probe.ts`,
 `src/hooks.ts` (`useDashboard`, `useLoad`, `useCallLog`). React components live in `src/components/` and `src/App.tsx`.
 The call log uses the optional `onCall` hook on `VtcClient` (`packages/vtc-client`); the status panel is the
 framework-free `@buildathon/status-panel`, mounted by a small wrapper component (`useEffect` that mounts and destroys it).

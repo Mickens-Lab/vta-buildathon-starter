@@ -68,8 +68,10 @@ calls the VTA/VTC directly, and for the mediator, which cannot be proxied (its U
 
 A web page that talks to the mediator directly (the TSP browser client) needs two things the defaults do not give:
 
-- **Mediator:** set `MEDIATOR_CORS_ALLOW_ORIGIN` before `npm run up` (or `docker compose --profile messaging up -d mediator` again; it is applied on
-  every boot, no volume reset). It becomes `[security] cors_allow_origin` and takes one exact origin such as `http://localhost:5173`, a
+- **Mediator:** set `MEDIATOR_CORS_ALLOW_ORIGIN` before `npm run up` (it is applied on every boot, no volume reset). To change it on a running tunnel
+  stack, recreate only the mediator; compose needs its tunnel host too, which is the last part of the mediator's `did:webvh` (`mediatorDid` in
+  `.vta/tunnel.json`): `MEDIATOR_PUBLIC_HOST=<mediator host> MEDIATOR_CORS_ALLOW_ORIGIN=<origin> docker compose --profile messaging up -d mediator`
+  (same host, so it keeps its DID; the VTA and VTC reconnect on their own) **[command from the compose file and entrypoint; live check pending]**. It becomes `[security] cors_allow_origin` and takes one exact origin such as `http://localhost:5173`, a
   `https://*.suffix` pattern, or `*`. **Unset (the default) means off**: responses carry no `Access-Control-Allow-Origin`, and the mediator also
   refuses a WebSocket upgrade that carries a browser `Origin` header (403). Prefer an exact origin; `*` is tolerable only because the mediator
   authenticates with a bearer token, not cookies. Anything outside letters, digits and `: / . * -` is refused at boot.
@@ -80,7 +82,11 @@ A web page that talks to the mediator directly (the TSP browser client) needs tw
   defaults you still want. The browser templates do not depend on any of this: their Vite dev server proxies `/__vta` and `/__vtc`, so the page
   stays same-origin on whatever port it lands on.
 
-The status panel's "Mediator did:webvh resolves at its tunnel host" row is the one place the browser templates touch the mediator: it fetches the
+The community dashboard's optional "Credential frames" panel logs in to the mediator from the browser (it fetches the mediator's `did.jsonl` and
+opens the socket), so it needs `MEDIATOR_CORS_ALLOW_ORIGIN=<the dashboard's origin>`, usually `http://localhost:5173` (one exact origin: the port Vite
+reports); a failed connect there prints that exact line and the recreate command above. Nothing else in the dashboard needs it.
+
+The status panel's "Mediator did:webvh resolves at its tunnel host" row is the other place the browser templates touch the mediator: it fetches the
 mediator's `did.jsonl`. Without this setting it reports "the host answers but this page cannot read it (CORS)" (not a fault; `npm run tunnel:probe`
 checks it from Node) and names the optional `MEDIATOR_CORS_ALLOW_ORIGIN=<origin>` line.
 
