@@ -14,6 +14,8 @@ import {
   newIdentity,
   seedFromMultibase,
   seedToMultibase,
+  siopIdToken,
+  siopKid,
 } from "../src/index.js";
 
 const VTA_DID = "did:webvh:Qmfake:localhost%3A8100";
@@ -107,4 +109,20 @@ test("grantHandoff sends an admin entry with the one-time hand-off marker and an
   assert.equal(seen[0].doc.type, TASK.aclGrant);
   assert.deepEqual([e.role, e.scopes, e.ext], ["admin", ["vtc"], { "org.openvtc.handoff": true }]);
   assert.ok(Date.parse(e.expiresAt) > Date.now());
+});
+
+test("siopIdToken names the signer's verification method as kid: did:key form, and a did:peer:2 #key-2 when the signer says so", () => {
+  const me = newIdentity();
+  const head = (t: string) => JSON.parse(Buffer.from(t.split(".")[0], "base64url").toString());
+  assert.equal(head(siopIdToken(me, VTA_DID, "n1")).kid, `${me.did}#${me.did.slice("did:key:".length)}`);
+  // A did:peer:2 applicant (shape of tsp-client's didPeerFromSeed): the old code sliced "did:key:".length off the DID and named no real key.
+  const peerDid = "did:peer:2.Ez6LSfake.Vz6Mkfake.SeyJ0IjoiVFNQVHJhbnNwb3J0In0";
+  const peer = { ...me, did: peerDid, signer: { ...me.signer, did: peerDid, verificationMethod: `${peerDid}#key-2` } };
+  assert.equal(siopKid(peer), `${peerDid}#key-2`);
+  const t = siopIdToken(peer, VTA_DID, "n2");
+  assert.equal(head(t).kid, `${peerDid}#key-2`);
+  const body = JSON.parse(Buffer.from(t.split(".")[1], "base64url").toString());
+  assert.deepEqual([body.iss, body.sub, body.aud, body.nonce], [peerDid, peerDid, VTA_DID, "n2"]);
+  // A signer for some other DID is not trusted for the kid: fall back to the did:key form.
+  assert.equal(siopKid({ ...me, signer: { ...me.signer, verificationMethod: "did:key:zOther#zOther" } }), `${me.did}#${me.did.slice("did:key:".length)}`);
 });

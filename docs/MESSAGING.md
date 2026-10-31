@@ -57,7 +57,7 @@ Ed25519 key (`#key-2`, authentication) and a `TSPTransport` service whose endpoi
   a relationship invite from the VTC and then two `credential-exchange/issue/0.1` frames, with no earlier contact from the applicant: `PASS: the credential reached the did:peer over TSP with no earlier contact.`
   **[verified]**. The join status then read `credentialsDelivered: false`, as expected ([why](#what-credentialsdelivered-means)).
 - With `VTC_APPLICANT=did:key` the did:key flow still works: `tsp:listen` (invite accepted), `vtc:join`, `vtc:approve`, two `credential-exchange/issue/0.1` frames received **[verified]**.
-- The community dashboard in headless Chromium applies as the `did:peer:2`, with no fallback and no console errors **[verified]**. It does not talk to the mediator from the browser, so it needs no mediator CORS.
+- The community dashboard in headless Chromium applies as the `did:peer:2`, with no fallback and no console errors **[verified]**. Applying and the status checks do not talk to the mediator from the browser and need no mediator CORS; only its optional "Credential frames" panel and its read-only "Identity" section (which shows the decoded applicant DID beside the mediator's DID document) do (below).
 - `npm run tunnel:probe` (and so `npm run up -- --tunnel`) checks that the mediator's DID resolves at its tunnel host **[verified]**.
 
 **Why this needed a different mediator DID.** The affinidi DID resolver that both the mediator and the VTC use (`DIDCacheClient`) refuses any DID over `max_did_size_in_bytes`, default
@@ -72,7 +72,7 @@ tunnel URL, and quick-tunnel hosts are 50 to 62 characters. Even the shortest re
 **What this costs, stated plainly.** The mediator's DID now resolves over HTTPS (DNS plus an HTTP fetch) through its tunnel host, as the VTA's and VTC's `did:webvh` DIDs already do in tunnel mode.
 Every party that resolves it (VTA, VTC, the clients, a browser page) needs the tunnel up and reachable. A browser page that resolves it (the `templates/tsp-ping` page) fetches the mediator's
 `did.jsonl` cross-origin, so `MEDIATOR_CORS_ALLOW_ORIGIN` must name the page's origin, the same setting `/ws` already needed: without it the page fails with
-`did:webvh resolve failed ... Failed to fetch`, with it the pong comes back **[verified, both]**. `MODE=local` has no mediator and makes no DNS or HTTP lookups beyond localhost. The applicant's
+`did:webvh resolve failed ... Failed to fetch`, with it the pong comes back **[verified, both]**. On that failure the page now names the exact line `MEDIATOR_CORS_ALLOW_ORIGIN=<its origin>` and the command that recreates only the mediator (unit-tested; verified live 2026-10-30 (one machine, one run)). `MODE=local` has no mediator and makes no DNS or HTTP lookups beyond localhost. The applicant's
 `did:peer:2` itself resolves with no lookup at all (its keys and service are in the identifier).
 
 Upstream quirk worth reporting: `mediator-setup` 0.45.0 writes `did_web_self_hosted = "file://./conf/did.jsonl"`, which the mediator resolves against its **working directory**, not the
@@ -85,6 +85,22 @@ From reading the VTC source at its pin (and consistent with the live run above):
 - when the mediator DID in the applicant's service is the **same string** as the VTC's own mediator DID, the frame is sealed to the applicant and routed through that mediator, and the VTC gets
   evidence of collection. A different mediator is sent nested and settles only by escalation **[unverified]**. The plan is TSP only, so a silent TSP failure has no DIDComm fallback.
 
+**In the browser.** The status panel's card "9. Applicant and messaging" (web-vta-app, and the dashboard's connection drawer) shows the same choice:
+the applicant type for the mode (and why a tunnel-mode did:peer:2 fell back to the did:key), the mediator's and the applicant's DID size against the
+1000-byte resolver limit, and whether the mediator's `did:webvh` resolves at its tunnel host (the page fetches its `did.jsonl` and compares the last
+entry's `id`). Without `MEDIATOR_CORS_ALLOW_ORIGIN` set to the page's origin the browser cannot read that file; the row then says so and points
+to `npm run tunnel:probe`, which checks it from Node. It is advisory and does not watch delivery. Unit-tested; verified live 2026-10-30 (one machine, one run).
+
+**Watching the frames in the browser.** The community dashboard's collapsed **Credential frames** panel (in-review and member screens) is
+`tsp:listen` in the page: *Listen for credential frames* logs in to the mediator as the same applicant the page applies as (a `did:key`
+sends the VTC a relationship invite first, a `did:peer:2` does not) and lists each frame from the VTC with its time and kind
+(relationship invite or accept, `credential-exchange/issue/0.1`, another document type, unreadable or not from the VTC) and a running tally.
+It reads the frame kind only, never the credential, and says plainly that frames arriving is not `credentialsDelivered`. Start it before
+the approval. It and the collapsed **Identity** section (the applicant `did:peer:2` decoded locally, keys and `TSPTransport` service, beside the mediator's DID document read from its `did.jsonl`) are the parts of the dashboard that need `MEDIATOR_CORS_ALLOW_ORIGIN` set to the page's origin (the panel fetches the
+mediator's `did.jsonl` and opens its socket from the browser); a failed connect prints the exact line. The mediator keeps one
+live-delivery socket per DID, so with `npm run tsp:listen` running as the same DID at the same time a frame may go to either. Unit- and
+component-tested with a fake listener; verified live 2026-10-30 (one machine, one run) (3 frames: 1 invite, 2 credential-exchange/issue/0.1, as the did:peer:2).
+
 ```
 npm run tsp:peer-push                         # tunnel mode: listener as the did:peer, join, approve, status; PASS when an issue frame arrives
 VTC_APPLICANT=did:key npm run vtc:join        # tunnel mode, the old way: apply as the did:key (run npm run tsp:listen first)
@@ -96,8 +112,18 @@ VTC_APPLICANT=did:key npm run vtc:join        # tunnel mode, the old way: apply 
 
 `credentialsDelivered` in `join-requests/status` (and the dashboard's membership card) is **not** a delivery receipt for the pushed frames. The VTC sets it to `true` only once it holds the
 member's **own** membership credential, sent back to the community (`vtc/members/vmc/0.1`, the reciprocal half of the membership pair; read from the VTC 0.15.0 source,
-`member_vmc_received_at`). Nothing in this kit sends that credential back, so the flag stays `false` even when every frame arrived, for a `did:key` and a `did:peer` alike. Frame arrival is what
+`member_vmc_received_at`). The pushed frames do not set it, so the flag stays `false` even when every frame arrived, for a `did:key` and a `did:peer` alike. Frame arrival is what
 `npm run tsp:listen` (its last line) and the VTC log (`trust-task push delivered ... via=tsp`) show.
+
+The community dashboard can send that credential back: the membership card's **Send my membership credential back** (after a confirm)
+signs a DTG `MembershipCredential` as the member (issuer: the applicant `did:key` or `did:peer:2`; subject: the community's DID;
+`issuerScope: directed`; an `eddsa-jcs-2022` proof for `assertionMethod`, the same proof the kit puts on every Trust Task) and sends
+`{ vc }` to `vtc/members/vmc/0.1` over REST, so it works in every mode (`local` too: no messaging is involved). It carries **no**
+`digestMultibase` of the community's grant, so the VTC stores it **unbound**: `credentialsDelivered` turns `true`, but the membership
+pair stays incomplete (the VTC logs a warning). Binding it would need the grant, which the kit could only get by renewing the membership
+(that replaces the grant), so the page does not. It sends no `requestId` either: the page cannot be sure which approved request is the
+current membership's, and a wrong one makes the VTC refuse the whole delivery. `VtcClient.sendMembershipCredential()` does the same from
+Node. Read from the VTC source and unit-tested (shape, proof for both identities, the call, the UI flow); the dashboard's button is **verified live 2026-10-30 (one machine, one run)** for both identities (receipt `stored`, `credentialsDelivered=true`, the VTC logs `stored member-issued VMC` with the unbound-digest warning).
 
 ## The rest of the gap: no DIDComm client, no wallet-side delivery
 

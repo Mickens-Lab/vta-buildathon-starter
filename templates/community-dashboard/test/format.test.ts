@@ -29,6 +29,10 @@ test("refusal wording", () => {
   assert.match(explainRefusal(500, "weird"), /internal problem/);
   assert.match(explainRefusal(418, "teapot", "short and stout"), /short and stout/);
   assert.match(explainRefusal(409, "x:revisionConflict"), /changed this/);
+  // vtc/members/vmc/0.1 refusals, by their declared codes.
+  assert.match(explainRefusal(422, "vtc/members/vmc:subjectMismatch"), /different community[^]*subjectMismatch/);
+  assert.match(explainRefusal(404, "vtc/members/vmc:notAMember", "no active member"), /not an active member[^]*notAMember/);
+  assert.match(explainRefusal(422, "vtc/members/vmc:invalidCredential"), /could not accept the credential[^]*invalidCredential/);
 });
 test("stripDids removes DID-valued and DID-named fields at any depth", () => {
   const out = stripDids({ entryId: "e1", did: "did:key:zFake", values: { name: "Pat", ref: "did:web:example" }, list: [{ subject: "x", n: 1 }] });

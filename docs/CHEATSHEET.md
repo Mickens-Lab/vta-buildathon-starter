@@ -108,7 +108,7 @@ Tunnel URLs and DIDs die with the run; what each mode gives and every caveat: [M
 | `MEDIATOR_IMAGE`, `REDIS_IMAGE` | compose | `MODE=tunnel` only: default `mediator-buildathon:local` and `redis:7.4.6-alpine` |
 | `APPROVER_DID` | `.env` | Set by `npm run approvals:setup`; makes a fresh VTA require a second key's approval for a gated task ([APPROVALS.md](APPROVALS.md)) |
 | `VTA_PORT` | compose | Port, default 8100; baked into the VTA DID on first boot |
-| `MEDIATOR_CORS_ALLOW_ORIGIN` | compose | Tunnel mode: one origin, `*.suffix` or `*` for browser access to the mediator; unset = off; applied every boot |
+| `MEDIATOR_CORS_ALLOW_ORIGIN` | compose | Tunnel mode: one origin, `*.suffix` or `*` for browser access to the mediator (`tsp-ping` page: `http://localhost:3000`; the dashboard's "Credential frames" panel: its origin, usually `http://localhost:5173`); unset = off; applied every boot ([MODES.md](MODES.md#browser-access-cors) has the recreate-only-the-mediator command) |
 | `CORS_ORIGINS_TOML` | compose | TOML array body of allowed origins, e.g. `'"http://localhost:4200"'`; first boot only; replaces the default loopback list |
 | `ENV_FILE` | provision/hello | Alternate env file, e.g. `.env.agent` |
 | `APP_ROLE` | provision | ACL role for the app, default `application` |
@@ -140,15 +140,16 @@ anything that changes state. See `templates/inbox-verifier`.
 
 ## Status panel (`@buildathon/status-panel`)
 
-`mountStatusPanel(container, opts)` renders seven cards (connection with the mode, VTA identity with a Messaging row, version vs `pins.json`, session,
-capabilities, wallet, optional VTC) with a Refresh button and optional 15/30 s auto-refresh. Pure helpers
+`mountStatusPanel(container, opts)` renders nine cards (connection with the mode, VTA identity with a Messaging row, version vs `pins.json`, session,
+capabilities, wallet, optional VTC, key custody, and applicant and messaging: which DID applies to the community, DID sizes vs the 1000-byte
+resolver limit, and whether the mediator's did:webvh resolves at its tunnel host) with a Refresh button and optional 15/30 s auto-refresh. Pure helpers
 (`parseDidDocServices`, `compareVersions`, `groupTasks`, `compatHints`) are exported and unit-tested:
 `npm test -w @buildathon/status-panel`. Web template: `npm run dev -w @buildathon/web-vta-app -- --port 3000` for
 another allowed origin.
 
 ## Packages (VTC)
 
-`@buildathon/vtc-client`: `VtcClient.connect(url, identity, fetch?, knownDid?)`, `manifest()`, `submitJoin()`, `joinStatus()`, `pickCriterion(manifest)`, admin `listMembers()`, `listJoinRequests()`, `decideJoin()`, and `call()` for any other task. `authenticate()`/`whoami()` are **admin-only** (a plain did:key member is refused by design). A member is **sessionless**: use typed signed requests (`myCard()`, `updateMyCard()`, `directoryEntries()`, `communityProfile()`, `withdrawJoin()`, `renewMembership()`, `leaveCommunity({confirm:true})`, `groups()` ...) and `memberProof()` (member portal `/v1/member/me`) for "am I a member right now". Matrix and limits: [VTC-SURFACE.md](VTC-SURFACE.md), [VTC.md](VTC.md#the-sessionless-member). Local VTC: submit/status/list/decide are verified live (see [VTC.md](VTC.md)).
+`@buildathon/vtc-client`: `VtcClient.connect(url, identity, fetch?, knownDid?)`, `manifest()`, `submitJoin()`, `joinStatus()`, `pickCriterion(manifest)`, admin `listMembers()`, `listJoinRequests()`, `decideJoin()`, and `call()` for any other task. `authenticate()`/`whoami()` are **admin-only** (a plain did:key member is refused by design). A member is **sessionless**: use typed signed requests (`myCard()`, `updateMyCard()`, `directoryEntries()`, `communityProfile()`, `withdrawJoin()`, `renewMembership()`, `leaveCommunity({confirm:true})`, `sendMembershipCredential()` (your own credential back, unbound; turns `credentialsDelivered` true; verified live 2026-10-30 (one machine, one run) from the dashboard), `groups()` ...) and `memberProof()` (member portal `/v1/member/me`) for "am I a member right now". Matrix and limits: [VTC-SURFACE.md](VTC-SURFACE.md), [VTC.md](VTC.md#the-sessionless-member). Local VTC: submit/status/list/decide are verified live (see [VTC.md](VTC.md)).
 
 **Observing calls.** `client.onCall = (e) => ...` (optional) is told after every call settles: `type`, `issuer`, `startedAt`,
 `durationMs`, `status`, `ok`, `code` (refusal code, or `network`), the signed `payload` and the full signed `request`

@@ -61,7 +61,7 @@ mattered: a signer with no ACL entry shares one per-address anonymous budget (bu
 | `members/purge`, `members/rotate*`, `config/restart,reload,patch`, `backup/*`, `install/*`, `admin/bootstrap` | not probed (destructive) | | | |
 
 Not verified live (source only): `directory/card/publish,present`, `directory/images/*`, `groups/show,join,leave,members/list`
-(the community has no group key holder), `members/personhood/*`, `members/vmc`, `members/rotate*`, `relationships/publish,revoke`,
+(the community has no group key holder), `members/personhood/*`, `members/vmc` (now sent by the dashboard and `VtcClient.sendMembershipCredential()`; verified live 2026-10-30 (one machine, one run) from the dashboard), `members/rotate*`, `relationships/publish,revoke`,
 `rooms/offers/accept`, `join-requests/supplement` success path, `credential-exchange/*` and `vtc/auth/recognise/*`.
 `vtc/elections/*` and `vetting-pcs` tasks are **not served** by this build (absent from the discovery list; `voting` and
 `vetting-pcs` features are off).
@@ -132,7 +132,7 @@ read. "Returns" is each task's spec payload; the spec lives in `dtgwg-trust-task
 | signer, own request | resolve_holder (signed proof only) | live: applicant, member OK; stranger/admin notFound | join-requests/status@0.1 |
 | signer (applicant/member), own request | resolve_holder: signed proof; the request's owner is the whole authority. No ACL read | live: applicant, stranger, member (submit, withdraw OK; 'notFound' when none open) | join-requests/submit@0.3, join-requests/supplement@0.1, join-requests/wallet-session/start@0.1, join-requests/wallet-session/status@0.1, join-requests/withdraw@0.1 |
 | admin | vtc.members.manage / admin ACL entry | live: member refused | members/admin-remove@0.1, members/admit@0.1, members/credentials@0.1, members/list@0.2, members/make-membership@0.1, members/purge@0.1, members/removed@0.1, members/show@0.1, members/solicit-vmc@0.1, members/update@0.1 |
-| member, own DID | signed by the subject (personhood), or holder reply to solicit-vmc | source only (payload errors reached the handler) | members/personhood/assert@0.2, members/personhood/challenge@0.1, members/vmc@0.1 |
+| member, own DID | signed by the subject (personhood), or holder reply to solicit-vmc | source only (payload errors reached the handler); members/vmc is used by the kit (dashboard "Send my membership credential back", `sendMembershipCredential`), verified live 2026-10-30 (one machine, one run) from the dashboard (`stored`) | members/personhood/assert@0.2, members/personhood/challenge@0.1, members/vmc@0.1 |
 | the subject or admin | signer is subject, or admin | source only | members/personhood/revoke@0.1 |
 | signer's own membership | proof signer is the member (read now). self-remove takes effect at once with an EMPTY payload | live: renew OK, self-remove OK (tombstoned; re-join works); rotate not exercised | members/renew@0.1, members/rotate-challenge@0.1, members/rotate@0.1, members/self-remove@0.1 |
 | admin | admin | live: member refused, admin OK | relationships/graph@0.2 |
@@ -165,3 +165,4 @@ By design, not an omission to patch (source: `acl/storage.rs`, `member_portal/mo
   goes over DIDComm/TSP, which the local stack leaves off (in tunnel mode the applicant is a `did:peer:2` naming the mediator and the VTC pushes the credential to it over TSP: [MESSAGING.md](MESSAGING.md#tunnel-mode-delivers-the-credential-to-the-applicant)). The admin's `decide` response does contain the VMC and role VAC.
   `credentialsDelivered` is not a delivery receipt: the VTC sets it only when it holds the member's own membership credential sent back
   (`vtc/members/vmc/0.1`), so it stays false even when the pushed frames arrived ([MESSAGING.md](MESSAGING.md#what-credentialsdelivered-means)).
+  The dashboard's "Send my membership credential back" sends one (unbound: no digest of the grant), which turns it true.

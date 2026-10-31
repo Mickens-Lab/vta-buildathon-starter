@@ -53,15 +53,23 @@ export const identityFromCredential = (c: CredentialBundle): Identity =>
   identityFromSeed(seedFromMultibase(c.privateKeyMultibase));
 
 /**
- * A self-issued SIOPv2 `id_token` (compact EdDSA JWS) for a did:key identity: `iss = sub = did`,
- * `aud` the verifier's DID, `nonce` the challenge it issued. Works in Node and browsers (noble, no crypto.subtle).
+ * A self-issued SIOPv2 `id_token` (compact EdDSA JWS): `iss = sub = did`, `aud` the verifier's DID, `nonce` the
+ * challenge it issued. The `kid` is the signing key's verification method: `did:key:z..#z..` for a did:key, and the
+ * signer's own `verificationMethod` when it names one (a did:peer:2 applicant signs with `<did>#key-2`; the verifier
+ * refuses any other id). Works in Node and browsers (noble, no crypto.subtle).
  */
 export function siopIdToken(me: Identity, audience: string, nonce: string, ttlSeconds = 120): string {
   const enc = (o: unknown) => base64urlnopad.encode(new TextEncoder().encode(JSON.stringify(o)));
   const now = Math.floor(Date.now() / 1000);
-  const mb = me.did.slice("did:key:".length);
-  const head = enc({ alg: "EdDSA", typ: "JWT", kid: `${me.did}#${mb}` });
+  const head = enc({ alg: "EdDSA", typ: "JWT", kid: siopKid(me) });
   const body = enc({ iss: me.did, sub: me.did, aud: audience, nonce, iat: now, exp: now + ttlSeconds });
   const sig = ed25519.sign(new TextEncoder().encode(`${head}.${body}`), me.seed);
   return `${head}.${body}.${base64urlnopad.encode(sig)}`;
+}
+
+/** The id_token's `kid`: the signer's verification method when it belongs to `me.did`, else the did:key form. */
+export function siopKid(me: Identity): string {
+  const vm = me.signer?.verificationMethod;
+  if (typeof vm === "string" && vm.startsWith(`${me.did}#`)) return vm;
+  return `${me.did}#${me.did.slice("did:key:".length)}`;
 }

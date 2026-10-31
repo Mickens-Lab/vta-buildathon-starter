@@ -13,6 +13,18 @@ export interface FetchFailureContext {
   target?: string;
   /** Which server: decides the override variable named in the fix. Default "vta". */
   server?: "vta" | "vtc" | "mediator";
+  /** The mediator's tunnel host (server "mediator"): adds the command that recreates only the mediator with the new origin. */
+  mediatorHost?: string;
+}
+
+// What browsers say when a fetch got no answer: Chromium, Firefox, Safari. Libraries often wrap the TypeError into their own
+// Error and keep only this text (the did:webvh resolver: "did:webvh resolve failed: invalidDid — Failed to fetch").
+const NO_ANSWER = /Failed to fetch|NetworkError when attempting to fetch|Load failed/i;
+
+/** True for a fetch that never got an answer: the browser's TypeError, or another error whose message carries its wording. */
+export function looksLikeFetchFailure(e: unknown): boolean {
+  if (e instanceof TypeError) return true;
+  return e instanceof Error && NO_ANSWER.test(e.message);
 }
 
 const CORS_VAR = { vta: "CORS_ORIGINS_TOML", vtc: "VTC_CORS_ORIGINS_TOML", mediator: "MEDIATOR_CORS_ALLOW_ORIGIN" } as const;
@@ -25,7 +37,7 @@ const statusOf = (e: unknown): number | undefined => {
   return m ? Number(m[1]) : undefined;
 };
 
-/** The explanation for a fetch that never got an answer (TypeError), or for the dev proxy's 502; `undefined` for any other error. */
+/** The explanation for a fetch that never got an answer (looksLikeFetchFailure), or for the dev proxy's 502; `undefined` for any other error. */
 export function explainFetchFailure(e: unknown, c: FetchFailureContext): string | undefined {
   const server = c.server ?? "vta";
   const name = NAME[server];
@@ -33,7 +45,7 @@ export function explainFetchFailure(e: unknown, c: FetchFailureContext): string 
   if (c.proxied && status !== undefined && [502, 503, 504].includes(status)) {
     return `The dev server is running but could not reach the ${name}${c.target ? ` at ${c.target}` : ""}. Is the stack up? Run \`npm run doctor\`, then \`npm run up\`. If ${server === "vta" ? "VTA_URL" : "the URL"} in the repo-root .env changed, restart the dev server.`;
   }
-  if (!(e instanceof TypeError)) return undefined;
+  if (!looksLikeFetchFailure(e)) return undefined;
   if (c.proxied) {
     return `The page could not reach its own dev server at ${c.origin} (called ${c.url}). Is \`npm run dev\` still running? The ${name} is reached through that server, so this page's port does not matter.`;
   }
@@ -41,7 +53,11 @@ export function explainFetchFailure(e: unknown, c: FetchFailureContext): string 
   const v = CORS_VAR[server];
   const fix =
     server === "mediator"
-      ? `The mediator allows no browser origin by default: start the stack with MEDIATOR_CORS_ALLOW_ORIGIN=${c.origin} (docs/MODES.md, "Browser access").`
+      ? [
+          `The mediator allows no browser origin by default. It needs this exact line (one origin, scheme and port included):`,
+          `MEDIATOR_CORS_ALLOW_ORIGIN=${c.origin}`,
+          `Either start a fresh tunnel stack with it (\`MEDIATOR_CORS_ALLOW_ORIGIN=${c.origin} npm run up -- --tunnel\`; a tunnel stack is never resumed)${c.mediatorHost ? `, or recreate only the running mediator with it (it keeps its DID): \`MEDIATOR_PUBLIC_HOST=${c.mediatorHost} MEDIATOR_CORS_ALLOW_ORIGIN=${c.origin} docker compose --profile messaging up -d mediator\`` : ""} (docs/MODES.md, "Browser access").`,
+        ].join("\n")
       : `Either call it through the Vite dev proxy (/__vta, /__vtc: the templates do), or allow ${c.origin}: set ${v} to a list that includes it (it replaces the default; first boot only), then \`npm run reset && npm run up\`.`;
   return [
     `The browser could not reach the ${name} at ${c.url} from ${c.origin}. A browser reports two different problems the same way:`,

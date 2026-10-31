@@ -16,6 +16,12 @@ test("passes current wording and clearly historical lines", () => {
   assert.deepEqual(staleHits("Prebuilt images from ghcr.io/mickens-lab by default, local build as the fallback.", true), []);
 });
 
+test("'nothing sends the member credential back' is stale now that the dashboard sends it", () => {
+  assert.equal(staleHits("Nothing in this kit sends that credential back, so the flag stays false.").length, 1);
+  assert.equal(staleHits("`credentialsDelivered` stays false in every case: it reports the member's own credential sent back.").length, 1);
+  assert.deepEqual(staleHits("The pushed frames do not set it; the dashboard's Send my membership credential back does."), []);
+});
+
 test("reports the line number", () => {
   assert.match(staleHits("ok\nnobody should build\n", true)[0], /^line 2:/);
 });

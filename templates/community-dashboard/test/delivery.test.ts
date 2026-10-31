@@ -19,6 +19,14 @@ test("every note says credentialsDelivered is the reciprocal credential, not fra
   }
 });
 
+test("the notes point at the send-back action, and the delivered note does not claim the pair is complete", () => {
+  assert.match(deliveryNote("tunnel", false, "did:peer").detail, /Send my membership credential back/);
+  const ok = deliveryNote("local", true).detail;
+  assert.match(ok, /unbound/);
+  assert.match(ok, /incomplete/);
+  assert.doesNotMatch(ok, /which this page does not send/);
+});
+
 test("a did:peer applicant in tunnel mode is told to run the listener, not that delivery is impossible", () => {
   const n = deliveryNote("tunnel", false, "did:peer");
   assert.equal(n.label, "pushed over TSP; flag stays false");

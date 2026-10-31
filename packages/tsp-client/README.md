@@ -25,6 +25,7 @@ console.log(describePong(r));     // "pong from the VTA in 120 ms: status ok, pr
 | `emitTspTrace` | Reports each ping to the shared trace (`TRACE=1`). |
 | `didPeerFromSeed(seed, mediatorDid)` | A deterministic `did:peer:2` (X25519 `#key-1`, Ed25519 `#key-2`, `TSPTransport` -> mediator DID) with a Trust Task signer, its TSP keys and the mediator-login secret. `parseDidPeer2`, `tspMediatorOf` read one back. |
 | `connectTsp({ identity })` / `clientKeys` | Log in to the mediator and open TSP frames as that did:peer instead of a did:key. |
+| `frameOf(m)`, `record(tally, frame)`, `emptyTally()`, `ISSUE_TYPE` | Pure: an opened frame's kind (relationship control type, or the Trust Task document type; never the credential) and a running count. Shared by `npm run tsp:listen` and the community dashboard's "Credential frames" panel. |
 
 ## Limits
 

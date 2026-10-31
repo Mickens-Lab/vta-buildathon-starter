@@ -42,6 +42,9 @@ export function explainRefusal(status: number | undefined, code: string | undefi
   const t = `${tail} ${message ?? ""}`;
   let plain: string;
   if (code === "network" || (status === undefined && !code)) plain = "The community did not answer. Check that it is running and that this page is allowed to call it.";
+  else if (/subjectmismatch/i.test(tail)) plain = "The credential names a different community as its subject, so this community will not store it.";
+  else if (/notamember/i.test(tail)) plain = "You are not an active member of this community, so it will not store your membership credential.";
+  else if (/invalidcredential/i.test(tail)) plain = "The community could not accept the credential: its issuer, shape or signature did not check out.";
   else if (/notfound/i.test(tail)) plain = "The community has no record of that: there is nothing to act on.";
   else if (/holds no entry|notmember|not a member/i.test(t)) plain = "You are not a member of this community, so it will not do that.";
   else if (/permissiondenied|notpermitted|forbidden|notadmin/i.test(t) || status === 403) plain = "You are not allowed to do that here.";

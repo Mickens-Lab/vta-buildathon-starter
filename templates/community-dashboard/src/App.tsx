@@ -1,10 +1,17 @@
 import { useCallback, useRef, useState } from "react";
 import type { VtcClient } from "@buildathon/vtc-client";
+import { didPeerFits } from "@buildathon/tsp-client";
 import { describeError, getClient, identity, refusalOf } from "./client.ts";
+import { builtApplicant, runMode } from "./delivery.ts";
+import { framesGate } from "./frames.ts";
+import { startListener } from "./listener.ts";
+import { FramesPanel } from "./components/FramesPanel.tsx";
+import { IdentityPanel } from "./components/IdentityPanel.tsx";
 import { JourneyStrip } from "./components/JourneyStrip.tsx";
 import { MemberScreen } from "./components/MemberScreen.tsx";
 import { StatusDrawer } from "./components/StatusDrawer.tsx";
 import { TopBar } from "./components/TopBar.tsx";
+import { TunnelBanner } from "./components/TunnelBanner.tsx";
 import { UnderTheHood } from "./components/UnderTheHood.tsx";
 import { EndedScreen, ErrorScreen, LocalHints, PendingScreen, VisitorScreen, type Actions } from "./components/screens.tsx";
 import { Fresh, Toasts, toast } from "./components/ui.tsx";
@@ -70,6 +77,7 @@ export function App() {
     <div className="app">
       <a className="skip" href="#main">Skip to content</a>
       <TopBar community={name} did={appDid()} dash={s} statusOpen={drawer} onOpenStatus={() => setDrawer(true)} onRefreshAll={refreshAll} />
+      <TunnelBanner mode={runMode()} />
       {appDid() && (
         <p className="note warn" role="note">
           <b>Playground only.</b> The app key is embedded in this page, so anyone who can load it can act as this app. Do not reuse it or deploy this build. See docs/SECURITY.md.
@@ -79,7 +87,15 @@ export function App() {
       {s && s.kind !== "member" && <Fresh info={d.source} onRefresh={() => void reread(false)} cooldownMs={cooldownMs} label="Refresh status" />}
       <LocalHints onForgot={() => void reread(false)} />
       <div className={`layout ${hood ? "with-hood" : ""}`}>
-        <main id="main" tabIndex={-1}>{main}</main>
+        <main id="main" tabIndex={-1}>
+          {main}
+          {/* One position for in-review and member, so a listener started before approval keeps running when the page turns to "member". */}
+          {s && (s.kind === "pending" || s.kind === "needs-info" || s.kind === "other" || s.kind === "member") && (
+            <FramesPanel gate={framesGate(runMode(), builtApplicant(didPeerFits))} start={startListener} origin={location.origin} did={appDid()} />
+          )}
+          {/* Read-only, collapsed: the applicant DID decoded, and the mediator's DID document (tunnel mode) fetched on open. */}
+          {s && <IdentityPanel mode={runMode()} did={appDid()} applicant={builtApplicant(didPeerFits)} origin={location.origin} />}
+        </main>
         <UnderTheHood open={hood} onToggle={() => setHood(!hood)} />
       </div>
       <StatusDrawer open={drawer} onClose={() => setDrawer(false)} />

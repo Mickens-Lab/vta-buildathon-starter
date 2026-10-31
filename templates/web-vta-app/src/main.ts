@@ -1,6 +1,6 @@
 import { VtaClient, decodeCredential, identityFromCredential } from "@buildathon/vta-client";
 import { VtcClient } from "@buildathon/vtc-client";
-import { mountStatusPanel } from "@buildathon/status-panel";
+import { applicantRule, mountStatusPanel, tunnelBanner } from "@buildathon/status-panel";
 
 // The status panel (packages/status-panel) shows connection, identity, version, session,
 // capabilities, wallet and the optional VTC link, live, with a Refresh button.
@@ -37,8 +37,23 @@ const vtc = vtcCfg
     }
   : undefined;
 
+const mode = __FARM__ ? "farm" : __TUNNEL__ ? "tunnel" : "local";
+
+// Tunnel mode only: the hosts and DIDs end at `npm run down` (wording shared with the community dashboard and the panel's Mode note).
+const banner = tunnelBanner(mode);
+if (banner) {
+  const el = $("tunnel-banner");
+  const b = document.createElement("b");
+  b.textContent = banner.title;
+  el.append(b, " ", ...banner.text.split(/`([^`]+)`/).map((part, i) => (i % 2 ? Object.assign(document.createElement("code"), { textContent: part }) : part)));
+  el.hidden = false;
+}
+// This page does not apply to the community. The "Applicant and messaging" card shows which identity `npm run vtc:join` and the
+// community dashboard would apply as (same rule; they also check the did:peer:2 fits the 1000-byte DID limit, this page does not).
+const applicant = { ...applicantRule(mode, __APPLICANT__, __MEDIATOR_DID__), mediatorDid: __MEDIATOR_DID__, appliesAs: "`npm run vtc:join` and the community dashboard (this page does not apply to the community)" };
+
 mountStatusPanel($("status-panel"), {
-  mode: __FARM__ ? "farm" : __TUNNEL__ ? "tunnel" : "local",
+  mode,
   vtaUrl,
   vtaDisplayUrl: __VTA_URL__,
   credentialPresent: !!credential,
@@ -47,6 +62,7 @@ mountStatusPanel($("status-panel"), {
   farm: __FARM_INFO__ ?? undefined,
   keyEmbedded: !!credential,
   keyNoteUrl: "/README.md",
+  applicant,
   vtc,
   title: "VTA connection status",
   autoRefreshMs: 0,

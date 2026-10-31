@@ -2,6 +2,8 @@
 import { CSS } from "./style.ts";
 import { custodyRows, type CustodyInput } from "./custody.ts";
 import { messagingRow, PING_TASK, protocolsOf } from "./messaging.ts";
+import { applicantCardRows, cardMediator, webvhLocation, type ApplicantInfo, type LogProbe } from "./applicant.ts";
+import { TUNNEL_LIFETIME } from "./tunnel.ts";
 import {
   compareVersions, compatHints, didDocFromLog, groupTasks, mediatorDid, parseDidDocServices, relativeTime,
   shortDid, versionFromOpenApi, type DidService,
@@ -40,6 +42,11 @@ export interface PanelOptions {
   keyNoteUrl?: string;
   /** Set when the app moved the key off the page: "backend" (level 1) or "webcrypto" (level 2). Feeds the Key custody card. */
   keyCustody?: CustodyInput["custody"];
+  /**
+   * What the page knows about the identity that applies to the community (feeds the "Applicant and messaging" card): kind, the DID
+   * when built, why a tunnel-mode did:peer:2 fell back to the did:key, and the stack's mediator DID (.vta/tunnel.json). Optional.
+   */
+  applicant?: ApplicantInfo;
   vtc?: {
     url: string;
     displayUrl?: string;
@@ -218,7 +225,7 @@ export function mountStatusPanel(container: HTMLElement, o: PanelOptions): Panel
     cards.push({
       title: "1. Connection",
       rows: [
-        { pill: o.mode === "tunnel" ? "warn" : "ok", label: "Mode", value: o.mode, note: o.mode === "tunnel" ? "Local containers behind public Cloudflare quick tunnels, with an OPEN mediator (messaging on). URLs and DIDs are regenerated every run; demo data only (docs/MODES.md)." : o.mode === "farm" ? `Hosted VTA on the VTA Farm${o.farm ? ` "${o.farm.name}" (FARM=${o.farm.id}, portal ${o.farm.portalUrl})` : ""}, reached through the dev server's /__vta proxy.${o.farm?.issues?.length ? " Known issue: " + o.farm.issues.join(" ") : ""}` : "Local VTA from this repo's docker compose stack." },
+        { pill: o.mode === "tunnel" ? "warn" : "ok", label: "Mode", value: o.mode, note: o.mode === "tunnel" ? `Local containers behind public Cloudflare quick tunnels, with an OPEN mediator (messaging on). ${TUNNEL_LIFETIME}; demo data only (docs/MODES.md).` : o.mode === "farm" ? `Hosted VTA on the VTA Farm${o.farm ? ` "${o.farm.name}" (FARM=${o.farm.id}, portal ${o.farm.portalUrl})` : ""}, reached through the dev server's /__vta proxy.${o.farm?.issues?.length ? " Known issue: " + o.farm.issues.join(" ") : ""}` : "Local VTA from this repo's docker compose stack." },
         { pill: "info", label: "VTA URL", value: vtaShown, note: o.vtaUrl !== vtaShown ? `The browser calls ${o.vtaUrl} (same-origin proxy).` : undefined },
         reachRow("VTA", health, vtaShown, origin, o.mode),
         health.ok
@@ -390,6 +397,15 @@ export function mountStatusPanel(container: HTMLElement, o: PanelOptions): Panel
       cards.push({ title: "7. Community (VTC)", rows: [{ pill: "unknown", label: "VTC link", value: "not configured", note: "Optional. Set VTC_URL (and VTC_DID in farm mode) in the repo-root .env and restart the dev server to see the community here." }] });
     }
     cards.push({ title: "8. Key custody", advisory: true, rows: custodyRows({ mode: o.mode, keyEmbedded: o.keyEmbedded, credentialPresent: o.credentialPresent, custody: o.keyCustody, vtaUrl: vtaShown, docsUrl: o.keyNoteUrl }) });
+
+    // 9. Applicant and messaging. Tunnel mode only fetches anything: the mediator's did.jsonl at its did:webvh host, from the browser.
+    const medForCard = cardMediator({ mode: o.mode, applicant: o.applicant, advertisedMediator: mediator });
+    const loc = medForCard ? webvhLocation(medForCard) : undefined;
+    let medLog: LogProbe | undefined;
+    if (loc) medLog = await probe(f, loc.url, timeoutMs);
+    cards.push({ title: "9. Applicant and messaging", advisory: true,
+      rows: applicantCardRows({ mode: o.mode, applicant: o.applicant, advertisedMediator: mediator, probe: medLog, origin }),
+      details: o.mode === "tunnel" ? { applicant: o.applicant, mediatorDid: medForCard, didJsonl: loc?.url, httpStatus: medLog?.status, corsBlocked: medLog?.corsBlocked } : undefined });
     return cards;
   }
 
