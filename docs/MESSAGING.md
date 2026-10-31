@@ -57,7 +57,7 @@ Ed25519 key (`#key-2`, authentication) and a `TSPTransport` service whose endpoi
   a relationship invite from the VTC and then two `credential-exchange/issue/0.1` frames, with no earlier contact from the applicant: `PASS: the credential reached the did:peer over TSP with no earlier contact.`
   **[verified]**. The join status then read `credentialsDelivered: false`, as expected ([why](#what-credentialsdelivered-means)).
 - With `VTC_APPLICANT=did:key` the did:key flow still works: `tsp:listen` (invite accepted), `vtc:join`, `vtc:approve`, two `credential-exchange/issue/0.1` frames received **[verified]**.
-- The community dashboard in headless Chromium applies as the `did:peer:2`, with no fallback and no console errors **[verified]**. Applying and the status checks do not talk to the mediator from the browser and need no mediator CORS; only its optional "Credential frames" panel does (below).
+- The community dashboard in headless Chromium applies as the `did:peer:2`, with no fallback and no console errors **[verified]**. Applying and the status checks do not talk to the mediator from the browser and need no mediator CORS; only its optional "Credential frames" panel and its read-only "Identity" section (which shows the decoded applicant DID beside the mediator's DID document) do (below).
 - `npm run tunnel:probe` (and so `npm run up -- --tunnel`) checks that the mediator's DID resolves at its tunnel host **[verified]**.
 
 **Why this needed a different mediator DID.** The affinidi DID resolver that both the mediator and the VTC use (`DIDCacheClient`) refuses any DID over `max_did_size_in_bytes`, default
@@ -96,7 +96,7 @@ to `npm run tunnel:probe`, which checks it from Node. It is advisory and does no
 sends the VTC a relationship invite first, a `did:peer:2` does not) and lists each frame from the VTC with its time and kind
 (relationship invite or accept, `credential-exchange/issue/0.1`, another document type, unreadable or not from the VTC) and a running tally.
 It reads the frame kind only, never the credential, and says plainly that frames arriving is not `credentialsDelivered`. Start it before
-the approval. It is the one part of the dashboard that needs `MEDIATOR_CORS_ALLOW_ORIGIN` set to the page's origin (it fetches the
+the approval. It and the collapsed **Identity** section (the applicant `did:peer:2` decoded locally, keys and `TSPTransport` service, beside the mediator's DID document read from its `did.jsonl`) are the parts of the dashboard that need `MEDIATOR_CORS_ALLOW_ORIGIN` set to the page's origin (the panel fetches the
 mediator's `did.jsonl` and opens its socket from the browser); a failed connect prints the exact line. The mediator keeps one
 live-delivery socket per DID, so with `npm run tsp:listen` running as the same DID at the same time a frame may go to either. Unit- and
 component-tested with a fake listener; the live browser check is pending.

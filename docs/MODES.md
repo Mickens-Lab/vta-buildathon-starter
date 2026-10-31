@@ -88,7 +88,8 @@ line and the recreate command above with the mediator host filled in **[unit-tes
 
 The community dashboard's optional "Credential frames" panel logs in to the mediator from the browser (it fetches the mediator's `did.jsonl` and
 opens the socket), so it needs `MEDIATOR_CORS_ALLOW_ORIGIN=<the dashboard's origin>`, usually `http://localhost:5173` (one exact origin: the port Vite
-reports); a failed connect there prints that exact line and the recreate command above. Nothing else in the dashboard needs it.
+reports); a failed connect there prints that exact line and the recreate command above. Its read-only "Identity" section fetches the same `did.jsonl`
+to show the mediator's DID document and, when blocked, says so with the same line (the decoded applicant DID needs no fetch). Nothing else in the dashboard needs it.
 
 The status panel's "Mediator did:webvh resolves at its tunnel host" row is the other place the browser templates touch the mediator: it fetches the
 mediator's `did.jsonl`. Without this setting it reports "the host answers but this page cannot read it (CORS)" (not a fault; `npm run tunnel:probe`

@@ -111,3 +111,8 @@ form.inline { display: flex; gap: .5rem; align-items: center; } form.inline inpu
   .journey li.done::before { content: "\2713 "; }
 }
 .fresh { margin: .25rem 0 .5rem; gap: .5rem; }
+
+/* Identity section (components/IdentityPanel.tsx) */
+.card.identity { margin-top: .75rem; }
+.identity .small-heading { font-size: .95rem; margin: .75rem 0 .25rem; }
+code.wrap { overflow-wrap: anywhere; word-break: break-all; }

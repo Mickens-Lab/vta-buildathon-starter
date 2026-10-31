@@ -6,6 +6,7 @@ import { builtApplicant, runMode } from "./delivery.ts";
 import { framesGate } from "./frames.ts";
 import { startListener } from "./listener.ts";
 import { FramesPanel } from "./components/FramesPanel.tsx";
+import { IdentityPanel } from "./components/IdentityPanel.tsx";
 import { JourneyStrip } from "./components/JourneyStrip.tsx";
 import { MemberScreen } from "./components/MemberScreen.tsx";
 import { StatusDrawer } from "./components/StatusDrawer.tsx";
@@ -90,6 +91,8 @@ export function App() {
           {s && (s.kind === "pending" || s.kind === "needs-info" || s.kind === "other" || s.kind === "member") && (
             <FramesPanel gate={framesGate(runMode(), builtApplicant(didPeerFits))} start={startListener} origin={location.origin} did={appDid()} />
           )}
+          {/* Read-only, collapsed: the applicant DID decoded, and the mediator's DID document (tunnel mode) fetched on open. */}
+          {s && <IdentityPanel mode={runMode()} did={appDid()} applicant={builtApplicant(didPeerFits)} origin={location.origin} />}
         </main>
         <UnderTheHood open={hood} onToggle={() => setHood(!hood)} />
       </div>

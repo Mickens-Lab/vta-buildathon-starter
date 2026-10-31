@@ -67,12 +67,25 @@ arriving is **not** `credentialsDelivered` (that flag means the member's own cre
 close the socket. The mediator keeps one live-delivery socket per DID, so with `npm run tsp:listen` running as the same DID a frame
 may go there instead.
 
-This is the dashboard's only direct call to the mediator, and the only thing here that needs mediator CORS: the page fetches the
-mediator's `did.jsonl` from its tunnel host and opens its socket with a browser `Origin`, so start the stack with
+This panel and the read-only **Identity** section (below) are the dashboard's only direct calls to the mediator, and the only things here that
+need mediator CORS: the panel fetches the mediator's `did.jsonl` from its tunnel host and opens its socket with a browser `Origin`, so start the stack with
 `MEDIATOR_CORS_ALLOW_ORIGIN=<this page's origin>` (for example `http://localhost:5173`; one exact origin,
 [MODES.md](../../docs/MODES.md#browser-access-cors)). A failed connect prints the exact line and the command that recreates only the
 mediator with it. Local mode shows why there is nothing to listen to (no mediator); farm mode says it is not available.
 Unit- and component-tested with a fake listener; the live browser check is pending.
+
+## Identity (read-only)
+
+A collapsed **Identity** section below the main screen shows this page's applicant DID decoded from the identifier itself, with no
+resolver (`src/identity.ts`): for the tunnel-mode `did:peer:2` its keys by position (`#key-1` X25519 keyAgreement, `#key-2` Ed25519
+authentication, each with its public multibase) and its `TSPTransport` service, whose endpoint is the mediator's DID; for a `did:key`
+its one Ed25519 key and no service. Beside it, in tunnel mode, the mediator's DID document as its `did.jsonl` serves it (the latest log
+entry: id, verification relationships, verification methods with public keys, services); the page does not check the log's hashes or
+proofs. The document is fetched only when the section is opened, from `https://<mediator host>/.well-known/did.jsonl`, so it needs
+`MEDIATOR_CORS_ALLOW_ORIGIN=<this page's origin>` like the frames panel; when the browser cannot read it the section says so with that
+exact line and the recreate command, and still shows the applicant side. Local and farm mode show the `did:key` and say there is no
+mediator. Only public key material is shown, never the seed or a private key. Unit- and component-tested with a fake reader; the live
+browser check is pending.
 
 ## The community is the database
 
