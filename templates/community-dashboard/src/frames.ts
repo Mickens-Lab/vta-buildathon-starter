@@ -2,7 +2,7 @@
 // closing line, and the explanation for a failed connect. Pure, so it is unit-tested (test/frames.test.ts). The frame kinds and the
 // tally are the ones `npm run tsp:listen` uses (@buildathon/tsp-client src/frames.ts). Nothing here reads or verifies a credential.
 import { explainFetchFailure, looksLikeFetchFailure } from "@buildathon/vta-client";
-import { ISSUE_TYPE, type Frame, type Tally } from "@buildathon/tsp-client";
+import { ISSUE_TYPE, mediatorHostOf, type Frame, type Tally } from "@buildathon/tsp-client";
 import type { ApplicantKind, RunMode } from "./delivery.ts";
 
 /** Whether this page can listen, and if not, why (shown instead of the button). */
@@ -45,12 +45,8 @@ export const NOT_DELIVERED_FLAG = "Frames arriving is not credentialsDelivered. 
 
 export const ONE_LISTENER = "The mediator keeps one live-delivery socket per DID. If `npm run tsp:listen` runs as the same DID at the same time, a frame may go to that listener instead of this page.";
 
-/** The host a did:webvh is bound to (`did:webvh:<scid>:<host>[:path]`, a port encoded as %3A), else undefined. */
-export function mediatorHostOf(did: string): string | undefined {
-  const p = did.split(":");
-  if (p[0] !== "did" || p[1] !== "webvh" || p.length < 4 || !p[3]) return undefined;
-  try { return decodeURIComponent(p[3]); } catch { return undefined; }
-}
+/** Re-exported: the host extraction is shared with the tsp-ping page (@buildathon/tsp-client src/webvh.ts). */
+export { mediatorHostOf };
 
 export const CONNECT_TIMEOUT_MS = 20_000;
 export class ConnectTimeout extends Error {

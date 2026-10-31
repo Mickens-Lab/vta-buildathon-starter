@@ -82,6 +82,10 @@ A web page that talks to the mediator directly (the TSP browser client) needs tw
   defaults you still want. The browser templates do not depend on any of this: their Vite dev server proxies `/__vta` and `/__vtc`, so the page
   stays same-origin on whatever port it lands on.
 
+The `tsp-ping` page (`templates/tsp-ping`) needs the same for its origin, `http://localhost:3000` by default. When the mediator's `did.jsonl` cannot be read
+(`did:webvh resolve failed ... Failed to fetch`) or the socket is refused, its verdict names the exact `MEDIATOR_CORS_ALLOW_ORIGIN=<this page's origin>`
+line and the recreate command above with the mediator host filled in **[unit-tested; live check pending]**.
+
 The community dashboard's optional "Credential frames" panel logs in to the mediator from the browser (it fetches the mediator's `did.jsonl` and
 opens the socket), so it needs `MEDIATOR_CORS_ALLOW_ORIGIN=<the dashboard's origin>`, usually `http://localhost:5173` (one exact origin: the port Vite
 reports); a failed connect there prints that exact line and the recreate command above. Nothing else in the dashboard needs it.

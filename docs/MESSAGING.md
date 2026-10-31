@@ -72,7 +72,7 @@ tunnel URL, and quick-tunnel hosts are 50 to 62 characters. Even the shortest re
 **What this costs, stated plainly.** The mediator's DID now resolves over HTTPS (DNS plus an HTTP fetch) through its tunnel host, as the VTA's and VTC's `did:webvh` DIDs already do in tunnel mode.
 Every party that resolves it (VTA, VTC, the clients, a browser page) needs the tunnel up and reachable. A browser page that resolves it (the `templates/tsp-ping` page) fetches the mediator's
 `did.jsonl` cross-origin, so `MEDIATOR_CORS_ALLOW_ORIGIN` must name the page's origin, the same setting `/ws` already needed: without it the page fails with
-`did:webvh resolve failed ... Failed to fetch`, with it the pong comes back **[verified, both]**. `MODE=local` has no mediator and makes no DNS or HTTP lookups beyond localhost. The applicant's
+`did:webvh resolve failed ... Failed to fetch`, with it the pong comes back **[verified, both]**. On that failure the page now names the exact line `MEDIATOR_CORS_ALLOW_ORIGIN=<its origin>` and the command that recreates only the mediator (unit-tested; live check pending). `MODE=local` has no mediator and makes no DNS or HTTP lookups beyond localhost. The applicant's
 `did:peer:2` itself resolves with no lookup at all (its keys and service are in the identifier).
 
 Upstream quirk worth reporting: `mediator-setup` 0.45.0 writes `did_web_self_hosted = "file://./conf/did.jsonl"`, which the mediator resolves against its **working directory**, not the
