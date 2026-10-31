@@ -28,6 +28,13 @@ export default defineConfig(({ mode }) => {
   }
   const vtcUrl = process.env.VTC_URL ?? e.VTC_URL;
   const vtcDid = process.env.VTC_DID ?? e.VTC_DID;
+  // For the status panel's "Applicant and messaging" card, read the same way as the community dashboard: VTC_APPLICANT ("" = no override)
+  // and the stack's mediator DID (.vta/tunnel.json, tunnel mode). This page does not apply to the VTC; the card says which identity
+  // `npm run vtc:join` and the dashboard would apply as.
+  const override = (process.env.VTC_APPLICANT ?? e.VTC_APPLICANT ?? "").trim().toLowerCase().replace(/^(did:)?key$/, "did:key").replace(/^(did:)?peer$/, "did:peer");
+  const applicant = override === "did:key" || override === "did:peer" ? override : "";
+  let mediatorDid: string | null = null;
+  try { mediatorDid = tunnel ? (JSON.parse(readFileSync(new URL("../../.vta/tunnel.json", import.meta.url), "utf8")).mediatorDid ?? null) : null; } catch { /* no tunnel state */ }
 
   // The version this kit is pinned to, for the status panel's version check.
   const pins = JSON.parse(readFileSync(new URL("../../pins.json", import.meta.url), "utf8"));
@@ -61,6 +68,8 @@ export default defineConfig(({ mode }) => {
     define: {
       __FARM__: JSON.stringify(farm),
       __TUNNEL__: JSON.stringify(tunnel),
+      __APPLICANT__: JSON.stringify(applicant),
+      __MEDIATOR_DID__: JSON.stringify(mediatorDid),
       __VTA_BROWSER_URL__: JSON.stringify(VTA_PROXY),
       __VTA_URL__: JSON.stringify(e.VTA_URL ?? "http://localhost:8100"),
       __FARM_INFO__: JSON.stringify(farm ? farmInfo : null),

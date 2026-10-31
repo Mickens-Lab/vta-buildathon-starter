@@ -7,7 +7,10 @@ reachable (and round-trip time), its DID and DID-document services, the `vta-ser
 version against the pin in `pins.json`, your session (role, scopes, context, expiry),
 the Trust Task capabilities grouped by family (with acl/grant and discovery compatibility
 hints), whether `window.vtaWallet` is present, and, if `VTC_URL` is in the root `.env`,
-the community's `/health` and join manifest. Each row has an ok/warn/bad/unknown pill and
+the community's `/health` and join manifest, and (card 9, "Applicant and messaging") which identity `npm run vtc:join` and the
+community dashboard apply as in this mode, the mediator's DID size against the 1000-byte resolver limit, and whether the mediator's
+did:webvh resolves at its tunnel host (this page itself does not apply to the community; it does not build the did:peer:2, so it does
+not check that DID's size). Each row has an ok/warn/bad/unknown pill and
 a plain-words explanation; raw JSON sits under "details". Refresh with the button or the
 auto-refresh menu. If the wallet is present it also offers a profile lookup and a
 wallet-signed Trust Task. Without the wallet, the rest still works.

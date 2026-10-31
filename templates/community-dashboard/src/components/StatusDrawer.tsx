@@ -2,7 +2,17 @@ import { useEffect, useRef } from "react";
 import { mountStatusPanel } from "@buildathon/status-panel";
 import { VtcClient } from "@buildathon/vtc-client";
 import { VtaClient } from "@buildathon/vta-client";
+import { didPeerFits } from "@buildathon/tsp-client";
 import { abs, credential, identity, vtaBrowserUrl, vtcBrowserUrl } from "../client.ts";
+import { builtApplicant } from "../delivery.ts";
+
+/** The applicant this page signs as (the same rule as `npm run vtc:join`), for the panel's "Applicant and messaging" card. */
+function applicantInfo() {
+  const a = builtApplicant(didPeerFits);
+  let did: string | undefined;
+  try { did = identity().did; } catch { /* no credential: kind and mediator are still known */ }
+  return { kind: a.kind, did, why: a.why, mediatorDid: a.mediatorDid };
+}
 
 /** The framework-free status panel, mounted from an effect and destroyed on cleanup. */
 export function StatusPanelHost() {
@@ -28,6 +38,7 @@ export function StatusPanelHost() {
       pin: __PIN__,
       farm: __FARM_INFO__ ?? undefined,
       keyEmbedded: !!cred,
+      applicant: applicantInfo(),
       vtc: {
         url: abs(vtcBrowserUrl()),
         displayUrl: __VTC_URL__,

@@ -80,6 +80,10 @@ A web page that talks to the mediator directly (the TSP browser client) needs tw
   defaults you still want. The browser templates do not depend on any of this: their Vite dev server proxies `/__vta` and `/__vtc`, so the page
   stays same-origin on whatever port it lands on.
 
+The status panel's "Mediator did:webvh resolves at its tunnel host" row is the one place the browser templates touch the mediator: it fetches the
+mediator's `did.jsonl`. Without this setting it reports "the host answers but this page cannot read it (CORS)" (not a fault; `npm run tunnel:probe`
+checks it from Node) and names the optional `MEDIATOR_CORS_ALLOW_ORIGIN=<origin>` line.
+
 _Verified live:_ with `MEDIATOR_CORS_ALLOW_ORIGIN=http://localhost:3000` the mediator answers that origin with a matching `Access-Control-Allow-Origin` and no other, and a headless Chromium page on that origin logs in and opens the TSP socket **[verified]**.
 
 ## Caveats, stated plainly

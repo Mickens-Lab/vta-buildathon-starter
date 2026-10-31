@@ -85,6 +85,12 @@ From reading the VTC source at its pin (and consistent with the live run above):
 - when the mediator DID in the applicant's service is the **same string** as the VTC's own mediator DID, the frame is sealed to the applicant and routed through that mediator, and the VTC gets
   evidence of collection. A different mediator is sent nested and settles only by escalation **[unverified]**. The plan is TSP only, so a silent TSP failure has no DIDComm fallback.
 
+**In the browser.** The status panel's card "9. Applicant and messaging" (web-vta-app, and the dashboard's connection drawer) shows the same choice:
+the applicant type for the mode (and why a tunnel-mode did:peer:2 fell back to the did:key), the mediator's and the applicant's DID size against the
+1000-byte resolver limit, and whether the mediator's `did:webvh` resolves at its tunnel host (the page fetches its `did.jsonl` and compares the last
+entry's `id`). Without `MEDIATOR_CORS_ALLOW_ORIGIN` set to the page's origin the browser cannot read that file; the row then says so and points
+to `npm run tunnel:probe`, which checks it from Node. It is advisory and does not watch delivery. Unit-tested; a live browser check is pending.
+
 ```
 npm run tsp:peer-push                         # tunnel mode: listener as the did:peer, join, approve, status; PASS when an issue frame arrives
 VTC_APPLICANT=did:key npm run vtc:join        # tunnel mode, the old way: apply as the did:key (run npm run tsp:listen first)

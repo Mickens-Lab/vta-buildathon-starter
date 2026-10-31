@@ -140,8 +140,9 @@ anything that changes state. See `templates/inbox-verifier`.
 
 ## Status panel (`@buildathon/status-panel`)
 
-`mountStatusPanel(container, opts)` renders seven cards (connection with the mode, VTA identity with a Messaging row, version vs `pins.json`, session,
-capabilities, wallet, optional VTC) with a Refresh button and optional 15/30 s auto-refresh. Pure helpers
+`mountStatusPanel(container, opts)` renders nine cards (connection with the mode, VTA identity with a Messaging row, version vs `pins.json`, session,
+capabilities, wallet, optional VTC, key custody, and applicant and messaging: which DID applies to the community, DID sizes vs the 1000-byte
+resolver limit, and whether the mediator's did:webvh resolves at its tunnel host) with a Refresh button and optional 15/30 s auto-refresh. Pure helpers
 (`parseDidDocServices`, `compareVersions`, `groupTasks`, `compatHints`) are exported and unit-tested:
 `npm test -w @buildathon/status-panel`. Web template: `npm run dev -w @buildathon/web-vta-app -- --port 3000` for
 another allowed origin.
