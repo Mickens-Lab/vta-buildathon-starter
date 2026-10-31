@@ -1,5 +1,5 @@
 import { useRef, useState, type KeyboardEvent } from "react";
-import type { PortalMe } from "@buildathon/vtc-client";
+import type { MemberVmcReceipt, PortalMe } from "@buildathon/vtc-client";
 import { describeError } from "../client.ts";
 import { builtApplicant, deliveryNote, runMode } from "../delivery.ts";
 import { didPeerFits } from "@buildathon/tsp-client";
@@ -44,6 +44,7 @@ function MembershipCard({ actions, communityName, delivered }: { actions: Action
   // per 5 s per address), so it costs three of those tokens. Global refreshes therefore skip it; this card has its own Refresh.
   const me = useLoad<PortalMe>("proof", (c) => c.memberProof(), true, "member/me", false);
   const [proof, setProof] = useState<PortalMe>();
+  const [receipt, setReceipt] = useState<MemberVmcReceipt>();
   const d = me.data;
   return (
     <section className="card member-card" aria-labelledby="mc-h">
@@ -55,7 +56,25 @@ function MembershipCard({ actions, communityName, delivered }: { actions: Action
           <div><dt>Joined</dt><dd>{formatDate(d?.joinedAt)}</dd></div>
         </dl>
       )}
-      <dl className="kv"><div><dt>Credential delivery</dt><dd data-testid="delivery"><span className={`tag ${note.pill === "ok" ? "verified" : note.pill === "warn" ? "inferred" : ""}`}>{note.label}</span> <span className="muted small-text">{note.detail}</span>{who.why ? <span className="muted small-text" data-testid="applicant-fallback"> Why the did:key: {who.why}</span> : null}</dd></div></dl>
+      <dl className="kv"><div><dt title={FLAG_TITLE}>Credential delivery</dt><dd data-testid="delivery"><span className={`tag ${note.pill === "ok" ? "verified" : note.pill === "warn" ? "inferred" : ""}`}>{note.label}</span> <span className="muted small-text">{note.detail}</span>{who.why ? <span className="muted small-text" data-testid="applicant-fallback"> Why the did:key: {who.why}</span> : null}</dd></div></dl>
+      <p className="note info small-text" data-testid="delivery-explained">
+        "Credential delivery" shows the community's <code>credentialsDelivered</code> flag. It turns true only when the community holds
+        your own membership credential sent back to it (<code>vtc/members/vmc/0.1</code>). Credentials the community pushes to you
+        (the frames) do not change it.
+      </p>
+      <Confirm label="Send my membership credential back" busy={actions.busy}
+        confirmText="This signs a membership credential with your app key, naming this community as its subject, and sends it to the community, which stores it. It carries no digest of the credential the community issued to you, so the community stores it unbound to that grant and records your membership pair as incomplete. Continue?"
+        onConfirm={() => void (async () => {
+          setReceipt(undefined);
+          const r = await actions.run((c) => c.sendMembershipCredential(), (x) => `The community answered "${x?.status ?? "(no status)"}" for your membership credential.`);
+          if (r) setReceipt(r);
+        })()} />
+      {receipt && (
+        <div className="proof" data-testid="vmc-receipt">
+          <p className="small-text muted">The community's receipt, as it sent it. "Credential delivery" above was read again afterwards; this page does not set it.</p>
+          <CodeBlock label="Receipt" text={JSON.stringify({ ...receipt, memberDid: "(your app DID)" }, null, 2)} />
+        </div>
+      )}
       <Fresh info={me.asOf} busy={me.refreshing} onRefresh={me.reload} cooldownMs={ANON_COOLDOWN_MS} />
       <p className="muted small-text">Reading this card uses the member portal, which the community rate-limits more tightly, so Refresh all leaves it alone.</p>
       <button type="button" disabled={actions.busy} onClick={async () => {
@@ -71,6 +90,8 @@ function MembershipCard({ actions, communityName, delivered }: { actions: Action
     </section>
   );
 }
+
+const FLAG_TITLE = "credentialsDelivered: true only when the community holds your own membership credential sent back (vtc/members/vmc/0.1); pushed frames do not change it.";
 
 function CommunityTab() {
   const profile = useLoad("profile", (c) => c.communityProfile(), true, "community/profile/show");

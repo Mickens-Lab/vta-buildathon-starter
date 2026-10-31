@@ -32,7 +32,7 @@ If it fails: a "NetworkError" or fetch failure means the stack is down (`npm run
 
 ## 3. Join a community and see the member screens (React)
 
-*Mode: any mode. The membership card's "Credential delivery" row explains, per mode, why no credential arrives ([MESSAGING.md](MESSAGING.md)): there is no inbox for it in `local`, and in `tunnel` the page applies as a `did:peer:2` naming the mediator, so the VTC pushes the credential frames to it (with `VTC_APPLICANT=did:key` it applies as the app `did:key`, which names no mediator). `credentialsDelivered` stays false in every case: it reports the member's own credential sent back, not frame arrival.*
+*Mode: any mode. The membership card's "Credential delivery" row explains, per mode, why no credential arrives ([MESSAGING.md](MESSAGING.md)): there is no inbox for it in `local`, and in `tunnel` the page applies as a `did:peer:2` naming the mediator, so the VTC pushes the credential frames to it (with `VTC_APPLICANT=did:key` it applies as the app `did:key`, which names no mediator). `credentialsDelivered` stays false until you send your own credential back: it reports that, not frame arrival.*
 
 ```sh
 npm run dev -w @buildathon/community-dashboard      # open http://localhost:5173
@@ -48,6 +48,12 @@ npm run vtc:approve          # approved <request id> (did:key:...)
 
 Press **Refresh status** (or wait up to 10 s): the badge becomes **Member**, with a membership card and Community, Directory, My card and Account tabs.
 Open **Under the hood** to see every signed Trust Task the page made. CLI view of the same state: `npm run vtc:status` (`member yes: role=member ...`) and `npm run vtc:profile`.
+Watch `credentialsDelivered` turn true (any mode; **live check pending**): on the membership card, "Credential delivery" says the flag is
+false and why. Press **Send my membership credential back**, read the confirm (you sign a credential naming the community as its subject; the
+community stores it; it is unbound to the community's grant, so the membership pair is recorded as incomplete) and press
+**Yes, send my membership credential back**. A toast says `The community answered "stored" for your membership credential.`, a **Receipt**
+block shows the community's answer, and the row turns to **reciprocal credential held**. In local mode (and with `VTC_APPLICANT=did:key`)
+`npm run vtc:status` then prints `credentialsDelivered=true`; in tunnel mode the page is the `did:peer:2`, which `vtc:status` (the `did:key`) is not.
 To start over: `npm run vtc:leave -- --yes`. If it fails: "Problem" with a network code means the VTC is not up (`WITH_VTC=1 npm run up`, then `npm run vtc:hello`).
 
 ### 3b. The community is the database: change it from the CLI, press Refresh

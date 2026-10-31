@@ -12,6 +12,8 @@ export interface Db {
   /** Make the next call to a method fail: `{ method: refusal }`. */
   failing: Record<string, TrustTaskError | Error>;
   networkDown: boolean;
+  /** Whether the community holds the member's own membership credential (what the status reports as credentialsDelivered). */
+  delivered: boolean;
 }
 
 export const refusal = (status: number, code: string, message = "") => new TrustTaskError(status, { payload: { code, message } });
@@ -21,7 +23,7 @@ export const notMember = () => refusal(403, "urn:x:vtc:permissionDenied", "the s
 export const REVIEW = { id: "review", requirementsDigest: "digest-review-0001", admission: "review" };
 
 export function freshDb(): Db {
-  return { member: false, card: { revision: 0, values: { nickname: "" } }, criteria: [REVIEW], failing: {}, networkDown: false };
+  return { member: false, card: { revision: 0, values: { nickname: "" } }, criteria: [REVIEW], failing: {}, networkDown: false, delivered: false };
 }
 
 export class FakeClient {
@@ -59,7 +61,7 @@ export class FakeClient {
   joinStatus = vi.fn((_id?: string) => this.run("joinStatus", this.task("join-requests/status/0.1"), () => {
     const r = this.db.request;
     if (!r) throw notFound();
-    return { requestId: r.id, status: r.status, credentialsDelivered: false };
+    return { requestId: r.id, status: r.status, credentialsDelivered: this.db.delivered };
   }));
   communityProfile = vi.fn(() => this.run("communityProfile", this.task("community/profile/show/0.1"), () => { this.requireMember(); return { profile: { name: "Test Community" } }; }));
   memberProof = vi.fn(() => this.run("memberProof", "GET /v1/member/me", () => { this.requireMember(); return { did: "x", sessionId: "s", accessExpiresAt: 0, amr: [], joinedAt: "2026-01-02T03:04:05Z", role: "member", personhood: false, canManagePasskeys: false, community: { name: "Test Community", logoUrl: null, did: null } }; }));
@@ -78,6 +80,11 @@ export class FakeClient {
   withdrawJoin = vi.fn(() => this.run("withdrawJoin", this.task("join-requests/withdraw/0.1"), () => { if (!this.db.request) throw notFound(); this.db.request.status = "withdrawn"; return {}; }));
   supplementJoin = vi.fn(() => this.run("supplementJoin", this.task("join-requests/supplement/0.1"), () => ({})));
   renewMembership = vi.fn(() => this.run("renewMembership", this.task("members/renew/0.1"), () => { this.requireMember(); return {}; }));
+  sendMembershipCredential = vi.fn((_o?: any) => this.run("sendMembershipCredential", this.task("members/vmc/0.1"), () => {
+    if (!this.db.member) throw refusal(404, "vtc/members/vmc:notAMember", "no active member");
+    this.db.delivered = true;
+    return { memberDid: "did:example:app", vmcId: "urn:uuid:00000000-0000-4000-8000-000000000001", status: "stored" };
+  }));
   leaveCommunity = vi.fn(() => this.run("leaveCommunity", this.task("members/self-remove/0.1"), () => { this.requireMember(); this.db.member = false; return {}; }));
   updateMyCard = vi.fn((patch: any) => this.run("updateMyCard", this.task("directory/card/update/0.1"), () => {
     this.requireMember();
@@ -87,7 +94,7 @@ export class FakeClient {
   }));
 }
 
-export const CHANGES = ["submitJoin", "withdrawJoin", "supplementJoin", "renewMembership", "leaveCommunity", "updateMyCard"];
+export const CHANGES = ["submitJoin", "withdrawJoin", "supplementJoin", "renewMembership", "sendMembershipCredential", "leaveCommunity", "updateMyCard"];
 
 /** What "the admin approved it in another terminal" does to the database. */
 export const approve = (db: Db) => { if (db.request) db.request.status = "approved"; db.member = true; };

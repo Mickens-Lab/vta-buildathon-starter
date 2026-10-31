@@ -41,7 +41,7 @@ export function framesVerdict(t: Tally): string {
   return "No credential-exchange/issue/0.1 frame yet. It is pushed right after an administrator approves the request (`npm run vtc:approve`).";
 }
 
-export const NOT_DELIVERED_FLAG = "Frames arriving is not credentialsDelivered. That flag turns true only when the community holds your own membership credential sent back to it (vtc/members/vmc/0.1), which this page does not send, so it stays false here (docs/MESSAGING.md, \"What credentialsDelivered means\").";
+export const NOT_DELIVERED_FLAG = "Frames arriving is not credentialsDelivered. That flag turns true only when the community holds your own membership credential sent back to it (vtc/members/vmc/0.1), so frames alone leave it false; the membership card's \"Send my membership credential back\" sends one (docs/MESSAGING.md, \"What credentialsDelivered means\").";
 
 export const ONE_LISTENER = "The mediator keeps one live-delivery socket per DID. If `npm run tsp:listen` runs as the same DID at the same time, a frame may go to that listener instead of this page.";
 

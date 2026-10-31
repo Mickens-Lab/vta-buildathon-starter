@@ -36,6 +36,9 @@ export const VTC_TASK = {
   joinSupplement: `${TT}/vtc/join-requests/supplement/0.1`,
   membersRenew: `${TT}/vtc/members/renew/0.1`,
   membersSelfRemove: `${TT}/vtc/members/self-remove/0.1`,
+  // The member's own MembershipCredential sent back to the community (the reciprocal half). It is what sets
+  // `credentialsDelivered` in the join status; see `sendMembershipCredential`.
+  membersVmc: `${TT}/vtc/members/vmc/0.1`,
   // Community reads: any signer the community holds an entry for (applicants are refused, see docs/VTC-SURFACE.md).
   profileShow: `${TT}/vtc/community/profile/show/0.1`,
   brandingShow: `${TT}/vtc/community/branding/show/0.1`,
@@ -139,6 +142,60 @@ export interface CallEvent {
 export function refusalCode(body: unknown): string | undefined {
   const c = (body as any)?.payload?.code ?? (body as any)?.code;
   return typeof c === "string" ? c : undefined;
+}
+
+// --- the member's own membership credential (vtc/members/vmc/0.1) ------------------------------
+//
+// Wire facts (vtc-service at the pinned VTC): the payload is `{ vc, requestId? }`. The VTC refuses a `vc` whose `issuer` is not
+// the proof signer, whose `credentialSubject.id` is not the community's DID (`subjectMismatch`), that is not a DTG
+// MembershipCredential under the v2 + DTG contexts declaring an `issuerScope`, that has no top-level `id`, or whose
+// eddsa-jcs-2022 proof does not verify for assertionMethod (`invalidCredential`); a signer with no active member row gets
+// `notAMember`. Re-sending the same `id` is a no-op; a different `id` replaces the stored one. With no
+// `credentialSubject.digestMultibase` the VTC stores it UNBOUND to the grant it issued: `credentialsDelivered` turns true, but
+// the membership pair stays incomplete.
+
+/** The two `@context` entries a DTG credential carries, in this order. */
+export const DTG_CONTEXTS = ["https://www.w3.org/ns/credentials/v2", "https://registry.trustoverip.org/dtg/context/v1"] as const;
+
+export interface MemberVmcOpts {
+  /** The member, who issues and signs it. */
+  memberDid: string;
+  /** The community's DID: the credential's subject. */
+  communityDid: string;
+  /** `urn:uuid:...`; a fresh one by default. The VTC's idempotency key. */
+  id?: string;
+  validFrom?: Date;
+  issuerScope?: "pairwise" | "directed" | "public";
+}
+
+/** RFC 3339, UTC, no fraction when it is all zeros (the form the Rust side writes). */
+const rfc3339 = (d: Date) => d.toISOString().replace(/\.000Z$/, "Z");
+
+/** The member's MembershipCredential naming the community, unsigned and with no digest (so unbound to the community's grant). */
+export function memberVmc(o: MemberVmcOpts): Record<string, unknown> {
+  return {
+    "@context": [...DTG_CONTEXTS],
+    type: ["VerifiableCredential", "DTGCredential", "MembershipCredential"],
+    id: o.id ?? `urn:uuid:${globalThis.crypto.randomUUID()}`,
+    issuer: o.memberDid,
+    issuerScope: o.issuerScope ?? "directed",
+    validFrom: rfc3339(o.validFrom ?? new Date()),
+    credentialSubject: { id: o.communityDid },
+  };
+}
+
+/** Sign a credential as `signer` (eddsa-jcs-2022, assertionMethod): the same proof the client puts on every Trust Task. */
+export function signCredential(vc: Record<string, unknown>, signer: Identity["signer"]): Record<string, unknown> {
+  return signTrustTask(vc as any, signer) as unknown as Record<string, unknown>;
+}
+
+/** The VTC's answer to `vtc/members/vmc/0.1`. `status` is `"stored"` on success. */
+export interface MemberVmcReceipt {
+  memberDid: string;
+  vmcId: string;
+  status: string;
+  /** Echoed only when the submission named an approved join request. */
+  requestId?: string;
 }
 
 /** The member portal's session (`/v1/member/*`), see {@link VtcClient.portalSignIn}. */
@@ -372,6 +429,17 @@ export class VtcClient {
   leaveCommunity(opts: { confirm: boolean; disposition?: string }) {
     if (opts.confirm !== true) throw new Error("leaveCommunity removes the signer from the community immediately; pass { confirm: true }");
     return this.call(VTC_TASK.membersSelfRemove, opts.disposition ? { disposition: opts.disposition } : {});
+  }
+
+  /**
+   * Send the signer's own MembershipCredential back to the community (`vtc/members/vmc/0.1`): built by {@link memberVmc},
+   * signed by this client's signer, carried as `{ vc }` (plus `requestId` when given: it must name this member's APPROVED
+   * join request, or the whole delivery is refused). It carries no digest, so the VTC stores it unbound to the grant: the
+   * join status's `credentialsDelivered` turns true while the membership pair stays incomplete. Plain REST, like every call.
+   */
+  sendMembershipCredential(opts: { id?: string; validFrom?: Date; requestId?: string } = {}): Promise<MemberVmcReceipt> {
+    const vc = signCredential(memberVmc({ memberDid: this.me.did, communityDid: this.vtcDid, id: opts.id, validFrom: opts.validFrom }), this.me.signer);
+    return this.call<MemberVmcReceipt>(VTC_TASK.membersVmc, { vc, ...(opts.requestId ? { requestId: opts.requestId } : {}) });
   }
 
   // --- member: community reads (any signer the community has an entry for) --------------------

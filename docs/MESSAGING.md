@@ -112,8 +112,18 @@ VTC_APPLICANT=did:key npm run vtc:join        # tunnel mode, the old way: apply 
 
 `credentialsDelivered` in `join-requests/status` (and the dashboard's membership card) is **not** a delivery receipt for the pushed frames. The VTC sets it to `true` only once it holds the
 member's **own** membership credential, sent back to the community (`vtc/members/vmc/0.1`, the reciprocal half of the membership pair; read from the VTC 0.15.0 source,
-`member_vmc_received_at`). Nothing in this kit sends that credential back, so the flag stays `false` even when every frame arrived, for a `did:key` and a `did:peer` alike. Frame arrival is what
+`member_vmc_received_at`). The pushed frames do not set it, so the flag stays `false` even when every frame arrived, for a `did:key` and a `did:peer` alike. Frame arrival is what
 `npm run tsp:listen` (its last line) and the VTC log (`trust-task push delivered ... via=tsp`) show.
+
+The community dashboard can send that credential back: the membership card's **Send my membership credential back** (after a confirm)
+signs a DTG `MembershipCredential` as the member (issuer: the applicant `did:key` or `did:peer:2`; subject: the community's DID;
+`issuerScope: directed`; an `eddsa-jcs-2022` proof for `assertionMethod`, the same proof the kit puts on every Trust Task) and sends
+`{ vc }` to `vtc/members/vmc/0.1` over REST, so it works in every mode (`local` too: no messaging is involved). It carries **no**
+`digestMultibase` of the community's grant, so the VTC stores it **unbound**: `credentialsDelivered` turns `true`, but the membership
+pair stays incomplete (the VTC logs a warning). Binding it would need the grant, which the kit could only get by renewing the membership
+(that replaces the grant), so the page does not. It sends no `requestId` either: the page cannot be sure which approved request is the
+current membership's, and a wrong one makes the VTC refuse the whole delivery. `VtcClient.sendMembershipCredential()` does the same from
+Node. Read from the VTC source and unit-tested (shape, proof for both identities, the call, the UI flow); **live check pending**.
 
 ## The rest of the gap: no DIDComm client, no wallet-side delivery
 

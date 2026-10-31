@@ -29,7 +29,7 @@ Markers: **verified** = seen working against the local stack (VTC 0.15.0, VTA 0.
 |---|---|---|---|
 | Visitor | `join-requests/status` answers `notFound`, nothing remembered | Public profile, *How to join* (criteria; ones needing an invitation, credentials or vetting are greyed with the reason), *Apply to join* with a preview of the request before it is signed | verified |
 | Pending | status `pending` | Summary, timeline, automatic check every 10 s with Pause (and *Refresh status* above it), *Withdraw* with confirmation; local hint to run `npm run vtc:approve` | verified |
-| Member | status `approved` **and** a member-only read (`community/profile/show`) succeeds | Membership card (role, joined, community from `/v1/member/me`), *Prove I am a member*, tabs Community / Directory / My card / Account | verified |
+| Member | status `approved` **and** a member-only read (`community/profile/show`) succeeds | Membership card (role, joined, community from `/v1/member/me`), *Prove I am a member*, credential delivery with *Send my membership credential back*, tabs Community / Directory / My card / Account | verified |
 | Withdrawn | status `withdrawn` | What happened, *Re-apply* | verified |
 | Left | status `approved` but the member-only read is refused | Same, *Re-apply* | verified that this is what the VTC returns after leaving; the word "left" is inferred (removal looks the same) |
 | Left (request gone) | `notFound` after this browser remembers a request | Same | inferred |
@@ -87,7 +87,7 @@ run unless marked):
   anonymous (visitor, applicant, someone who left), because of the community's admission budgets (a signer with no ACL entry:
   burst 10, then one per 5 s per address; a known signer: burst 60, then one per 500 ms; the applicant case is **inferred**).
   A refresh keeps the old data on screen until the new answer arrives.
-- **No optimistic updates.** After every action (apply, withdraw, renew, leave, save card, prove) the page re-reads from the
+- **No optimistic updates.** After every action (apply, withdraw, renew, leave, save card, prove, send credential back) the page re-reads from the
   community and shows what it read, never what it just sent. A refusal re-reads too (the records probably differ from what the
   page showed); a dead network does not.
 - **Return to the tab.** Coming back to the tab (visibility or focus), debounced 400 ms, re-reads if the last read is at least
@@ -96,6 +96,14 @@ run unless marked):
 - **The membership card is special.** It comes from the member portal (`GET /v1/member/me` after a challenge and a sign-in:
   three plain REST calls). Live, those routes were rate-limited like anonymous callers even for a member (HTTP 429, burst 10
   then one per 5 s). So *Refresh all* skips the card; the card has its own *Refresh* with the 5 s cooldown.
+- **Credential delivery.** The card shows the join status's `credentialsDelivered` and says what it means: true only when the
+  community holds your own membership credential sent back (`vtc/members/vmc/0.1`); pushed frames do not change it.
+  *Send my membership credential back* (after a confirm) signs a `MembershipCredential` as the applicant (`did:key` or
+  `did:peer:2`), naming the community as subject, and sends it over REST (every mode). It carries no digest of the community's
+  grant, so the community stores it unbound and records the membership pair as incomplete. The page shows the community's receipt
+  as sent and re-reads the status; refusals (`subjectMismatch`, `notAMember`, `invalidCredential`) are explained in words. No
+  `requestId` is sent (see the local hint below: the page cannot be sure which approved request is current). Component-tested;
+  live check pending.
 - **Local hint.** The request id this browser remembers (`localStorage`, per app identity) is labelled as a hint, never as the
   record. It is used to ask about the right request (an upstream quirk: `join-requests/status` with no id can answer with an
   older approved request after a newer one was withdrawn). *Forget local hints* removes it and re-reads; without it, a person
