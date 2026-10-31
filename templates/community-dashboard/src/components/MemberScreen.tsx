@@ -84,7 +84,7 @@ function MembershipCard({ actions, communityName, delivered }: { actions: Action
       {proof && (
         <div className="proof">
           <p className="small-text muted">The community just checked, with a fresh signed sign-in, that you are an active member:</p>
-          <CodeBlock label="Membership proof" text={JSON.stringify({ ...proof, did: "(your app did:key)", sessionId: "(session)" }, null, 2)} />
+          <CodeBlock label="Membership proof" text={JSON.stringify({ ...proof, did: "(your app DID)", sessionId: "(session)" }, null, 2)} />
         </div>
       )}
     </section>

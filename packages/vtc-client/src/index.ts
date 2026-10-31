@@ -487,8 +487,8 @@ export class VtcClient {
   // --- member: the portal session (the only member session there is) -------------------------
 
   /**
-   * Sign in to the member portal with a self-issued SIOPv2 id_token minted by `me`'s own did:key
-   * (`/v1/member/wallet/auth/*`, marked deprecated upstream in favour of the wallet `auth/oob/*`
+   * Sign in to the member portal with a self-issued SIOPv2 id_token minted by `me`'s own key
+   * (did:key, or a did:peer:2 signing as `<did>#key-2`; `/v1/member/wallet/auth/*`, marked deprecated upstream in favour of the wallet `auth/oob/*`
    * flow). Only an ACTIVE member gets a session; the result serves `/v1/member/me` and
    * `/v1/member/passkeys*` and nothing else: it unlocks no Trust Task. Use it as a membership
    * proof (`portalMe`), not as a general session.

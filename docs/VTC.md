@@ -63,7 +63,8 @@ administrators; "no gate in this service may be a claims check"), so **do not bu
   `vtc.memberProof()`: it mints a self-issued SIOPv2 `id_token` from its did:key, signs in to the member portal
   (`/v1/member/wallet/auth/*`, audience `VTC-member`) and reads `GET /v1/member/me`
   (`did`, `role`, `joinedAt`, `personhood`). Verified live: works for an approved member, refused for a pending
-  applicant. That portal route is marked deprecated upstream in favour of the wallet `auth/oob/*` flow, so treat it
+  applicant. A did:peer:2 applicant (tunnel mode) signs it with its own key id, `<did>#key-2` (the VTC refuses any other
+  key id with a 401); verified live 2026-10-30 (one machine, one run) from the community dashboard. That portal route is marked deprecated upstream in favour of the wallet `auth/oob/*` flow, so treat it
   as a convenience, and the token as good for `/v1/member/me` and passkeys only: it unlocks no Trust Task.
 - **Pattern for an app with its own backend.** The browser (or agent) signs a challenge/request with the member
   did:key; the backend verifies the signature, then asks the VTC about that DID. The cheap, session-free ways are
