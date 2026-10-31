@@ -23,8 +23,10 @@ export default defineConfig(({ mode }) => {
   }
   const vtcUrl = process.env.VTC_URL ?? e.VTC_URL;
   const vtcDid = process.env.VTC_DID ?? e.VTC_DID;
-  // VTC_APPLICANT=did:peer (tunnel only): apply as a did:peer:2 naming the stack's mediator (.vta/tunnel.json), so the VTC can push to it.
-  const applicant = (process.env.VTC_APPLICANT ?? e.VTC_APPLICANT ?? "").trim().toLowerCase().replace(/^peer$/, "did:peer") === "did:peer" ? "did:peer" : "did:key";
+  // MODE=tunnel applies as a did:peer:2 naming the stack's mediator (.vta/tunnel.json), so the VTC can push to it; VTC_APPLICANT=did:key
+  // keeps the did:key (src/delivery.ts applicantChoice). "" = no override.
+  const override = (process.env.VTC_APPLICANT ?? e.VTC_APPLICANT ?? "").trim().toLowerCase().replace(/^(did:)?key$/, "did:key").replace(/^(did:)?peer$/, "did:peer");
+  const applicant = override === "did:key" || override === "did:peer" ? override : "";
   let mediatorDid: string | null = null;
   try { mediatorDid = tunnel ? (JSON.parse(readFileSync(new URL("../../.vta/tunnel.json", import.meta.url), "utf8")).mediatorDid ?? null) : null; } catch { /* no tunnel state */ }
 

@@ -14,5 +14,5 @@ test("the verdict separates frame arrival from credentialsDelivered", () => {
   assert.match(v, /^RECEIVED 1 .* as the did:peer with no TSP contact first/);
   assert.match(v, /credentialsDelivered: false until the member sends its own credential back/);
   assert.match(verdict(emptyTally(), { method: "did:peer", related: false }), /same DID string/);
-  assert.match(verdict(emptyTally(), { method: "did:key", related: true }), /VTC_APPLICANT=did:peer/);
+  assert.match(verdict(emptyTally(), { method: "did:key", related: true }), /unset VTC_APPLICANT=did:key/);
 });

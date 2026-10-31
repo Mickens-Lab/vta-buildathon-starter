@@ -19,6 +19,6 @@ export function verdict(t: Tally, opts: { method: "did:key" | "did:peer"; relate
   }
   const why = opts.method === "did:peer"
     ? "Check the VTC log for \"trust-task push\" (via=tsp, or \"no matching protocol\"), that the request was approved while this ran, and that the DID's mediator is the VTC's mediator (same DID string)."
-    : "A did:key names no mediator: the VTC pushes over TSP only after this DID spoke TSP to it (this run did that only if \"relationship accepted\" was printed). Try VTC_APPLICANT=did:peer.";
+    : "A did:key names no mediator: the VTC pushes over TSP only after this DID spoke TSP to it (this run did that only if \"relationship accepted\" was printed). In MODE=tunnel the did:peer:2 applicant needs no earlier contact: unset VTC_APPLICANT=did:key.";
   return `NO credential frame arrived. ${why}`;
 }

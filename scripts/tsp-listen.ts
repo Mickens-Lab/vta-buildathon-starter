@@ -1,7 +1,7 @@
 // Listen on the mediator socket as the applicant and log every TSP frame that reaches it:
-//   npm run tsp:listen [-- --did-peer] [--peer <did>] [--seconds 90] [--relate] [--until-issue 2]
-// The applicant is the app did:key, or (VTC_APPLICANT=did:peer or --did-peer, MODE=tunnel) the did:peer:2 that vtc:join and the
-// dashboard apply as. Default peer is the VTC (VTC_DID). Used for the credential-push experiment in docs/MESSAGING.md: start this,
+//   npm run tsp:listen [-- --peer <did>] [--seconds 90] [--relate] [--until-issue 2]
+// The applicant is the same one vtc:join and the dashboard apply as: in MODE=tunnel the did:peer:2 naming the mediator, or
+// the app did:key with VTC_APPLICANT=did:key (or when the did:peer cannot be built; the note says why). Default peer is the VTC (VTC_DID). Used for the credential-push experiment in docs/MESSAGING.md: start this,
 // then in another shell run `npm run vtc:join` and `npm run vtc:approve`, and see whether `credential-exchange/issue/0.1` arrives.
 // A did:key first sends the VTC a relationship invite (the VTC learns it speaks TSP from that); a did:peer does not, unless --relate,
 // because its DID already names the mediator. Exit code 0 when an issue frame arrived, 2 when none did. Read-only.
@@ -9,7 +9,7 @@ import "./lib/cli.js";
 import { connectTsp, type PeerIdentity } from "@buildathon/tsp-client";
 import { decodeCredential, seedFromMultibase } from "@buildathon/vta-client";
 import { readTunnel } from "./lib/compose.js";
-import { applicant, applicantKind } from "./lib/applicant.js";
+import { applicant, applicantOverride } from "./lib/applicant.js";
 import { emptyTally, record, verdict, ISSUE_TYPE } from "./lib/listen.js";
 import { die, env, mode } from "./env.js";
 
@@ -29,7 +29,7 @@ if (!state?.mediatorDid || !cred || !peer) {
 }
 const who = (() => {
   try {
-    return applicant(applicantKind(process.argv, env("VTC_APPLICANT")), seedFromMultibase(decodeCredential(cred).privateKeyMultibase), { mode: mode(), mediatorDid: state.mediatorDid });
+    return applicant(seedFromMultibase(decodeCredential(cred).privateKeyMultibase), { mode: mode(), mediatorDid: state.mediatorDid, override: applicantOverride(env("VTC_APPLICANT")) });
   } catch (e) {
     return die((e as Error).message);
   }

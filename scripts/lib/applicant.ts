@@ -1,19 +1,20 @@
-// Which identity applies to the community: the app's did:key (default, every mode), or a did:peer:2 derived from the same
-// seed whose TSPTransport service names the stack's mediator (opt-in, MODE=tunnel only). The VTC pushes the credential
-// to the did:peer over TSP with no earlier contact; a did:key is reached only after it has spoken TSP to the VTC.
-// Choose with VTC_APPLICANT=did:peer in .env or --did-peer on vtc:join / tsp:listen (both must agree). docs/MESSAGING.md.
+// Which identity applies to the community. MODE=tunnel: a did:peer:2 derived from the app credential's seed, whose
+// TSPTransport service names the stack's mediator, so the VTC pushes the credential to it over TSP with no earlier contact.
+// MODE=local and MODE=farm: the app's did:key (no mediator to name). VTC_APPLICANT=did:key in .env keeps the did:key in
+// tunnel mode too (it is then reached only after it has spoken TSP to the VTC; tsp:listen does that). If the did:peer cannot
+// be built (no mediator DID, or over the resolver's 1000-byte limit) the did:key applies and the note says why. docs/MESSAGING.md.
 import { identityFromSeed, type Identity } from "@buildathon/vta-client";
 import { didPeerFromSeed, type PeerIdentity } from "@buildathon/tsp-client";
 
 export type ApplicantKind = "did:key" | "did:peer";
 
-/** `--did-peer` wins, then VTC_APPLICANT; anything else is did:key. */
-export function applicantKind(argv: string[], envValue: string | undefined): ApplicantKind {
-  if (argv.includes("--did-peer")) return "did:peer";
+/** VTC_APPLICANT as an override: did:key or did:peer, or undefined when unset (the mode decides). A typo is refused. */
+export function applicantOverride(envValue: string | undefined): ApplicantKind | undefined {
   const v = (envValue ?? "").trim().toLowerCase();
+  if (!v) return undefined;
   if (v === "did:peer" || v === "peer") return "did:peer";
-  if (v && v !== "did:key" && v !== "key") throw new Error(`VTC_APPLICANT must be did:key or did:peer, got ${JSON.stringify(envValue)}`);
-  return "did:key";
+  if (v === "did:key" || v === "key") return "did:key";
+  throw new Error(`VTC_APPLICANT must be did:key or did:peer, got ${JSON.stringify(envValue)}`);
 }
 
 export interface Applicant {
@@ -23,23 +24,33 @@ export interface Applicant {
   requestIdKey: "VTC_REQUEST_ID" | "VTC_PEER_REQUEST_ID";
   /** One line on how the credential can reach this applicant. */
   note: string;
+  /** Set when MODE=tunnel wanted the did:peer but fell back to the did:key: why. */
+  fallback?: string;
 }
 
-/** The applicant for `seed`. A did:peer needs the stack's mediator DID (MODE=tunnel); without it this throws a mode-aware message. */
-export function applicant(kind: ApplicantKind, seed: Uint8Array, opts: { mode: string; mediatorDid?: string }): Applicant {
-  if (kind === "did:key") {
-    const note = opts.mode === "tunnel"
-      ? "applicant is a did:key (no service): the VTC pushes the credential over TSP only if this DID spoke TSP to it recently (run tsp:listen first), otherwise over DIDComm. VTC_APPLICANT=did:peer removes that need."
-      : `applicant is a did:key; MODE=${opts.mode} has no messaging stack here, so the credential is not pushed (the admin's decide response carries it).`;
-    return { kind, identity: identityFromSeed(seed), requestIdKey: "VTC_REQUEST_ID", note };
+const KEY_TUNNEL_NOTE = "the VTC pushes the credential to a did:key over TSP only if it spoke TSP to the VTC recently (npm run tsp:listen does that first), otherwise over DIDComm.";
+
+/** The applicant for `seed` in `mode`. `mediatorDid` is the stack's mediator (.vta/tunnel.json); `override` is VTC_APPLICANT. */
+export function applicant(seed: Uint8Array, opts: { mode: string; mediatorDid?: string; override?: ApplicantKind }): Applicant {
+  const asKey = (note: string, fallback?: string): Applicant => ({ kind: "did:key", identity: identityFromSeed(seed), requestIdKey: "VTC_REQUEST_ID", note, ...(fallback ? { fallback } : {}) });
+  if (opts.mode !== "tunnel") {
+    return asKey(`applicant is a did:key; MODE=${opts.mode} has no messaging stack here, so the credential is not pushed (the admin's decide response carries it).`);
   }
-  if (opts.mode !== "tunnel" || !opts.mediatorDid) {
-    throw new Error(`a did:peer applicant names the stack's mediator in its DID, so it needs MODE=tunnel with the mediator up (npm run up -- --tunnel). MODE=${opts.mode}${opts.mediatorDid ? "" : ", no mediator DID in .vta/tunnel.json"}. Unset VTC_APPLICANT (or drop --did-peer) to apply as the did:key.`);
+  if (opts.override === "did:key") return asKey(`applicant is a did:key (VTC_APPLICANT=did:key): ${KEY_TUNNEL_NOTE}`);
+  let why: string;
+  if (!opts.mediatorDid) {
+    why = "no mediator DID in .vta/tunnel.json (is the tunnel stack up? npm run up -- --tunnel)";
+  } else {
+    try {
+      return {
+        kind: "did:peer",
+        identity: didPeerFromSeed(seed, opts.mediatorDid),
+        requestIdKey: "VTC_PEER_REQUEST_ID",
+        note: "applicant is a did:peer:2 whose TSPTransport service names the stack's mediator: the VTC pushes the credential over TSP with no earlier contact. `npm run tsp:listen` receives it.",
+      };
+    } catch (e) {
+      why = (e as Error).message;
+    }
   }
-  return {
-    kind,
-    identity: didPeerFromSeed(seed, opts.mediatorDid),
-    requestIdKey: "VTC_PEER_REQUEST_ID",
-    note: "applicant is a did:peer:2 whose TSPTransport service names the stack's mediator: the VTC can push the credential over TSP with no earlier contact. Run `npm run tsp:listen -- --did-peer` to receive it.",
-  };
+  return asKey(`applicant is a did:key, because the did:peer:2 could not be built: ${why}. ${KEY_TUNNEL_NOTE}`, why);
 }

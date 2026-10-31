@@ -22,15 +22,19 @@ test("every note says credentialsDelivered is the reciprocal credential, not fra
 test("a did:peer applicant in tunnel mode is told to run the listener, not that delivery is impossible", () => {
   const n = deliveryNote("tunnel", false, "did:peer");
   assert.equal(n.label, "pushed over TSP; flag stays false");
-  assert.match(n.detail, /tsp:listen -- --did-peer/);
+  assert.match(n.detail, /npm run tsp:listen/);
+  assert.doesNotMatch(n.detail, /--did-peer/);
 });
 
-test("did:peer is used only when asked for, in tunnel mode, with a mediator DID", () => {
+test("tunnel mode applies as the did:peer by default; did:key in local/farm, on override, or with the reason", () => {
+  assert.deepEqual(applicantChoice("tunnel", "", "did:example:mediator"), { kind: "did:peer" });
+  assert.deepEqual(applicantChoice("tunnel", undefined, "did:example:mediator"), { kind: "did:peer" });
   assert.deepEqual(applicantChoice("tunnel", "did:peer", "did:example:mediator"), { kind: "did:peer" });
-  assert.equal(applicantChoice("tunnel", undefined, "did:example:mediator").kind, "did:key");
-  assert.match(applicantChoice("local", "did:peer", "did:example:mediator").why ?? "", /needs MODE=tunnel/);
-  assert.match(applicantChoice("tunnel", "did:peer", null).why ?? "", /no mediator DID/);
-  assert.match(applicantChoice("tunnel", "did:peer", "did:example:mediator", () => false).why ?? "", /1000-byte DID limit/);
+  assert.deepEqual(applicantChoice("tunnel", "did:key", "did:example:mediator"), { kind: "did:key" });
+  assert.deepEqual(applicantChoice("local", "", "did:example:mediator"), { kind: "did:key" });
+  assert.deepEqual(applicantChoice("farm", "did:peer", "did:example:mediator"), { kind: "did:key" });
+  assert.match(applicantChoice("tunnel", "", null).why ?? "", /no mediator DID/);
+  assert.match(applicantChoice("tunnel", "", "did:example:mediator", () => false).why ?? "", /1000-byte DID limit/);
 });
 
 test("a member state carries what the VTC said about delivery", () => {
