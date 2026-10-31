@@ -174,6 +174,12 @@ removes `.vta/tunnel.json`, and removes the dead URLs and the app credential fro
 refusal is also enforced inside the VTA and mediator entrypoints (a volume made for one host will not start for another), so running
 `docker compose` by hand cannot reuse it either. `npm run reset` does all of that in any mode: it also stops any recorded tunnels, deletes every volume (local and messaging) and `.vta/`, and removes only the keys the kit wrote to `.env`.
 
+In tunnel mode the browser pages say this at the top: the community dashboard and the `web-vta-app` page show a banner, "Tunnel mode: these
+hosts and DIDs last only for this run.", naming the public hosts and DIDs of the VTA, the VTC and the mediator and the applicant `did:peer:2`
+that names the mediator, which die at `npm run down` and are new after the next `npm run up -- --tunnel`, so nothing should be bookmarked or
+shared beyond the run. The status panel's Mode row (card 1) says the same in short. No banner in local or farm mode. Wording in
+`packages/status-panel/src/tunnel.ts` **[unit- and component-tested; live check pending]**.
+
 ## Images and pins
 
 `pins.json` records the mediator (affinidi-messaging-mediator commit `7e378c03`, tag v0.45.0, features `tsp,secrets-aws`), the redis tag, and the

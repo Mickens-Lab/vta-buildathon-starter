@@ -3,6 +3,7 @@ import { CSS } from "./style.ts";
 import { custodyRows, type CustodyInput } from "./custody.ts";
 import { messagingRow, PING_TASK, protocolsOf } from "./messaging.ts";
 import { applicantCardRows, cardMediator, webvhLocation, type ApplicantInfo, type LogProbe } from "./applicant.ts";
+import { TUNNEL_LIFETIME } from "./tunnel.ts";
 import {
   compareVersions, compatHints, didDocFromLog, groupTasks, mediatorDid, parseDidDocServices, relativeTime,
   shortDid, versionFromOpenApi, type DidService,
@@ -224,7 +225,7 @@ export function mountStatusPanel(container: HTMLElement, o: PanelOptions): Panel
     cards.push({
       title: "1. Connection",
       rows: [
-        { pill: o.mode === "tunnel" ? "warn" : "ok", label: "Mode", value: o.mode, note: o.mode === "tunnel" ? "Local containers behind public Cloudflare quick tunnels, with an OPEN mediator (messaging on). URLs and DIDs are regenerated every run; demo data only (docs/MODES.md)." : o.mode === "farm" ? `Hosted VTA on the VTA Farm${o.farm ? ` "${o.farm.name}" (FARM=${o.farm.id}, portal ${o.farm.portalUrl})` : ""}, reached through the dev server's /__vta proxy.${o.farm?.issues?.length ? " Known issue: " + o.farm.issues.join(" ") : ""}` : "Local VTA from this repo's docker compose stack." },
+        { pill: o.mode === "tunnel" ? "warn" : "ok", label: "Mode", value: o.mode, note: o.mode === "tunnel" ? `Local containers behind public Cloudflare quick tunnels, with an OPEN mediator (messaging on). ${TUNNEL_LIFETIME}; demo data only (docs/MODES.md).` : o.mode === "farm" ? `Hosted VTA on the VTA Farm${o.farm ? ` "${o.farm.name}" (FARM=${o.farm.id}, portal ${o.farm.portalUrl})` : ""}, reached through the dev server's /__vta proxy.${o.farm?.issues?.length ? " Known issue: " + o.farm.issues.join(" ") : ""}` : "Local VTA from this repo's docker compose stack." },
         { pill: "info", label: "VTA URL", value: vtaShown, note: o.vtaUrl !== vtaShown ? `The browser calls ${o.vtaUrl} (same-origin proxy).` : undefined },
         reachRow("VTA", health, vtaShown, origin, o.mode),
         health.ok

@@ -3,3 +3,4 @@ export { mountStatusPanel, type PanelClient, type PanelOptions, type PanelHandle
 export * from "./custody.ts";
 export * from "./messaging.ts";
 export * from "./applicant.ts";
+export * from "./tunnel.ts";

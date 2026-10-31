@@ -14,16 +14,19 @@
       button { font: inherit; color: inherit; background: transparent; border: 1px solid #c3c9d2; border-radius: 8px; padding: .3rem .7rem; margin: 0 .4rem .4rem 0; cursor: pointer; }
       pre { background: #eef0f4; padding: .6rem; overflow: auto; border-radius: 6px; font-size: 12.5px; }
       .err { color: #b3201f; }
+      .banner { margin: 0 0 1rem; padding: .6rem .9rem; border: 1px solid #c98a00; border-radius: 10px; background: #fff6dd; }
       summary { cursor: pointer; opacity: .75; font-size: .9rem; }
       @media (prefers-color-scheme: dark) {
         body { background: #14171c; color: #e6e9ee; }
         .actions { background: #1d2128; border-color: #2d333c; }
+        .banner { background: #2b2412; border-color: #8a6a1a; }
         button { border-color: #3a424d; } pre { background: #12151a; } .err { color: #ff8d8a; }
       }
     </style>
   </head>
   <body>
     <main>
+      <p id="tunnel-banner" class="banner" role="note" aria-label="Tunnel mode" hidden></p>
       <div id="status-panel"></div>
       <section class="actions" id="wallet-actions" hidden>
         <h2>Wallet actions <small>(optional)</small></h2>

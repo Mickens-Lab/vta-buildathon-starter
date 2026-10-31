@@ -21,6 +21,10 @@ connection dot that opens the status panel as a drawer. Under it, a journey stri
 and the screen for your state. The collapsible **Under the hood** panel lists the last 20 Trust Task calls
 (type and version, who signed, outcome, duration) with *View signed request* and *Copy as TypeScript*.
 Every action ends in a toast; a refusal is explained in plain words with its code.
+In tunnel mode only, a banner under the top bar says the public hosts and DIDs (VTA, VTC, mediator, and the applicant `did:peer:2` that
+names the mediator) die at `npm run down` and are new after the next `npm run up -- --tunnel`, so nothing should be bookmarked or shared
+beyond the run (wording shared with web-vta-app and the status panel: `tunnelBanner` in `@buildathon/status-panel`; unit- and
+component-tested, live check pending).
 
 Markers: **verified** = seen working against the local stack (VTC 0.15.0, VTA 0.65.0, headless Chromium);
 **inferred** = worked out from the spec or source, not seen; **unverified** = the path is built but not tried.
