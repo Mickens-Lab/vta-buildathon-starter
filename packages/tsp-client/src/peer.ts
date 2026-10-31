@@ -16,7 +16,8 @@ export const TSP_SERVICE_TYPE = "TSPTransport";
  * The largest DID the affinidi resolver (`DIDCacheClient`, `max_did_size_in_bytes`, default 1000) parses. The mediator and the VTC
  * both use it, and neither says why when it is exceeded: the mediator login answers 403 "authcrypt requires the public key of
  * sender", the VTC treats the DID as unresolvable. A did:peer:2 carries its service inside the identifier, so naming a mediator
- * whose own DID is a long did:peer:2 (this kit's mediator: about 700 bytes) overflows it. A did:webvh mediator DID fits.
+ * whose own DID is a long did:peer:2 (about 725 bytes) overflows it. This kit's tunnel mediator has a short did:webvh (about 105
+ * bytes), so the applicant is about 290 bytes.
  */
 export const MAX_DID_BYTES = 1000;
 

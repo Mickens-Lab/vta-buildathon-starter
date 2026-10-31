@@ -16,7 +16,7 @@ export const PING_RESPONSE_TYPE = `${PING_TYPE}#response`;
 export interface PingOptions {
   /** The VTA's DID (did:webvh at its tunnel host). */
   vtaDid: string;
-  /** The mediator's DID (did:peer:2, in .vta/tunnel.json). */
+  /** The mediator's DID (a did:webvh bound to its tunnel host, in .vta/tunnel.json). */
   mediatorDid: string;
   /**
    * Ed25519 seed of the did:key to log in as. Omit for a throwaway did:key. The VTA only answers DIDs on its ACL,

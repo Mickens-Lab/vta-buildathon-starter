@@ -27,7 +27,8 @@ go.onclick = async () => {
     verdict.textContent = describePong(r);
   } catch (e) {
     verdict.className = "verdict bad";
-    // The mediator URL comes from its DID document, so this page cannot proxy it: its origin must be allowed (MEDIATOR_CORS_ALLOW_ORIGIN).
+    // The mediator URL comes from its DID document (a did:webvh fetched from the mediator's own host), so this page cannot proxy
+    // it: its origin must be allowed (MEDIATOR_CORS_ALLOW_ORIGIN), both for that did.jsonl fetch and for the socket.
     const hint = explainFetchFailure(e, { url: "its URL (from its DID document)", origin: location.origin, server: "mediator" });
     verdict.textContent = `No pong: ${(e as Error).message}${hint ? `\n\n${hint}` : ""}`;
   } finally {

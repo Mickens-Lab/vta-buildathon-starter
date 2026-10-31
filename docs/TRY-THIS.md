@@ -32,7 +32,7 @@ If it fails: a "NetworkError" or fetch failure means the stack is down (`npm run
 
 ## 3. Join a community and see the member screens (React)
 
-*Mode: any mode. The membership card's "Credential delivery" row explains, per mode, why no credential arrives ([MESSAGING.md](MESSAGING.md)): there is no inbox for it in `local`, and in `tunnel` this page's default `did:key` names none (`VTC_APPLICANT=did:peer` would sign as a DID that does, but with this kit's mediator that DID is too long for the resolver, so the page falls back to the did:key). `credentialsDelivered` stays false in every case: it reports the member's own credential sent back, not frame arrival.*
+*Mode: any mode. The membership card's "Credential delivery" row explains, per mode, why no credential arrives ([MESSAGING.md](MESSAGING.md)): there is no inbox for it in `local`, and in `tunnel` the page applies as a `did:peer:2` naming the mediator, so the VTC pushes the credential frames to it (with `VTC_APPLICANT=did:key` it applies as the app `did:key`, which names no mediator). `credentialsDelivered` stays false in every case: it reports the member's own credential sent back, not frame arrival.*
 
 ```sh
 npm run dev -w @buildathon/community-dashboard      # open http://localhost:5173
@@ -182,10 +182,10 @@ With the pinned images (mediator 0.45.0) you should see the client log in, send,
 In the VTA log you see `TSP trust-task dispatched ... status=200 OK`. Try `npm run tsp:ping -- --throwaway` (a DID the VTA does not know: 403) and the page with the credential field cleared.
 If you use an older mediator image (`MEDIATOR_IMAGE`) the ping times out and the VTA log says `failed to send TSP reply ... unsupported TSP major version`: that mediator does not read TSP 1.0 ([MESSAGING.md](MESSAGING.md)).
 
-Credential push: run `npm run tsp:listen` in one shell, then `npm run vtc:join` and `npm run vtc:approve` in another; the listener prints `frame from the peer: .../credential-exchange/issue/0.1` (twice, **verified**).
-It proves the frames arrive, not that a wallet could use them. The `did:key` listener sends a relationship invite first; that is how the VTC learns to use TSP for it.
+Credential push by hand: run `npm run tsp:listen` in one shell, then `npm run vtc:join` and `npm run vtc:approve` in another (both apply as the `did:peer:2` by default; set `VTC_APPLICANT=did:key` in `.env` for the `did:key` way); the listener prints `frame from the peer: .../credential-exchange/issue/0.1` (twice, **verified**).
+It proves the frames arrive, not that a wallet could use them. A `did:key` listener sends a relationship invite first; that is how the VTC learns to use TSP for it. A `did:peer:2` needs none.
 
-With no ping first: `VTC_APPLICANT=did:peer npm run tsp:peer-push` applies as a `did:peer:2` whose `TSPTransport` service names the mediator, approves, and waits for the frames ([MESSAGING.md](MESSAGING.md#a-didpeer2-applicant-blocked-by-the-mediators-did-size)). With this kit's mediator it stops at once: the DID would be over the resolver's 1000-byte limit (**verified failure**; it needs a mediator with a short did:webvh).
+With no ping first (the tunnel default): `npm run tsp:peer-push` listens and applies as a `did:peer:2` whose `TSPTransport` service names the mediator, approves, and ends with `PASS: the credential reached the did:peer over TSP with no earlier contact.` (**verified**, [MESSAGING.md](MESSAGING.md#tunnel-mode-delivers-the-credential-to-the-applicant)).
 The join status still says `credentialsDelivered: false` afterwards; that flag reports the member's own credential sent back, not frame arrival.
 
 ## 9. Extend it: your own task and an extension

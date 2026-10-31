@@ -1,6 +1,6 @@
 # @buildathon/tsp-client
 
-Talk to the VTA over TSP through the mediator (`MODE=tunnel`, [docs/MESSAGING.md](../../docs/MESSAGING.md)): log in to the mediator as a `did:key`, open the raw-TSP socket, send a signed
+Talk to the VTA over TSP through the mediator (`MODE=tunnel`, [docs/MESSAGING.md](../../docs/MESSAGING.md)): log in to the mediator as a `did:key` or a `did:peer:2`, open the raw-TSP socket, send a signed
 `messaging/ping/0.1` and read the pong, or receive frames (the credential pushes from the VTC). TSP 1.0, built on `@openvtc/pnm-core`'s login and socket helpers.
 Node 22+ and browsers (a browser needs the mediator's CORS opened for its origin, [docs/MODES.md](../../docs/MODES.md)). DEV ONLY.
 
@@ -29,4 +29,4 @@ console.log(describePong(r));     // "pong from the VTA in 120 ms: status ok, pr
 ## Limits
 
 - Ping-shaped: there is no general `call(type, payload)` or `listen(handler)` yet; other tasks mean using `session.request()` with a document you build and sign (`@openvtc/pnm-core` `buildTrustTask`, `signOutboundTask`).
-- DIDComm is not implemented. `didPeerFromSeed` gives a `did:peer:2` whose `TSPTransport` service names the mediator, and `connectTsp({ identity })` listens as it; nothing verifies or stores the credential, and with this kit's did:peer mediator the did:peer is over the resolver's 1000-byte DID limit, so `didPeerFromSeed` refuses it ([docs/MESSAGING.md](../../docs/MESSAGING.md#a-didpeer2-applicant-blocked-by-the-mediators-did-size)).
+- DIDComm is not implemented. `didPeerFromSeed` gives a `did:peer:2` whose `TSPTransport` service names the mediator, and `connectTsp({ identity })` listens as it; nothing verifies or stores the credential. `didPeerFromSeed` refuses a DID over the resolver's 1000-byte limit; with the kit's `did:webvh` tunnel mediator the did:peer is about 290 bytes ([docs/MESSAGING.md](../../docs/MESSAGING.md#tunnel-mode-delivers-the-credential-to-the-applicant)).
