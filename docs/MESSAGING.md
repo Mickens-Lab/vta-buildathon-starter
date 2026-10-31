@@ -37,34 +37,38 @@ a TSP relationship, and send a signed `messaging/ping/0.1` in the TSP binding en
 `@openvtc/vti-tsp-js` 0.4.0.
 
 **Limits, stated plainly.** Observed with our own open-ACL mediator over quick tunnels, one machine, a handful of runs; a Farm-hosted mediator was not tried **[unverified]**. The `did:peer:2`
-applicant below is built and unit-tested but **not verified live**. One extra frame reaches the listener before the accept
+applicant below does not work with this kit's mediator (DID too long for the resolver; **verified failure**). One extra frame reaches the listener before the accept
 (`tsp: signature verification failed`: it is not from the VTC, its sender was not identified); it is ignored and did not affect the results.
 
-## A did:peer:2 applicant: the VTC pushes with no ping first
+## A did:peer:2 applicant (blocked by the mediator's DID size)
 
 A `did:key` names no mediator, so the VTC (0.15.0) reaches it over TSP only after that DID has spoken TSP to it (`tsp:listen` sends a relationship invite first for exactly this reason).
-A `did:peer:2` can carry a service. With `VTC_APPLICANT=did:peer` in `.env` (or `--did-peer`), `MODE=tunnel` only, the kit applies as a `did:peer:2` derived from the app credential's seed:
+A `did:peer:2` can carry a service. With `VTC_APPLICANT=did:peer` in `.env` (or `--did-peer`), `MODE=tunnel` only, the kit tries to apply as a `did:peer:2` derived from the app credential's seed:
 X25519 key (`#key-1`, keyAgreement), Ed25519 key (`#key-2`, authentication) and a `TSPTransport` service whose endpoint is the **mediator's DID** from `.vta/tunnel.json`
-(`didPeerFromSeed` in `packages/tsp-client`). `npm run vtc:join`, the community dashboard and `npm run tsp:listen` all use the same DID; the did:key stays the default in every mode.
+(`didPeerFromSeed` in `packages/tsp-client`). `npm run vtc:join`, the community dashboard and `npm run tsp:listen` all use the same choice; the did:key stays the default in every mode.
 
-```
-VTC_APPLICANT=did:peer npm run tsp:listen      # shell 1: logs in to the mediator AS the did:peer, sends no invite
-VTC_APPLICANT=did:peer npm run vtc:join        # shell 2
-npm run vtc:approve
-# or all of it in one go, with bounded waits:
-VTC_APPLICANT=did:peer npm run tsp:peer-push
-```
+**Result of the live run (MODE=tunnel, pinned images, mediator 0.45.0, 2026-10-30): it does not work with this kit's mediator [verified failure].**
+The mediator's own DID is a `did:peer:2` of about 725 bytes, so a `did:peer:2` that names it is about 1115 bytes. The affinidi DID resolver that both the mediator and the VTC use
+(`DIDCacheClient`) refuses any DID over `max_did_size_in_bytes`, default **1000**, before parsing it. Live, the mediator login as that DID failed with
+`403 ... authcrypt sender key binding failed: authcrypt requires the public key of sender` (the mediator log); the same keys logged in fine with no service, and with a TSPTransport endpoint
+up to about 400 bytes, and failed again from about 700 bytes up. The VTI source records the same trap (its CHANGELOG, "Watch the DID size": production mediators use a short `did:webvh`).
+`didPeerFromSeed` now refuses to mint such a DID and says why, so `vtc:join --did-peer` and `tsp:listen --did-peer` stop with that message, and the dashboard falls back to the did:key with the reason.
 
-Why it should work, from reading the VTC source at its pin (the spike; no live run yet):
+What would make it work: a mediator with a short DID (a `did:webvh`, as in production), so the applicant's DID stays under 1000 bytes. Not built here: the kit's mediator setup mints a `did:peer:2`.
+With such a mediator, the rest is expected to work from reading the VTC source at its pin (the spike; **not verified live**):
 - the VTC has no allowlist of applicant DID methods, and resolves `did:peer` locally, both for the join proof and for the push;
 - its push engine matches services by `type`; an applicant advertising a `TSPTransport` mediator gets a TSP-only plan with no earlier contact. The VTC sends a routed relationship invite and then the
   credential at once. A recipient that advertises only transports the VTC cannot use is refused, never downgraded;
 - when the mediator DID in the applicant's service is the **same string** as the VTC's own mediator DID, the frame is sealed to the applicant and routed through that mediator, and the VTC gets
-  evidence of collection. A different mediator is sent nested and settles only by escalation.
+  evidence of collection. A different mediator is sent nested and settles only by escalation. The plan is TSP only, so a silent TSP failure has no DIDComm fallback.
 
-**Not verified live** (the ports were held by another stack when this was built): the mediator login as a `did:peer:2`, that the mediator DID string in the applicant's DID matches the VTC's exactly,
-and the push reaching the listener. The plan is TSP only, so a silent TSP failure has no DIDComm fallback. Run `npm run tsp:peer-push` on a tunnel stack and record the result here before relying on it.
-Verified offline: the DID's keys and service, a round trip through pnm-core's resolver to the same TSP keys, a TSP frame sealed to the resolved keys opening with ours, and the join proof naming `#key-2`.
+```
+VTC_APPLICANT=did:peer npm run tsp:peer-push   # listener, join, approve, status; with this kit's mediator it now stops at once with the DID-size message
+```
+
+Verified offline: the DID's keys and service, a round trip through pnm-core's resolver to the same TSP keys, a TSP frame sealed to the resolved keys opening with ours, the join proof naming `#key-2`,
+and the size check. In the same live run the **did:key** flow still worked: `tsp:listen` (invite accepted), `vtc:join`, `vtc:approve`, two `credential-exchange/issue/0.1` frames received,
+VTC log `trust-task push queued ... via=tsp`, join status `credentialsDelivered: false` **[verified]**.
 
 ## What credentialsDelivered means
 
@@ -80,7 +84,7 @@ The TSP client above is the only messaging client in the kit. Nothing in the pin
 | Idea | Why it is not here | What it needs |
 |---|---|---|
 | **A DIDComm "send a Trust Task" example** (for example the inbox verifier over messaging) | no DIDComm client (TSP: see above) | a client that resolves DIDs, packs and unpacks DIDComm v2 (authenticated encryption), authenticates to the mediator, and polls or listens (and, for TSP, its own framing). A substantial project of its own; use an existing library rather than writing one |
-| **Credential delivery to the member's app** | the frames do arrive at a TSP listener (above), but nothing in the kit parses the credential, verifies it or stores it; by default the applicant is a plain `did:key` whose DID names no mediator (`VTC_APPLICANT=did:peer` gives one that does, [above](#a-didpeer2-applicant-the-vtc-pushes-with-no-ping-first), not verified live); `credentialsDelivered` stays `false` because nothing sends the member's own credential back | a client that unpacks, verifies and stores the credential, and sends its own membership credential back. A mobile wallet is such a client ([MOBILE-WALLET.md](MOBILE-WALLET.md)); it was not tried |
+| **Credential delivery to the member's app** | the frames do arrive at a TSP listener (above), but nothing in the kit parses the credential, verifies it or stores it; by default the applicant is a plain `did:key` whose DID names no mediator (`VTC_APPLICANT=did:peer` would give one that does, but with this kit's did:peer mediator that DID is over the resolver's 1000-byte limit, [above](#a-didpeer2-applicant-blocked-by-the-mediators-did-size)); `credentialsDelivered` stays `false` because nothing sends the member's own credential back | a client that unpacks, verifies and stores the credential, and sends its own membership credential back. A mobile wallet is such a client ([MOBILE-WALLET.md](MOBILE-WALLET.md)); it was not tried |
 | **A DIDComm round-trip check** | TSP has one (above). For DIDComm there is no client | a DIDComm client |
 
 What the kit shows for credentials: the community dashboard's membership card says, per mode, why delivery to the app is not confirmed instead of showing a bare `false`, and the admin's
@@ -98,7 +102,7 @@ The mediator in this kit is open and public for the length of a run: demo data o
 |---|---|---|---|
 | Trust Tasks over REST, the dashboard, roles lab, e2e | yes **[verified]** | yes **[verified]** | yes |
 | Approvals demo with the software approver ([APPROVALS.md](APPROVALS.md)) | yes **[verified]** | yes **[verified]** | no (you cannot seed a hosted VTA's policy from here) |
-| Credential frames reach the member's listener | no | yes, over TSP to a `did:key` listening on the mediator after it spoke TSP first **[verified]** (`npm run tsp:listen`); to a `did:peer:2` naming the mediator with no ping first: built, **not verified live** (`npm run tsp:peer-push`); `credentialsDelivered` stays false either way ([why](#what-credentialsdelivered-means)) | **[unverified]** |
+| Credential frames reach the member's listener | no | yes, over TSP to a `did:key` listening on the mediator after it spoke TSP first **[verified]** (`npm run tsp:listen`); to a `did:peer:2` naming the mediator with no ping first: **does not work** with this kit's mediator, the DID is over the resolver's 1000-byte limit (verified failure); `credentialsDelivered` stays false either way ([why](#what-credentialsdelivered-means)) | **[unverified]** |
 | A real phone as approver | no | needs a wallet and its messaging; **not tried** | **[unverified]** |
 | TSP ping and pong (`npm run tsp:ping`, browser page, `tunnel:probe`) | no | yes **[verified]** (mediator 0.45.0) | **[unverified]** |
 | DIDComm application round trip | no | **no client** | **[unverified]** |
