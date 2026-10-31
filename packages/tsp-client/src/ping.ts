@@ -7,7 +7,8 @@ import {
   type MediatorConnection, type WebSocketCtor,
 } from "@openvtc/pnm-core";
 import { ed25519 } from "@noble/curves/ed25519.js";
-import { TspSession } from "./session.js";
+import { TspSession, type TspKeys } from "./session.js";
+import type { PeerIdentity } from "./peer.js";
 
 export const PING_TYPE = "https://trusttasks.org/spec/messaging/ping/0.1";
 export const PING_RESPONSE_TYPE = `${PING_TYPE}#response`;
@@ -15,7 +16,7 @@ export const PING_RESPONSE_TYPE = `${PING_TYPE}#response`;
 export interface PingOptions {
   /** The VTA's DID (did:webvh at its tunnel host). */
   vtaDid: string;
-  /** The mediator's DID (did:peer:2, in .vta/tunnel.json). */
+  /** The mediator's DID (a did:webvh bound to its tunnel host, in .vta/tunnel.json). */
   mediatorDid: string;
   /**
    * Ed25519 seed of the did:key to log in as. Omit for a throwaway did:key. The VTA only answers DIDs on its ACL,
@@ -63,7 +64,7 @@ export function describePong(r: PingResult): string {
 }
 
 export interface TspClient {
-  /** The did:key that logged in. */
+  /** The DID that logged in (a did:key, or the did:peer:2 passed as `identity`). */
   did: string;
   conn: MediatorConnection;
   session: TspSession;
@@ -72,12 +73,33 @@ export interface TspClient {
 }
 
 /** Log in to the mediator as a did:key, open the socket and resolve the peer and the mediator to TSP keys. */
-export async function connectTsp(opts: Pick<PingOptions, "vtaDid" | "mediatorDid" | "seed" | "allowInsecure" | "webSocketImpl" | "log">): Promise<TspClient> {
-  const log = opts.log ?? (() => {});
+/** The DID, TSP keys and mediator-login secret for a did:key from `seed` (or a throwaway), or for a did:peer:2 identity. */
+export function clientKeys(opts: { seed?: Uint8Array; identity?: PeerIdentity }): { signing: ReturnType<typeof generateSigningIdentity>; keys: TspKeys; login: { did: string; kid: string; jwk: { kty: "OKP"; crv: "X25519"; x: string; d: string } }; method: "did:key" | "did:peer" } {
+  const p = opts.identity;
+  if (p) {
+    // The did:peer logs in to the mediator as itself: the mediator delivers what is addressed to this DID to this socket.
+    return {
+      signing: { did: p.did, kid: p.authKid, privateKey: p.seed, publicKey: p.ed25519PublicKey },
+      keys: { vid: p.did, signingKey: p.seed, decryptionKey: p.decryptionKey },
+      login: { did: p.did, kid: p.keyAgreementKid, jwk: p.secretJwk },
+      method: "did:peer",
+    };
+  }
   const signing = opts.seed ? signingIdentityFromSecret(opts.seed) : generateSigningIdentity();
   const ka = didcommKeyAgreementFromSigning(signing);
-  const holder = Identity.fromSecretJwk({ did: signing.did, kid: ka.keyAgreementKid, jwk: ka.secretJwk });
-  log(`client DID (did:key): ${signing.did}`);
+  return {
+    signing,
+    keys: { vid: signing.did, signingKey: signing.privateKey, decryptionKey: ed25519.utils.toMontgomerySecret(signing.privateKey) },
+    login: { did: signing.did, kid: ka.keyAgreementKid, jwk: ka.secretJwk },
+    method: "did:key",
+  };
+}
+
+export async function connectTsp(opts: Pick<PingOptions, "vtaDid" | "mediatorDid" | "seed" | "allowInsecure" | "webSocketImpl" | "log"> & { identity?: PeerIdentity }): Promise<TspClient> {
+  const log = opts.log ?? (() => {});
+  const { signing, keys, login, method } = clientKeys(opts);
+  const holder = Identity.fromSecretJwk(login);
+  log(`client DID (${method}): ${signing.did}`);
   log("logging in to the mediator and opening the socket");
   const conn = await connectMediatorSession({
     holder, mediatorDid: opts.mediatorDid, vtaDid: opts.vtaDid,
@@ -89,7 +111,7 @@ export async function connectTsp(opts: Pick<PingOptions, "vtaDid" | "mediatorDid
     const peer = await resolveVtaTspEndpoint(opts.vtaDid);
     log("resolving the mediator DID to its TSP keys");
     const mediator = await resolveVtaTspEndpoint(opts.mediatorDid);
-    const session = new TspSession(conn, { vid: signing.did, signingKey: signing.privateKey, decryptionKey: ed25519.utils.toMontgomerySecret(signing.privateKey) }, mediator, peer, log);
+    const session = new TspSession(conn, keys, mediator, peer, log);
     return { did: signing.did, conn, session, signing, close: () => { conn.close(); holder.dispose(); } };
   } catch (e) {
     conn.close();

@@ -12,8 +12,13 @@ import { agentUrl, farmId, type FarmTable } from "../../scripts/farm-select.ts";
 // Farm VTAs would refuse http://localhost:5173 anyway (their CORS list holds only the wallet extension).
 export default defineConfig(({ mode }) => {
   const e = loadEnv(mode, "../..", ["VTA_", "VTC_", "MODE", "FARM"]);
-  const farm = (process.env.MODE ?? e.MODE) === "farm";
-  const tunnel = (process.env.MODE ?? e.MODE) === "tunnel";
+  // MODE from the environment, the repo-root .env, else the running stack (`npm run up -- --tunnel` writes .vta/mode.json, not .env),
+  // the same order as scripts/env.ts modeInfo().
+  let stackMode: string | undefined;
+  try { stackMode = JSON.parse(readFileSync(new URL("../../.vta/mode.json", import.meta.url), "utf8")).mode; } catch { /* no stack */ }
+  const runMode = process.env.MODE || e.MODE || stackMode || "local";
+  const farm = runMode === "farm";
+  const tunnel = runMode === "tunnel";
   // FARM=ic3|firstperson + FARM_AGENT=<name> derive the agent URL when VTA_URL is not set.
   const table: FarmTable = JSON.parse(readFileSync(new URL("../../scripts/farm-hosts.json", import.meta.url), "utf8"));
   const fe = (k: string) => process.env[k] ?? e[k];
@@ -23,6 +28,12 @@ export default defineConfig(({ mode }) => {
   }
   const vtcUrl = process.env.VTC_URL ?? e.VTC_URL;
   const vtcDid = process.env.VTC_DID ?? e.VTC_DID;
+  // MODE=tunnel applies as a did:peer:2 naming the stack's mediator (.vta/tunnel.json), so the VTC can push to it; VTC_APPLICANT=did:key
+  // keeps the did:key (src/delivery.ts applicantChoice). "" = no override.
+  const override = (process.env.VTC_APPLICANT ?? e.VTC_APPLICANT ?? "").trim().toLowerCase().replace(/^(did:)?key$/, "did:key").replace(/^(did:)?peer$/, "did:peer");
+  const applicant = override === "did:key" || override === "did:peer" ? override : "";
+  let mediatorDid: string | null = null;
+  try { mediatorDid = tunnel ? (JSON.parse(readFileSync(new URL("../../.vta/tunnel.json", import.meta.url), "utf8")).mediatorDid ?? null) : null; } catch { /* no tunnel state */ }
 
   // The version this kit is pinned to, for the status panel's version check.
   const pins = JSON.parse(readFileSync(new URL("../../pins.json", import.meta.url), "utf8"));
@@ -44,6 +55,8 @@ export default defineConfig(({ mode }) => {
     define: {
       __FARM__: JSON.stringify(farm),
       __TUNNEL__: JSON.stringify(tunnel),
+      __APPLICANT__: JSON.stringify(applicant),
+      __MEDIATOR_DID__: JSON.stringify(mediatorDid),
       __VTA_BROWSER_URL__: JSON.stringify(VTA_PROXY),
       __VTA_URL__: JSON.stringify(e.VTA_URL ?? "http://localhost:8100"),
       __VTC_BROWSER_URL__: JSON.stringify(VTC_PROXY),

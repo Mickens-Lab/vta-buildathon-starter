@@ -162,4 +162,6 @@ By design, not an omission to patch (source: `acl/storage.rs`, `member_portal/mo
   room host and need credentials the room issues; locally no room exists.
 - Voting/elections: not served (feature off at this pin). Vetting by members: only granted vetters.
 - Receiving your membership credential over HTTP: `status` returns `credentialsDelivered:false` and no `vmc`; delivery
-  goes over DIDComm/TSP, which this stack leaves off. The admin's `decide` response does contain the VMC and role VAC.
+  goes over DIDComm/TSP, which the local stack leaves off (in tunnel mode the applicant is a `did:peer:2` naming the mediator and the VTC pushes the credential to it over TSP: [MESSAGING.md](MESSAGING.md#tunnel-mode-delivers-the-credential-to-the-applicant)). The admin's `decide` response does contain the VMC and role VAC.
+  `credentialsDelivered` is not a delivery receipt: the VTC sets it only when it holds the member's own membership credential sent back
+  (`vtc/members/vmc/0.1`), so it stays false even when the pushed frames arrived ([MESSAGING.md](MESSAGING.md#what-credentialsdelivered-means)).

@@ -6,8 +6,8 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { parseMode } from "../env.js";
 import {
-  composeEnv, composeProject, existingVolumes, hostFromLog, memoryWarning, messagingVerdict, profileArgs, protocolsOf, tunnelUrls,
-  vtcMessagingVerdict, volumeGuard, type TunnelState,
+  composeEnv, composeProject, existingVolumes, hostFromLog, mediatorDidFromToml, memoryWarning, messagingVerdict, profileArgs, protocolsOf,
+  tunnelUrls, vtcMessagingVerdict, volumeGuard, webvhAtHost, type TunnelState,
 } from "../lib/tunnel.js";
 import { pins } from "../pins.js";
 
@@ -143,6 +143,10 @@ test("entrypoints are valid sh and say what tunnel mode is", () => {
   assert.match(m, /OPEN/);
   assert.match(m, /explicit_deny/);
   assert.match(m, />\/tmp\/setup\.out/, "mediator-setup stdout (it prints the admin private key) is not left in container logs");
+  assert.match(m, /^did_method = "did:webvh"$/m, "the tunnel mediator mints a short did:webvh (a did:peer:2 applicant must fit in 1000 bytes)");
+  assert.match(m, /^public_url = "https:\/\/\$MEDIATOR_HOST"$/m, "the did:webvh is bound to the mediator's tunnel host");
+  assert.match(m, /sed -i "s\|\^did_web_self_hosted = /, "the self-hosted DID log path is made absolute (mediator-setup writes a working-dir path)");
+  assert.match(m, /grep -q "\^did_web_self_hosted = /, "and the patch is checked");
   assert.match(read("vta-entrypoint.sh"), /refusing to start: this volume was set up for/);
   // local mode must still render the old config
   assert.match(read("vta-entrypoint.sh"), /MESSAGING_TOML='kind = "skip"'/);
@@ -194,4 +198,25 @@ test("mediator CORS: values that could break the TOML are refused, and a config 
   const r = runCorsBlock("http://localhost:5173", "[security]\n");
   assert.notEqual(r.status, 0);
   assert.match(r.stderr, /could not set cors_allow_origin/);
+});
+
+test("mediatorDidFromToml: the did:webvh (or a did:peer) from mediator_did, without the did:// prefix", () => {
+  const webvh = "did:webvh:QmSCID:med-x.trycloudflare.com";
+  assert.equal(mediatorDidFromToml(`mediator_did = "did://${webvh}"\n`), webvh);
+  assert.equal(mediatorDidFromToml(`# a comment\nmediator_did = "${webvh}"`), webvh);
+  assert.equal(mediatorDidFromToml(`mediator_did = "did://did:peer:2.Vz6Mk.Ez6LS.SeyJ0"`), "did:peer:2.Vz6Mk.Ez6LS.SeyJ0");
+  assert.equal(mediatorDidFromToml(`# mediator_did = "did://${webvh}"`), undefined, "a commented line is not the DID");
+  assert.equal(mediatorDidFromToml(`mediator_did = "vta://mediator"`), undefined);
+  assert.equal(mediatorDidFromToml(""), undefined);
+});
+
+test("webvhAtHost: a did.jsonl log is bound to the tunnel host, or says it is stale", () => {
+  const log = (did: string) => JSON.stringify({ versionId: "1-Qm", state: { "@context": ["https://www.w3.org/ns/did/v1"], id: did } });
+  const ok = webvhAtHost(log("did:webvh:QmSCID:med-x.trycloudflare.com"), "med-x.trycloudflare.com");
+  assert.equal(ok.ok, true);
+  assert.equal(ok.did, "did:webvh:QmSCID:med-x.trycloudflare.com");
+  const stale = webvhAtHost(log("did:webvh:QmSCID:old-y.trycloudflare.com"), "med-x.trycloudflare.com");
+  assert.equal(stale.ok, false);
+  assert.match(stale.detail, /stale/);
+  assert.equal(webvhAtHost("not a log", "med-x.trycloudflare.com").ok, false);
 });

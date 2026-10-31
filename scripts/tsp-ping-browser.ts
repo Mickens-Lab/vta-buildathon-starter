@@ -1,6 +1,7 @@
 // Browser check of the TSP ping page against your MODE=tunnel stack: `npm run tsp:ping:browser [-- --shot file.png]`.
 // Starts the page with Vite on :3000, opens headless Chromium, clicks "Send ping" and reports what the page says.
-// The mediator must allow http://localhost:3000 (start the stack with MEDIATOR_CORS_ALLOW_ORIGIN=http://localhost:3000).
+// The mediator must allow http://localhost:3000 (start the stack with MEDIATOR_CORS_ALLOW_ORIGIN=http://localhost:3000): the page
+// fetches the mediator's did:webvh log from the mediator's host and then opens its socket, both cross-origin.
 // Optional: not part of `npm test`. Exit 0 only if the page showed a genuine pong.
 import "./lib/cli.js";
 import { spawn } from "node:child_process";

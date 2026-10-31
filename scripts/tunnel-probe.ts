@@ -1,5 +1,5 @@
 // Live probe of a running MODE=tunnel stack: `npm run tunnel:probe` (not part of `npm test`).
-// Read-only. Checks the public hosts, the VTA's DID at its tunnel host, and the messaging state, loudly:
+// Read-only. Checks the public hosts, the mediator's and the VTA's DIDs at their tunnel hosts, and the messaging state, loudly:
 // a VTA whose mediator connection failed keeps serving REST and only logs a warning.
 // "messaging ok" means the transport is connected. It does NOT prove an app-level DIDComm/TSP round trip.
 import "./lib/cli.js";
@@ -7,7 +7,7 @@ import { VtaClient, TT, decodeCredential, seedFromMultibase } from "@buildathon/
 import { describePong, tspPing } from "@buildathon/tsp-client";
 import { env, loadAdmin } from "./env.js";
 import { readTunnel } from "./lib/compose.js";
-import { messagingVerdict, protocolsOf, tunnelUrls, vtcMessagingVerdict } from "./lib/tunnel.js";
+import { messagingVerdict, protocolsOf, tunnelUrls, vtcMessagingVerdict, webvhAtHost } from "./lib/tunnel.js";
 
 type Level = "ok" | "FAIL" | "info";
 const rows: [Level, string, string][] = [];
@@ -31,14 +31,18 @@ const u = tunnelUrls(state);
 // 1. mediator, through its public host
 const livez = await get(`${u.mediator}/mediator/v1/livez`);
 add(livez.status === 200 ? "ok" : "FAIL", "mediator livez (public)", `HTTP ${livez.status} at ${u.mediator}`);
+const medLog = await get(`${u.mediator}/.well-known/did.jsonl`);
+const med = medLog.status === 200 ? webvhAtHost(medLog.text, state.medHost) : { ok: false, did: undefined, detail: `HTTP ${medLog.status}` };
+const sameDid = !med.did || !state.mediatorDid || med.did === state.mediatorDid;
+add(med.ok && sameDid ? "ok" : "FAIL", "mediator did:webvh resolves at the tunnel host",
+  sameDid ? med.detail : "the served DID differs from .vta/tunnel.json's mediatorDid: reset with `npm run down`");
 
 // 2. VTA health and DID at the tunnel host
 const health = await get(`${u.vta}/health`);
 add(health.status === 200 ? "ok" : "FAIL", "VTA /health (public)", `HTTP ${health.status} at ${u.vta}`);
 const log = await get(`${u.vta}/.well-known/did.jsonl`);
-const did = /"id":"(did:webvh:[^"#]+)"/.exec(log.text)?.[1];
-add(did?.endsWith(`:${state.vtaHost}`) ? "ok" : "FAIL", "VTA did:webvh resolves at the tunnel host",
-  log.status !== 200 ? `HTTP ${log.status}` : did ? (did.endsWith(`:${state.vtaHost}`) ? "DID is bound to the current tunnel host" : "DID names a different host: this volume is stale, reset with `npm run down`") : "no DID in the log");
+const vtaAtHost = webvhAtHost(log.text, state.vtaHost);
+add(log.status === 200 && vtaAtHost.ok ? "ok" : "FAIL", "VTA did:webvh resolves at the tunnel host", log.status !== 200 ? `HTTP ${log.status}` : vtaAtHost.detail);
 const advertises = ["DIDCommMessaging", "TSPTransport"].filter((t) => log.text.includes(t));
 add(advertises.length === 2 ? "ok" : "FAIL", "DID document advertises messaging", advertises.length ? advertises.join(", ") : "neither DIDCommMessaging nor TSPTransport");
 

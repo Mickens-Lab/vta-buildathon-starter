@@ -89,6 +89,8 @@ services:
 
   # The messaging mediator, OPEN ACL (any DID may register and relay): DEV ONLY, see
   # mediator-entrypoint.sh and docs/MODES.md. Build the image with `npm run images:build mediator`.
+  # Its DID is a short did:webvh bound to MEDIATOR_HOST, which it serves itself at /.well-known/did.jsonl
+  # (short so a did:peer:2 applicant naming it fits the resolver's 1000 bytes; docs/MESSAGING.md).
   mediator:
     profiles: ["messaging"]
     image: ${MEDIATOR_IMAGE:-mediator-buildathon:local}

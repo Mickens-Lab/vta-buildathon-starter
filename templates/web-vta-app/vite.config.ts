@@ -12,8 +12,13 @@ import { agentUrl, farmId, type FarmTable } from "../../scripts/farm-select.ts";
 // any dev-server port works. Farm mode needs it anyway (a hosted VTA does not allow http://localhost:5173 in its CORS list).
 export default defineConfig(({ mode }) => {
   const e = loadEnv(mode, "../..", ["VTA_", "VTC_", "MODE", "FARM"]);
-  const farm = (process.env.MODE ?? e.MODE) === "farm";
-  const tunnel = (process.env.MODE ?? e.MODE) === "tunnel";
+  // MODE from the environment, the repo-root .env, else the running stack (`npm run up -- --tunnel` writes .vta/mode.json, not .env),
+  // the same order as scripts/env.ts modeInfo().
+  let stackMode: string | undefined;
+  try { stackMode = JSON.parse(readFileSync(new URL("../../.vta/mode.json", import.meta.url), "utf8")).mode; } catch { /* no stack */ }
+  const runMode = process.env.MODE || e.MODE || stackMode || "local";
+  const farm = runMode === "farm";
+  const tunnel = runMode === "tunnel";
   // FARM=ic3|firstperson + FARM_AGENT=<name> derive the agent URL when VTA_URL is not set.
   const table: FarmTable = JSON.parse(readFileSync(new URL("../../scripts/farm-hosts.json", import.meta.url), "utf8"));
   const fe = (k: string) => process.env[k] ?? e[k];

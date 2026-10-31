@@ -41,3 +41,26 @@ test("when prebuilt images are available, the unavailable rule stops and the old
   assert.deepEqual(staleHits("Prebuilt images are the default, local builds the fallback.", true), []);
   assert.equal(staleHits("everyone builds locally", true).length, 1);
 });
+
+test("the did:peer applicant is no longer blocked: the old wording is stale even when it says 'verified failure'", () => {
+  for (const line of [
+    "## A did:peer:2 applicant (blocked by the mediator's DID size)",
+    "a `did:peer:2` applicant **does not work** with this kit's mediator: that DID is over the 1000-byte limit **[verified failure]**",
+    "With this kit's mediator it stops at once: the DID would be over the resolver's 1000-byte limit (**verified failure**)",
+    "and the opt-in `did:peer:2` applicant (`VTC_APPLICANT=did:peer`, ...; blocked live)",
+    "`vtc:join --did-peer` and `tsp:listen --did-peer` stop with that message",
+    "the did:key stays the default in every mode",
+    "/** The mediator's DID (did:peer:2, in .vta/tunnel.json). */",
+    "[MESSAGING.md](MESSAGING.md#a-didpeer2-applicant-blocked-by-the-mediators-did-size)",
+  ]) assert.equal(staleHits(line).length, 1, line);
+});
+
+test("current did:peer wording and history of the old mediator DID pass", () => {
+  for (const line of [
+    "## Tunnel mode delivers the credential to the applicant",
+    "The kit's mediator used to mint a `did:peer:2` of about 725 bytes, which made the applicant about 1115 bytes",
+    "A lean `did:peer:2` mediator DID was tried and cannot fit",
+    "`--did-peer` is gone: tunnel mode applies as the did:peer by default",
+    "in `tunnel` the page applies as a `did:peer:2` naming the mediator; `VTC_APPLICANT=did:key` keeps the did:key",
+  ]) assert.deepEqual(staleHits(line), [], line);
+});

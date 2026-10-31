@@ -31,6 +31,6 @@ This starter was checked on Linux with Docker 29 and Node 22 only; Windows and m
 
 **Verified live**: the local VTA and VTC flows, the dashboard (browser end to end), the role matrix, `MODE=tunnel` bring-up with the public URLs, the status
 panel Messaging row in a browser, the software-approver demo in local and tunnel mode, and the TSP round trip in tunnel mode: a ping from Node and from headless
-Chromium reaches the VTA and its pong comes back through the mediator (0.45.0), and `npm run tsp:listen` receives the credential frames the VTC pushes after an approval.
-**Not verified**: DIDComm, a wallet storing the credential, a phone as approver, a hosted mediator admitting an outside VTA, the Farm community path, and Windows or macOS
+Chromium reaches the VTA and its pong comes back through the mediator (0.45.0), and `npm run tsp:listen` receives the credential frames the VTC pushes after an approval. In tunnel mode the applicant is, by default, a `did:peer:2` whose `TSPTransport` service names the mediator (a short `did:webvh` bound to its tunnel host), so the VTC pushes the credential frames to it with no ping first (`npm run tsp:peer-push`, [MESSAGING.md](MESSAGING.md#tunnel-mode-delivers-the-credential-to-the-applicant)); `VTC_APPLICANT=did:key` keeps the old `did:key` flow, also verified; `credentialsDelivered` stays false because it reports the member's own credential sent back, not frame arrival ([MESSAGING.md](MESSAGING.md#what-credentialsdelivered-means)).
+**Not verified**: DIDComm, a wallet storing the credential, a phone as approver, a hosted mediator admitting an outside VTA, the Farm community path, arm64, and Windows or macOS
 ([MESSAGING.md](MESSAGING.md)).

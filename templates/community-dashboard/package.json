@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@buildathon/status-panel": "*",
+    "@buildathon/tsp-client": "*",
     "@buildathon/vta-client": "*",
     "@buildathon/vtc-client": "*",
     "react": "18.3.1",

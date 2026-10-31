@@ -21,6 +21,7 @@ muscle memory keep working; a test fails if a script is missing from this page.
 | `npm run repl` | A Node REPL with `vta` (authenticated), `vtc`, `call(slug, payload)`, `tasks(words)` and top-level await |
 | `npm run vtc:hello` / `vtc:join` / `vtc:approve` / `vtc:status` | Community: read the join manifest / apply / admin approves / where do I stand |
 | `npm run tsp:ping` / `tsp:listen` | `MODE=tunnel`: TSP ping and pong / receive the credential frames the VTC pushes |
+| `npm run tsp:peer-push` | `MODE=tunnel`, live check: the default `did:peer:2` applicant receives its credential over TSP with no ping first (listener, join, approve, status; ignores `VTC_APPLICANT=did:key` in `.env`; docs/MESSAGING.md) |
 
 ## Community (VTC), more
 

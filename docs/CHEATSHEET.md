@@ -91,6 +91,8 @@ Tunnel URLs and DIDs die with the run; what each mode gives and every caveat: [M
 | `VTC_URL` | `.env`, scripts | VTC base URL, default `http://localhost:8200` in local mode |
 | `VTC_DID` | `.env` | VTC DID, when not served at `/.well-known/did.jsonl` |
 | `VTC_REQUEST_ID` | `.env` | Written by `vtc:join`; delete to apply again |
+| `VTC_APPLICANT` | `.env` (you) | Unset = the mode decides: `tunnel` applies, listens and signs the dashboard as a `did:peer:2` naming the mediator, `local`/`farm` as the app `did:key` ([MESSAGING.md](MESSAGING.md#tunnel-mode-delivers-the-credential-to-the-applicant)). `did:key` keeps the did:key in tunnel mode too |
+| `VTC_PEER_REQUEST_ID` | `.env` | The did:peer applicant's request id, written by `vtc:join`; delete to apply again |
 | `VTC_IMAGE`, `VTC_PORT`, `VTC_CONTEXT`, `VTC_CORS_ORIGINS_TOML` | compose | The optional local VTC |
 | `WITH_VTC=0` | shell | `npm run up` leaves the VTC out. The VTC is on by default in every mode; without its image `up` skips it with a note (`--no-vtc` / `--vtc` on the command line do the same) |
 

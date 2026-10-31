@@ -1,7 +1,8 @@
 import { useRef, useState, type KeyboardEvent } from "react";
 import type { PortalMe } from "@buildathon/vtc-client";
 import { describeError } from "../client.ts";
-import { deliveryNote, runMode } from "../delivery.ts";
+import { builtApplicant, deliveryNote, runMode } from "../delivery.ts";
+import { didPeerFits } from "@buildathon/tsp-client";
 import { formatDate, formatDateTime, stripDids } from "../format.ts";
 import { useLoad } from "../hooks.ts";
 import { ANON_COOLDOWN_MS } from "../refresh.ts";
@@ -37,7 +38,8 @@ export function MemberScreen({ actions, communityName, delivered }: { actions: A
 }
 
 function MembershipCard({ actions, communityName, delivered }: { actions: Actions; communityName: string; delivered?: boolean }) {
-  const note = deliveryNote(runMode(), delivered);
+  const who = builtApplicant(didPeerFits);
+  const note = deliveryNote(runMode(), delivered, who.kind);
   // The portal sign-in is plain REST (challenge, auth, me): the VTC rate-limits it like an anonymous caller (burst 10, then one
   // per 5 s per address), so it costs three of those tokens. Global refreshes therefore skip it; this card has its own Refresh.
   const me = useLoad<PortalMe>("proof", (c) => c.memberProof(), true, "member/me", false);
@@ -53,7 +55,7 @@ function MembershipCard({ actions, communityName, delivered }: { actions: Action
           <div><dt>Joined</dt><dd>{formatDate(d?.joinedAt)}</dd></div>
         </dl>
       )}
-      <dl className="kv"><div><dt>Credential delivery</dt><dd data-testid="delivery"><span className={`tag ${note.pill === "ok" ? "verified" : note.pill === "warn" ? "inferred" : ""}`}>{note.label}</span> <span className="muted small-text">{note.detail}</span></dd></div></dl>
+      <dl className="kv"><div><dt>Credential delivery</dt><dd data-testid="delivery"><span className={`tag ${note.pill === "ok" ? "verified" : note.pill === "warn" ? "inferred" : ""}`}>{note.label}</span> <span className="muted small-text">{note.detail}</span>{who.why ? <span className="muted small-text" data-testid="applicant-fallback"> Why the did:key: {who.why}</span> : null}</dd></div></dl>
       <Fresh info={me.asOf} busy={me.refreshing} onRefresh={me.reload} cooldownMs={ANON_COOLDOWN_MS} />
       <p className="muted small-text">Reading this card uses the member portal, which the community rate-limits more tightly, so Refresh all leaves it alone.</p>
       <button type="button" disabled={actions.busy} onClick={async () => {

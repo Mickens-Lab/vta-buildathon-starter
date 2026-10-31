@@ -2,6 +2,11 @@
 # MODE=tunnel mediator: first boot creates the mediator's own identity with `mediator-setup --from`
 # and patches the public endpoint; later boots just serve. State lives in the /conf volume.
 #
+# The mediator's DID is a did:webvh bound to its tunnel host (about 110 bytes), minted here by mediator-setup and served by
+# the mediator itself at https://$MEDIATOR_HOST/.well-known/did.jsonl. It is short on purpose: a did:peer:2 applicant names
+# this DID in its TSPTransport service, and the DID resolver the mediator and the VTC use refuses DIDs over 1000 bytes
+# (a did:peer:2 mediator DID is about 725 bytes, which pushed the applicant to about 1115). docs/MESSAGING.md.
+#
 # DEV ONLY. The mediator runs with an OPEN ACL (mediator_acl_mode = explicit_deny with
 # global_acl_default = ALLOW_ALL, the generated default): ANY DID may register and relay through it
 # while the tunnel is up. A closed mediator rejects a did:webvh VTA (403) and the VTA then silently
@@ -28,7 +33,7 @@ protocols = ["didcomm", "tsp"]
 use_vta = false
 
 [identity]
-did_method = "did:peer"
+did_method = "did:webvh"
 public_url = "https://$MEDIATOR_HOST"
 
 [secrets]
@@ -63,9 +68,16 @@ TOML
   # messages addressed to its public URL.
   sed -i "s|^# *local_endpoints = .*|local_endpoints = [\"https://$MEDIATOR_HOST\"]|" "$CONFIG"
   grep -q "^local_endpoints = \[\"https://$MEDIATOR_HOST\"\]" "$CONFIG" || { echo "could not set local_endpoints in $CONFIG" >&2; exit 1; }
+  # mediator-setup writes `did_web_self_hosted = "file://./conf/did.jsonl"`, but writes the log next to the config
+  # ($CONF/did.jsonl) and the mediator reads that path relative to its working directory (/app), not the config's.
+  # Without this the mediator cannot serve its own DID log. Upstream quirk (mediator 0.45.0).
+  sed -i "s|^did_web_self_hosted = .*|did_web_self_hosted = \"file://$CONF/did.jsonl\"|" "$CONFIG"
+  grep -q "^did_web_self_hosted = \"file://$CONF/did.jsonl\"\$" "$CONFIG" || { echo "could not set did_web_self_hosted in $CONFIG" >&2; exit 1; }
+  [ -s "$CONF/did.jsonl" ] || { echo "mediator-setup wrote no $CONF/did.jsonl (the did:webvh log)" >&2; exit 1; }
   echo "$MEDIATOR_HOST" > "$MARKER"
   chown -R 10002:10002 "$CONF"
   chmod 600 "$CONF"/mediator-secrets.json "$CONFIG"
+  chmod 644 "$CONF/did.jsonl"
 fi
 
 # Browser access (optional, default off). MEDIATOR_CORS_ALLOW_ORIGIN becomes `[security] cors_allow_origin`:
