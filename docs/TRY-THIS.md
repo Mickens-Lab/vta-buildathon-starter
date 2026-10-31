@@ -48,7 +48,7 @@ npm run vtc:approve          # approved <request id> (did:key:...)
 
 Press **Refresh status** (or wait up to 10 s): the badge becomes **Member**, with a membership card and Community, Directory, My card and Account tabs.
 Open **Under the hood** to see every signed Trust Task the page made. CLI view of the same state: `npm run vtc:status` (`member yes: role=member ...`) and `npm run vtc:profile`.
-Watch `credentialsDelivered` turn true (any mode; **live check pending**): on the membership card, "Credential delivery" says the flag is
+Watch `credentialsDelivered` turn true (any mode; **verified live 2026-10-30 (one machine, one run)**, local and tunnel): on the membership card, "Credential delivery" says the flag is
 false and why. Press **Send my membership credential back**, read the confirm (you sign a credential naming the community as its subject; the
 community stores it; it is unbound to the community's grant, so the membership pair is recorded as incomplete) and press
 **Yes, send my membership credential back**. A toast says `The community answered "stored" for your membership credential.`, a **Receipt**
@@ -194,7 +194,7 @@ It proves the frames arrive, not that a wallet could use them. A `did:key` liste
 With no ping first (the tunnel default): `npm run tsp:peer-push` listens and applies as a `did:peer:2` whose `TSPTransport` service names the mediator, approves, and ends with `PASS: the credential reached the did:peer over TSP with no earlier contact.` (**verified**, [MESSAGING.md](MESSAGING.md#tunnel-mode-delivers-the-credential-to-the-applicant)).
 The join status still says `credentialsDelivered: false` afterwards; that flag reports the member's own credential sent back, not frame arrival.
 
-In the browser instead of `tsp:listen` (**live check pending**; unit- and component-tested): start the dashboard
+In the browser instead of `tsp:listen` (**verified live 2026-10-30 (one machine, one run)**; unit- and component-tested): start the dashboard
 (`npm run dev -w @buildathon/community-dashboard`, note the origin Vite prints, usually `http://localhost:5173`), and make sure the mediator
 allows exactly that origin: start the tunnel stack with `MEDIATOR_CORS_ALLOW_ORIGIN=http://localhost:5173 npm run up -- --tunnel`, or recreate
 only the mediator ([MODES.md](MODES.md#browser-access-cors)). Apply in the page, open **Credential frames** under the in-review screen and press

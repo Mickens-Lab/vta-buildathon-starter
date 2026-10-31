@@ -17,7 +17,7 @@ wallet-signed Trust Task. Without the wallet, the rest still works.
 
 In tunnel mode only, a banner above the panel says the public hosts and DIDs (VTA, VTC, mediator, and the applicant `did:peer:2` that
 names the mediator) die at `npm run down` and are new after the next `npm run up -- --tunnel`; do not bookmark or share them beyond the
-run. The wording is `tunnelBanner` from `@buildathon/status-panel` (unit-tested; the panel's Mode row says the same in short); live check pending.
+run. The wording is `tunnelBanner` from `@buildathon/status-panel` (unit-tested; the panel's Mode row says the same in short); verified live 2026-10-30 (one machine, one run).
 
 With nothing reachable the page still renders and says what to fix (VTA down, CORS
 blocked, credential missing, wrong version image in farm mode).

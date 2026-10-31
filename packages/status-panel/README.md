@@ -43,7 +43,7 @@ the optional `applicant` option: `{ kind: "did:key" | "did:peer", did?, why?, me
 
 Local mode: messaging is off, the applicant is the did:key, nothing is fetched. Farm mode: the did:key, the mediator is not checked. The card is
 advisory (it does not change the overall status pill; the Messaging row in card 2 does that for a degraded VTA). Rows come from
-`applicantCardRows()` in `src/applicant.ts`; the behaviour is unit-tested, a live browser check is pending.
+`applicantCardRows()` in `src/applicant.ts`; the behaviour is unit-tested and verified live 2026-10-30 (one machine, one run).
 
 The panel never prints the credential. Pure helpers (DID-document services, version comparison, discovery grouping,
 compatibility hints) live in `src/parse.ts` and are exported; tests: `npm test -w @buildathon/status-panel`.

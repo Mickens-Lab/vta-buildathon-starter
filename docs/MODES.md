@@ -63,7 +63,7 @@ Compose files, entrypoints and recipes contain placeholders only.
 **The browser templates need none of this for the VTA and VTC.** Their Vite dev server proxies `/__vta` and `/__vtc` to the URLs in `.env`
 (`scripts/lib/dev-proxy.ts`), so the page and the call share one origin and no CORS check happens, on any port. The proxy also drops the
 browser `Origin` header, so the server sees an ordinary client. The credential sign-in is unaffected: a Trust Task is signed for the VTA's
-**DID** (`recipient`), not for a URL, and the DID is read from `/.well-known/did.jsonl` through the same proxy **[client code read; farm mode already signs in this way; a live local run is pending]**. The rest of this section is for code that
+**DID** (`recipient`), not for a URL, and the DID is read from `/.well-known/did.jsonl` through the same proxy **[client code read; farm mode already signs in this way; verified live 2026-10-30 (one machine, one run) in local mode: the status panel signs in through `/__vta`]**. The rest of this section is for code that
 calls the VTA/VTC directly, and for the mediator, which cannot be proxied (its URL comes from its DID document).
 
 A web page that talks to the mediator directly (the TSP browser client) needs two things the defaults do not give:
@@ -71,7 +71,7 @@ A web page that talks to the mediator directly (the TSP browser client) needs tw
 - **Mediator:** set `MEDIATOR_CORS_ALLOW_ORIGIN` before `npm run up` (it is applied on every boot, no volume reset). To change it on a running tunnel
   stack, recreate only the mediator; compose needs its tunnel host too, which is the last part of the mediator's `did:webvh` (`mediatorDid` in
   `.vta/tunnel.json`): `MEDIATOR_PUBLIC_HOST=<mediator host> MEDIATOR_CORS_ALLOW_ORIGIN=<origin> docker compose --profile messaging up -d mediator`
-  (same host, so it keeps its DID; the VTA and VTC reconnect on their own) **[command from the compose file and entrypoint; live check pending]**. It becomes `[security] cors_allow_origin` and takes one exact origin such as `http://localhost:5173`, a
+  (same host, so it keeps its DID; the VTA and VTC reconnect on their own) **[verified live 2026-10-30 (one machine, one run): the mediator DID stayed the same, `npm run tunnel:probe` passed afterwards]**. It becomes `[security] cors_allow_origin` and takes one exact origin such as `http://localhost:5173`, a
   `https://*.suffix` pattern, or `*`. **Unset (the default) means off**: responses carry no `Access-Control-Allow-Origin`, and the mediator also
   refuses a WebSocket upgrade that carries a browser `Origin` header (403). Prefer an exact origin; `*` is tolerable only because the mediator
   authenticates with a bearer token, not cookies. Anything outside letters, digits and `: / . * -` is refused at boot.
@@ -84,7 +84,7 @@ A web page that talks to the mediator directly (the TSP browser client) needs tw
 
 The `tsp-ping` page (`templates/tsp-ping`) needs the same for its origin, `http://localhost:3000` by default. When the mediator's `did.jsonl` cannot be read
 (`did:webvh resolve failed ... Failed to fetch`) or the socket is refused, its verdict names the exact `MEDIATOR_CORS_ALLOW_ORIGIN=<this page's origin>`
-line and the recreate command above with the mediator host filled in **[unit-tested; live check pending]**.
+line and the recreate command above with the mediator host filled in **[unit-tested; verified live 2026-10-30 (one machine, one run)]**.
 
 The community dashboard's optional "Credential frames" panel logs in to the mediator from the browser (it fetches the mediator's `did.jsonl` and
 opens the socket), so it needs `MEDIATOR_CORS_ALLOW_ORIGIN=<the dashboard's origin>`, usually `http://localhost:5173` (one exact origin: the port Vite
@@ -178,7 +178,7 @@ In tunnel mode the browser pages say this at the top: the community dashboard an
 hosts and DIDs last only for this run.", naming the public hosts and DIDs of the VTA, the VTC and the mediator and the applicant `did:peer:2`
 that names the mediator, which die at `npm run down` and are new after the next `npm run up -- --tunnel`, so nothing should be bookmarked or
 shared beyond the run. The status panel's Mode row (card 1) says the same in short. No banner in local or farm mode. Wording in
-`packages/status-panel/src/tunnel.ts` **[unit- and component-tested; live check pending]**.
+`packages/status-panel/src/tunnel.ts` **[unit- and component-tested; verified live 2026-10-30 (one machine, one run), tunnel and local mode]**.
 
 ## Images and pins
 

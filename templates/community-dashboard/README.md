@@ -24,7 +24,7 @@ Every action ends in a toast; a refusal is explained in plain words with its cod
 In tunnel mode only, a banner under the top bar says the public hosts and DIDs (VTA, VTC, mediator, and the applicant `did:peer:2` that
 names the mediator) die at `npm run down` and are new after the next `npm run up -- --tunnel`, so nothing should be bookmarked or shared
 beyond the run (wording shared with web-vta-app and the status panel: `tunnelBanner` in `@buildathon/status-panel`; unit- and
-component-tested, live check pending).
+component-tested, verified live 2026-10-30 (one machine, one run)).
 
 Markers: **verified** = seen working against the local stack (VTC 0.15.0, VTA 0.65.0, headless Chromium);
 **inferred** = worked out from the spec or source, not seen; **unverified** = the path is built but not tried.
@@ -76,7 +76,7 @@ need mediator CORS: the panel fetches the mediator's `did.jsonl` from its tunnel
 `MEDIATOR_CORS_ALLOW_ORIGIN=<this page's origin>` (for example `http://localhost:5173`; one exact origin,
 [MODES.md](../../docs/MODES.md#browser-access-cors)). A failed connect prints the exact line and the command that recreates only the
 mediator with it. Local mode shows why there is nothing to listen to (no mediator); farm mode says it is not available.
-Unit- and component-tested with a fake listener; the live browser check is pending.
+Unit- and component-tested with a fake listener; verified live 2026-10-30 (one machine, one run).
 
 ## Identity (read-only)
 
@@ -88,8 +88,7 @@ entry: id, verification relationships, verification methods with public keys, se
 proofs. The document is fetched only when the section is opened, from `https://<mediator host>/.well-known/did.jsonl`, so it needs
 `MEDIATOR_CORS_ALLOW_ORIGIN=<this page's origin>` like the frames panel; when the browser cannot read it the section says so with that
 exact line and the recreate command, and still shows the applicant side. Local and farm mode show the `did:key` and say there is no
-mediator. Only public key material is shown, never the seed or a private key. Unit- and component-tested with a fake reader; the live
-browser check is pending.
+mediator. Only public key material is shown, never the seed or a private key. Unit- and component-tested with a fake reader; verified live 2026-10-30 (one machine, one run).
 
 ## The community is the database
 
@@ -120,7 +119,7 @@ run unless marked):
   grant, so the community stores it unbound and records the membership pair as incomplete. The page shows the community's receipt
   as sent and re-reads the status; refusals (`subjectMismatch`, `notAMember`, `invalidCredential`) are explained in words. No
   `requestId` is sent (see the local hint below: the page cannot be sure which approved request is current). Component-tested;
-  live check pending.
+  verified live 2026-10-30 (one machine, one run) (receipt `stored`, then "reciprocal credential held", as a did:key and as a did:peer:2).
 - **Local hint.** The request id this browser remembers (`localStorage`, per app identity) is labelled as a hint, never as the
   record. It is used to ask about the right request (an upstream quirk: `join-requests/status` with no id can answer with an
   older approved request after a newer one was withdrawn). *Forget local hints* removes it and re-reads; without it, a person

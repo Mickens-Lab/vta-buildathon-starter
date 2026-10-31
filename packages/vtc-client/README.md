@@ -22,7 +22,7 @@ console.log(await vtc.joinStatus());                 // pending, approved, rejec
 |---|---|
 | `manifest()`, `submitJoin()`, `joinPayload()`, `joinStatus()`, `withdrawJoin()`, `supplementJoin()` | Apply, preview, poll, withdraw. `pickCriterion(manifest)` chooses one. |
 | `memberProof()`, `myCard()`, `updateMyCard()`, `renewMembership()`, `leaveCommunity({ confirm: true })` | As a member. |
-| `sendMembershipCredential()`, `memberVmc()`, `signCredential()` | Send your own membership credential back (`vtc/members/vmc/0.1`): a DTG `MembershipCredential` you issue, naming the community, signed like every Trust Task. No digest of the grant, so the community stores it unbound; it turns the join status's `credentialsDelivered` true ([docs/MESSAGING.md](../../docs/MESSAGING.md#what-credentialsdelivered-means)). Live check pending. |
+| `sendMembershipCredential()`, `memberVmc()`, `signCredential()` | Send your own membership credential back (`vtc/members/vmc/0.1`): a DTG `MembershipCredential` you issue, naming the community, signed like every Trust Task. No digest of the grant, so the community stores it unbound; it turns the join status's `credentialsDelivered` true ([docs/MESSAGING.md](../../docs/MESSAGING.md#what-credentialsdelivered-means)). Verified live 2026-10-30 (one machine, one run) through the community dashboard. |
 | `communityProfile()`, `directoryEntries()`, `groups()`, `joinGroup()`, ... | What a member can read; who may call what is in [docs/VTC-SURFACE.md](../../docs/VTC-SURFACE.md). |
 | `listJoinRequests()`, `decideJoin(id, "approved")`, `listMembers()` | Admin only. |
 | `call(type, payload)` | Any VTC task by type URI. Refusals throw `TrustTaskError`; `refusalCode(body)` extracts the code. |
