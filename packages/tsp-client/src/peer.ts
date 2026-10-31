@@ -12,6 +12,14 @@ import { createDidPeer2 } from "@openvtc/pnm-core";
 /** The service type a VTC and the TSP SDK match on. Spelled out: the `tsp` abbreviation expands differently per resolver. */
 export const TSP_SERVICE_TYPE = "TSPTransport";
 
+/**
+ * The largest DID the affinidi resolver (`DIDCacheClient`, `max_did_size_in_bytes`, default 1000) parses. The mediator and the VTC
+ * both use it, and neither says why when it is exceeded: the mediator login answers 403 "authcrypt requires the public key of
+ * sender", the VTC treats the DID as unresolvable. A did:peer:2 carries its service inside the identifier, so naming a mediator
+ * whose own DID is a long did:peer:2 (this kit's mediator: about 700 bytes) overflows it. A did:webvh mediator DID fits.
+ */
+export const MAX_DID_BYTES = 1000;
+
 /** A signer with the shape @openvtc/trust-tasks-proof's `Signer` has, for a key that is not a did:key. */
 export interface PeerSigner {
   curve: "ed25519";
@@ -52,6 +60,8 @@ export function didPeerFromSeed(seed: Uint8Array, mediatorDid: string): PeerIden
   const decryptionKey = ed25519.utils.toMontgomerySecret(seed);
   const x25519PublicKey = x25519.getPublicKey(decryptionKey);
   const peer = createDidPeer2({ ed25519PublicKey, x25519PublicKey, services: [{ type: TSP_SERVICE_TYPE, serviceEndpoint: mediatorDid }] });
+  const size = new TextEncoder().encode(peer.did).length;
+  if (size > MAX_DID_BYTES) throw new Error(didTooLongMessage(size, mediatorDid));
   return {
     did: peer.did,
     seed,
@@ -64,6 +74,16 @@ export function didPeerFromSeed(seed: Uint8Array, mediatorDid: string): PeerIden
     secretJwk: { kty: "OKP", crv: "X25519", x: base64urlnopad.encode(x25519PublicKey), d: base64urlnopad.encode(decryptionKey) },
     signer: { curve: "ed25519", did: peer.did, verificationMethod: peer.authKid, sign: (h) => ed25519.sign(h, seed) },
   };
+}
+
+/** Why a did:peer naming `mediatorDid` cannot be used, and what would fix it. */
+export function didTooLongMessage(size: number, mediatorDid: string): string {
+  return `a did:peer:2 naming this mediator would be ${size} bytes, over the ${MAX_DID_BYTES}-byte limit of the affinidi DID resolver the mediator and the VTC use (the mediator's own DID is ${mediatorDid.length} bytes${mediatorDid.startsWith("did:peer:") ? ", a did:peer:2" : ""}). The mediator would refuse the login (403) and the VTC could not resolve the applicant. It needs a mediator with a short DID (did:webvh). See docs/MESSAGING.md.`;
+}
+
+/** Whether a did:peer naming `mediatorDid` fits the resolver limit (same arithmetic as didPeerFromSeed, with a fixed key). */
+export function didPeerFits(mediatorDid: string): boolean {
+  try { didPeerFromSeed(new Uint8Array(32), mediatorDid); return true; } catch { return false; }
 }
 
 export interface ParsedDidPeer2 {

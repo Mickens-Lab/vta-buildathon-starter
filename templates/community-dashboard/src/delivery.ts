@@ -23,17 +23,18 @@ export function runMode(): RunMode {
 }
 
 /** The applicant this page signs as: did:peer only when asked for (VTC_APPLICANT) AND in tunnel mode with a known mediator DID. */
-export function applicantChoice(mode: RunMode, asked: ApplicantKind | undefined, mediatorDid: string | null | undefined): { kind: ApplicantKind; why?: string } {
+export function applicantChoice(mode: RunMode, asked: ApplicantKind | undefined, mediatorDid: string | null | undefined, fits: (mediatorDid: string) => boolean = () => true): { kind: ApplicantKind; why?: string } {
   if (asked !== "did:peer") return { kind: "did:key" };
   if (mode !== "tunnel") return { kind: "did:key", why: `VTC_APPLICANT=did:peer needs MODE=tunnel (the mediator); this page is MODE=${mode}, so it applies as the did:key.` };
   if (!mediatorDid) return { kind: "did:key", why: "VTC_APPLICANT=did:peer, but .vta/tunnel.json has no mediator DID (is the tunnel stack up?), so this page applies as the did:key." };
+  if (!fits(mediatorDid)) return { kind: "did:key", why: "VTC_APPLICANT=did:peer, but a did:peer:2 naming this mediator would exceed the 1000-byte DID limit of the mediator's and the VTC's resolver (the mediator's own DID is a long did:peer:2), so this page applies as the did:key (docs/MESSAGING.md)." };
   return { kind: "did:peer" };
 }
 
-export function builtApplicant(): { kind: ApplicantKind; mediatorDid: string | null; why?: string } {
+export function builtApplicant(fits?: (mediatorDid: string) => boolean): { kind: ApplicantKind; mediatorDid: string | null; why?: string } {
   const asked = typeof __APPLICANT__ !== "undefined" ? __APPLICANT__ : undefined;
   const mediatorDid = typeof __MEDIATOR_DID__ !== "undefined" ? __MEDIATOR_DID__ : null;
-  return { ...applicantChoice(runMode(), asked, mediatorDid), mediatorDid };
+  return { ...applicantChoice(runMode(), asked, mediatorDid, fits), mediatorDid };
 }
 
 const FLAG = "credentialsDelivered turns true only when the community holds your own membership credential sent back to it (vtc/members/vmc/0.1), which this page does not send. It does not report whether the pushed frames arrived.";

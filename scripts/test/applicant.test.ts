@@ -31,4 +31,5 @@ test("did:peer names the mediator, keeps its own request id, and needs MODE=tunn
   assert.equal(p.identity.signer.did, p.identity.did);
   assert.throws(() => applicant("did:peer", seed, { mode: "local", mediatorDid: MEDIATOR }), /needs MODE=tunnel/);
   assert.throws(() => applicant("did:peer", seed, { mode: "tunnel" }), /no mediator DID/);
+  assert.throws(() => applicant("did:peer", seed, { mode: "tunnel", mediatorDid: "did:peer:2." + "x".repeat(700) }), /1000-byte limit/);
 });

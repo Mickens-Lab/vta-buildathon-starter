@@ -4,7 +4,7 @@ import { ed25519, x25519 } from "@noble/curves/ed25519.js";
 import { pack, unpack } from "@openvtc/vti-tsp-js";
 import { resolveVtaTspEndpoint } from "@openvtc/pnm-core";
 import { signTrustTask } from "@openvtc/trust-tasks-proof";
-import { didPeerFromSeed, parseDidPeer2, tspMediatorOf, TSP_SERVICE_TYPE } from "../src/index.js";
+import { didPeerFits, didPeerFromSeed, MAX_DID_BYTES, parseDidPeer2, tspMediatorOf, TSP_SERVICE_TYPE } from "../src/index.js";
 
 const seed = Uint8Array.from({ length: 32 }, (_, i) => i + 1);
 const MEDIATOR = "did:example:mediator";
@@ -69,4 +69,13 @@ test("clientKeys: a did:peer logs in to the mediator as itself, with the keys it
   assert.equal(d.method, "did:key");
   assert.match(d.keys.vid, /^did:key:z6Mk/);
   assert.deepEqual(d.keys.decryptionKey, p.decryptionKey, "same seed, same X25519 key under both DIDs");
+});
+
+test("refuses to mint a DID the affinidi resolver would refuse (over 1000 bytes), naming the cause", () => {
+  // A mediator DID the size of a did:peer:2 with services (about 700 bytes) pushes ours over the limit; a short one fits.
+  const longMediator = "did:peer:2." + "x".repeat(700);
+  assert.throws(() => didPeerFromSeed(seed, longMediator), /over the 1000-byte limit[^]*did:webvh/);
+  assert.equal(didPeerFits(longMediator), false);
+  assert.equal(didPeerFits(MEDIATOR), true);
+  assert.ok(new TextEncoder().encode(didPeerFromSeed(seed, "did:example:" + "m".repeat(400)).did).length <= MAX_DID_BYTES);
 });

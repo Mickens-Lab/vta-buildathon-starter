@@ -30,6 +30,7 @@ test("did:peer is used only when asked for, in tunnel mode, with a mediator DID"
   assert.equal(applicantChoice("tunnel", undefined, "did:example:mediator").kind, "did:key");
   assert.match(applicantChoice("local", "did:peer", "did:example:mediator").why ?? "", /needs MODE=tunnel/);
   assert.match(applicantChoice("tunnel", "did:peer", null).why ?? "", /no mediator DID/);
+  assert.match(applicantChoice("tunnel", "did:peer", "did:example:mediator", () => false).why ?? "", /1000-byte DID limit/);
 });
 
 test("a member state carries what the VTC said about delivery", () => {
