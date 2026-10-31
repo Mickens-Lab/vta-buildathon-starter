@@ -19,7 +19,7 @@ import {
   writeStackMode, writeTunnel,
 } from "./lib/compose.js";
 import { currentMode, imagesAvailable, imageSpecs, imageStatus, realDocker, useImages, type ImageKind } from "./lib/images.js";
-import { composeEnv, tunnelUrls, TUNNEL_FILE, volumeGuard, type TunnelState } from "./lib/tunnel.js";
+import { composeEnv, mediatorDidFromToml, tunnelUrls, TUNNEL_FILE, volumeGuard, type TunnelState } from "./lib/tunnel.js";
 import { runPreflight } from "./doctor.js";
 import { pins } from "./pins.js";
 
@@ -85,15 +85,17 @@ async function tunnelUp(): Promise<void> {
     }
     writeTunnel(state);
     const urls = tunnelUrls(state);
-    // 2. mediator (needs only its own host), then read its DID for the VTA and VTC configs.
+    // 2. mediator (needs only its own host; it mints a did:webvh bound to that host), then read its DID for the VTA and VTC configs.
     console.log("starting redis + mediator...");
     let r = dc("tunnel", wantVtc, ["up", "-d", "--wait", "--no-build", "redis", "mediator"], { inherit: true });
     if (r.status !== 0) throw new Error("the mediator did not become healthy; see `docker compose --profile messaging logs mediator`.");
     const line = dc("tunnel", wantVtc, ["exec", "-T", "mediator", "grep", "-m1", "^mediator_did", "/conf/mediator.toml"]).stdout;
-    state.mediatorDid = /did:peer:[A-Za-z0-9._%=:-]+/.exec(line ?? "")?.[0];
+    state.mediatorDid = mediatorDidFromToml(line ?? "");
     if (!state.mediatorDid) throw new Error("could not read the mediator DID from its config.");
     writeTunnel(state);
     if (!(await waitFor200(`${urls.mediator}/mediator/v1/livez`, 90_000))) throw new Error(`the mediator is up but ${urls.mediator} does not answer through the tunnel (DNS can lag; try the probe again in a minute).`);
+    // The mediator's DID is a did:webvh that the VTA, the VTC and every client resolve at its tunnel host: wait until it is served.
+    if (!(await waitFor200(`${urls.mediator}/.well-known/did.jsonl`, 90_000))) throw new Error(`the mediator's DID log is not reachable at ${urls.mediator}/.well-known/did.jsonl.`);
     // 3. VTA, then check its did:webvh resolves at the public host before anything else needs it.
     console.log("starting the VTA...");
     r = dc("tunnel", wantVtc, ["up", "-d", "--wait", "vta"], { inherit: true });

@@ -25,6 +25,23 @@ export function hostFromLog(text: string): string | undefined {
   return undefined;
 }
 
+/**
+ * The mediator's own DID from its generated mediator.toml (`mediator_did = "did://<did>"`). In MODE=tunnel it is a short
+ * did:webvh bound to the mediator's tunnel host (mediator-entrypoint.sh); a did:peer is still accepted.
+ */
+export function mediatorDidFromToml(text: string): string | undefined {
+  return /^\s*mediator_did\s*=\s*"(?:did:\/\/)?(did:(?:webvh|peer):[A-Za-z0-9._%=:-]+)"/m.exec(text)?.[1];
+}
+
+/** The did:webvh a `did.jsonl` log names, and whether it is bound to `host` (the tunnel host this run serves it at). */
+export function webvhAtHost(logText: string, host: string): { ok: boolean; did?: string; detail: string } {
+  const did = /"id":"(did:webvh:[^"#]+)"/.exec(logText)?.[1];
+  if (!did) return { ok: false, detail: "no did:webvh in the log" };
+  return did.endsWith(`:${host}`)
+    ? { ok: true, did, detail: "DID is bound to the current tunnel host" }
+    : { ok: false, did, detail: "DID names a different host: this volume is stale, reset with `npm run down`" };
+}
+
 /** Variables the compose file reads (see docker-compose.yml). Empty hosts leave a service in local-mode behaviour. */
 export function composeEnv(s: TunnelState): Record<string, string> {
   return {
